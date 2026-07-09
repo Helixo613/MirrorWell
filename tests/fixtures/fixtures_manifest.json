@@ -1,0 +1,17 @@
+{
+  "$schemaNote": "docs/MODEL_AND_DATA.md §4 — records both paths per fixture + condition labels + consented self-reported demographics. NEVER names. Empty until real consented volunteer recordings exist (Task 6 kill-gate blocker — see docs/handoffs/).",
+  "$exampleEntryShape": {
+    "subjectId": "string, e.g. S01 — never a real name",
+    "condition": "neutral | EX_BROW_RAISE | EX_EYE_CLOSURE | EX_SMILE | EX_PUCKER | over_effort | one_sided | low_light | yaw_15 | distance_2m",
+    "mastersPath": "tests/fixtures/masters/fixture_<subjectId>_<condition>.{webm,mp4}",
+    "replayPath": "tests/fixtures/replay/fixture_<subjectId>_<condition>.mjpeg",
+    "demographics": {
+      "fitzpatrickBand": "I-II | III-IV | V-VI",
+      "gender": "string, self-reported",
+      "ageBand": "<40 | 40-60 | 60+",
+      "glasses": "boolean",
+      "facialHair": "boolean"
+    }
+  },
+  "fixtures": []
+}
