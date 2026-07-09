@@ -17,9 +17,11 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `npm run preview -- --port ${PORT} --strictPort`,
+    // Bind explicitly to 127.0.0.1 so readiness checks match baseURL on CI runners
+    // (default Vite preview may prefer localhost/IPv6 and miss the probe).
+    command: `npm run preview -- --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
+    timeout: 120_000,
   },
 });
