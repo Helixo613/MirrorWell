@@ -11,7 +11,13 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         // no-network gate (ARCHITECTURE §9): only same-origin assets are ever cached/fetched.
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,task}'],
+        // .wasm must be included — the actual FaceLandmarker runtime binaries live in
+        // public/wasm/ (largest is ~10.6MB) and must be precached for true offline support
+        // (ARCHITECTURE §5: "PWA fully offline after first load, verified in airplane mode").
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,task,wasm}'],
+        // Default 2MiB cap rejects face_landmarker.task (~3.76MB) and every wasm runtime file;
+        // raised with headroom above the largest shipped asset.
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
       },
       manifest: {
         name: 'MirrorWell',
