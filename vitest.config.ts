@@ -6,5 +6,6 @@ export default defineConfig({
     // Only Vitest-native suites. tests/e2e/**/*.spec.ts use @playwright/test's own
     // `test` global and must never be picked up by the Vitest runner.
     include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'],
+    setupFiles: ['./tests/unit/setup.ts'],
   },
 });
