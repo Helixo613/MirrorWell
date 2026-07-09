@@ -40,17 +40,19 @@ Cadence: `CaptureService → LandmarkEngine → QualityMonitor → Normalization
 
 | Concern | Choice | Justification (one line) |
 |---|---|---|
-| Language | TypeScript 5.x | Typed contracts between tracks; AI-agent friendly. |
-| UI | React 18.x | Mature, free, componentized screens. |
-| Build/PWA | Vite 5.x + `vite-plugin-pwa` (**needs verification**) | Fast builds; offline-first install on both target platforms. |
-| Face landmarks | `@mediapipe/tasks-vision` FaceLandmarker 0.10.x (**needs verification**) | Pretrained 478-point mesh + facial transformation matrix, on-device WASM/WebGPU, free. |
-| Storage | Dexie 4.x (IndexedDB) | Typed offline persistence for numeric metrics only. |
-| Charts | Recharts 2.x (**needs verification**) | Declarative trends chart. |
-| Unit tests | Vitest (**needs verification**) + `fake-indexeddb` | Fast TS-native tests for metric math and storage. |
-| E2E / a11y | Playwright 1.x + `@axe-core/playwright` (**needs verification**) | Chromium fake-camera replays fixtures deterministically; automated WCAG scans. |
+| Language | TypeScript 5.9.3 | Typed contracts between tracks; AI-agent friendly. |
+| UI | React 18.3.1 + react-dom 18.3.1 | Mature, free, componentized screens. |
+| Build/PWA | Vite 5.4.21 + `@vitejs/plugin-react` 5.2.0 + `vite-plugin-pwa` 1.3.0 | Fast builds; offline-first install on both target platforms. |
+| Face landmarks | `@mediapipe/tasks-vision` FaceLandmarker 0.10.35 | Pretrained 478-point mesh + facial transformation matrix, on-device WASM/WebGPU, free. |
+| Storage | Dexie 4.4.4 (IndexedDB) | Typed offline persistence for numeric metrics only. |
+| Charts | Recharts 2.15.4 | Declarative trends chart. |
+| Unit tests | Vitest 3.2.7 + `fake-indexeddb` 6.2.5 | Fast TS-native tests for metric math and storage. |
+| E2E / a11y | Playwright 1.61.1 (`@playwright/test`) + `@axe-core/playwright` 4.12.1 | Chromium fake-camera replays fixtures deterministically; automated WCAG scans. |
 | Server | **None** | Privacy-first; nothing to breach, no secrets to manage. |
 
 **Version pinning rule:** IMPLEMENTATION Task 1 resolves every "needs verification" version to latest stable and records it here; thereafter this table is canonical and no other dependency may be added without updating it.
+
+**Resolution note (Task 1, 2026-07-09):** every exact version above is the latest stable release **within the major already fixed by this table** (Vite 5.x, React 18.x, TypeScript 5.x, Recharts 2.x, `@mediapipe/tasks-vision` 0.10.x, Playwright 1.x). Current npm `latest` tags for several of these packages point to newer majors (Vite 8, React 19, TypeScript 7, Recharts 3) that were **not** installed — bumping majors is a separate decision requiring its own doc amendment, not something Task 1's "resolve needs-verification" instruction authorizes. `@vitejs/plugin-react` 5.2.0 and `vitest` 3.2.7 were selected (over their newest majors, which require Vite ^8) specifically because their `peerDependencies` are compatible with the pinned Vite 5.x. `@types/node` 22.20.1 was added as a dev-only type-declarations package (not a stack "Concern" choice — required transitively by Vitest's own peer dependencies and by `process` usage in `playwright.config.ts`).
 
 **Supported platforms (hard gates):** Windows desktop (Chromium, Firefox) and Android (Chrome). **Apple platforms are out of scope** — no code path may depend on them; no test targets them. **PWA installation** is supported on Chromium desktop and Android Chrome only; Firefox desktop does not support PWA install and runs MirrorWell as an **offline-capable browser tab** (the service worker still works) — Firefox remains a hard test gate regardless.
 
