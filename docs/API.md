@@ -267,7 +267,13 @@ Values are displacements from `neutralStats`, in inter-ocular-distance units, po
 
 ## 8. MetricEngine
 
-`src/metrics/metrics.ts`. Pure function. Math: ARCHITECTURE §7.
+`src/metrics/metrics.ts`. Deterministic module-singleton (same held-state pattern as `NormalizationLayer` §7) — not React state, not storage, not DOM.
+
+> **DOCS-CHANGE (Task 7, 2026-07-10):** `compute()`'s `effortIndex` denominator is `comfortableMax[exerciseId]` (ARCHITECTURE §7), which lives on `CalibrationBaseline` — a value `MetricEngine` cannot fetch itself (BACKEND §1.5 forbids storage access) and that a per-frame `NormalizedFrame` has no business carrying (it's a per-session constant, not a per-frame value). ARCHITECTURE §7 also assigns 5-frame smoothing and the ease-off sustained-duration condition to `MetricEngine`, both of which are cross-frame state that a single `compute(nf, exerciseId)` call cannot hold. Three methods are added below, mirroring `NormalizationLayer`'s existing `setBaseline`/state pattern — no new identifiers invented, only the already-canonical `setBaseline`/`reset` shapes extended to this module.
+
+### `setBaseline(b: CalibrationBaseline): void`
+
+Called once by `SessionController.start` (alongside `NormalizationLayer.setBaseline`), and again by `CalibrationFlow`/tests as needed. **Errors:** `NO_BASELINE` (invalid/missing baseline object — same rule as §7).
 
 ### `compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample`
 
@@ -279,8 +285,17 @@ Values are displacements from `neutralStats`, in inter-ocular-distance units, po
 ```json
 { "symmetryIndex": null, "effortIndex": 0.02, "timestampMs": 187423.6 }
 ```
+**Errors:** `NO_BASELINE` (no `setBaseline` call yet)
 
 > **Rule:** raw and 5-frame-median-smoothed values both exist internally; everything downstream (display, reps, storage) consumes **smoothed**; `DebugHud` shows both.
+
+### `isEaseOffActive(): boolean`
+
+`true` once smoothed `effortIndex` has stayed `> easeOffThreshold` (0.60) continuously for ≥ `easeOffSustainMs` (300 ms); resets the moment `effortIndex` drops back to ≤ 0.60. Naming mirrors the existing `isReady()`/`isRunning()`/`isDemoMode()` boolean-query convention.
+
+### `reset(): void`
+
+Clears the smoothing window and the ease-off sustain timer. `SessionController` calls this on every exercise transition (same rule as `RepDetector.reset()` below) — a unit test asserts no state leakage between exercises.
 
 ---
 

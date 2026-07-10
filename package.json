@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:a11y": "playwright test --grep @a11y",
     "seed:dev": "node --experimental-strip-types scripts/seed-dev.ts",
@@ -16,11 +17,11 @@
     "postinstall": "node --experimental-strip-types scripts/copy-wasm.ts && node --experimental-strip-types scripts/verify-model.ts"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.35",
     "dexie": "4.4.4",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "recharts": "2.15.4",
-    "@mediapipe/tasks-vision": "0.10.35"
+    "recharts": "2.15.4"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
@@ -29,6 +30,7 @@
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
     "@vitejs/plugin-react": "5.2.0",
+    "@vitest/coverage-v8": "3.2.7",
     "fake-indexeddb": "6.2.5",
     "typescript": "5.9.3",
     "vite": "5.4.21",

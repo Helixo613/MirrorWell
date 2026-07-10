@@ -153,6 +153,17 @@ describe('NormalizationLayer — synthetic rotation self-consistency (not V1)', 
   });
 });
 
+describe('NormalizationLayer — timestampMs passthrough', () => {
+  it('normalize() copies timestampMs from the LandmarkFrame unchanged (API.md §7)', async () => {
+    const { NormalizationLayer } = await import('../../src/metrics/normalize.ts');
+    NormalizationLayer.setBaseline(zeroBaseline());
+    const frame = makeFrame(baseLandmarks());
+    frame.timestampMs = 187423.6;
+    const result = NormalizationLayer.normalize(frame);
+    expect(result.timestampMs).toBe(187423.6);
+  });
+});
+
 describe('NormalizationLayer — baseline subtraction', () => {
   it('subtracts neutralStats so a frame identical to baseline yields ~zero displacement', async () => {
     const { NormalizationLayer } = await import('../../src/metrics/normalize.ts');

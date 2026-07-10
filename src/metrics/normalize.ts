@@ -18,6 +18,7 @@ import { exercises } from '../config/exercises.ts';
 
 export interface NormalizedFrame {
   regionDisplacements: Record<RegionId, { left: number; right: number }>;
+  timestampMs: number;
 }
 
 const LEFT_EYE_OUTER_CORNER = 33;
@@ -115,7 +116,7 @@ function normalize(lf: LandmarkFrame): NormalizedFrame {
     };
   }
 
-  return { regionDisplacements };
+  return { regionDisplacements, timestampMs: lf.timestampMs };
 }
 
 export const NormalizationLayer = { setBaseline, normalize, clearBaseline };

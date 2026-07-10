@@ -64,8 +64,12 @@ Pipeline per frame: (1) scale all landmark coordinates by inter-ocular distance;
 Pure functions — no DOM, no camera, no storage; 100% branch coverage required (TESTS.md §2). Canonical math in ARCHITECTURE §7.
 
 ```typescript
-// MetricEngine
-compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample  // symmetryIndex null under movementFloor
+// MetricEngine (stateful module singleton — holds baseline, smoothing window, ease-off
+// sustain timer; same pattern as NormalizationLayer §1.4. DOCS-CHANGE: API.md §8, Task 7)
+setBaseline(b: CalibrationBaseline): void                          // throws NO_BASELINE
+compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample // symmetryIndex null under movementFloor; throws NO_BASELINE
+isEaseOffActive(): boolean                                        // effortIndex > 0.60 sustained >= 300ms
+reset(): void                                                     // clears smoothing window + ease-off timer
 // RepDetector (stateful per exercise; reset() between exercises)
 feed(sample: MetricSample): RepEvent | null
 reset(): void

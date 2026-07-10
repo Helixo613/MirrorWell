@@ -46,7 +46,7 @@ Cadence: `CaptureService → LandmarkEngine → QualityMonitor → Normalization
 | Face landmarks | `@mediapipe/tasks-vision` FaceLandmarker 0.10.35 | Pretrained 478-point mesh + facial transformation matrix, on-device WASM/WebGPU, free. |
 | Storage | Dexie 4.4.4 (IndexedDB) | Typed offline persistence for numeric metrics only. |
 | Charts | Recharts 2.15.4 | Declarative trends chart. |
-| Unit tests | Vitest 3.2.7 + `fake-indexeddb` 6.2.5 | Fast TS-native tests for metric math and storage. |
+| Unit tests | Vitest 3.2.7 + `fake-indexeddb` 6.2.5 + `@vitest/coverage-v8` 3.2.7 | Fast TS-native tests for metric math and storage; coverage-v8 measures the Task 7 100%-branch-coverage hard requirement (TESTS.md §2). |
 | E2E / a11y | Playwright 1.61.1 (`@playwright/test`) + `@axe-core/playwright` 4.12.1 | Chromium fake-camera replays fixtures deterministically; automated WCAG scans. |
 | Server | **None** | Privacy-first; nothing to breach, no secrets to manage. |
 
