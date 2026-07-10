@@ -293,9 +293,13 @@ Called once by `SessionController.start` (alongside `NormalizationLayer.setBasel
 
 `true` once smoothed `effortIndex` has stayed `> easeOffThreshold` (0.60) continuously for ≥ `easeOffSustainMs` (300 ms); resets the moment `effortIndex` drops back to ≤ 0.60. Naming mirrors the existing `isReady()`/`isRunning()`/`isDemoMode()` boolean-query convention.
 
+### `getLastRaw(): { symmetryIndex: number | null; effortIndex: number } | null`
+
+> **DOCS-CHANGE (Task 8, 2026-07-10):** the canonical `DebugHud` CSV columns (ARCHITECTURE §12) include `symmetryIndexRaw`/`effortIndexRaw` alongside the smoothed pair, and this section already stated "DebugHud shows both" — but `MetricSample` (consumed by `RepDetector`/`SessionController`/`StorageService`) is deliberately smoothed-only and stays that way. `getLastRaw()` is a dev-only accessor returning the most recent pre-smoothing values, captured as a side-value inside `compute()` itself. `null` before the first `compute()` call or immediately after `reset()`.
+
 ### `reset(): void`
 
-Clears the smoothing window and the ease-off sustain timer. `SessionController` calls this on every exercise transition (same rule as `RepDetector.reset()` below) — a unit test asserts no state leakage between exercises.
+Clears the smoothing window, the ease-off sustain timer, and `getLastRaw()`'s cached value. `SessionController` calls this on every exercise transition (same rule as `RepDetector.reset()` below) — a unit test asserts no state leakage between exercises.
 
 ---
 
@@ -318,6 +322,10 @@ Clears the smoothing window and the ease-off sustain timer. `SessionController` 
 Thresholds (`repStartThreshold` 0.15, `repMinDurationMs` 800, `repEndThreshold` 0.10) from `thresholds.ts`.
 
 > **Rule:** `SessionController` must call `reset()` on every exercise transition; a unit test asserts no state leakage between exercises.
+
+### `getState(): 'idle' | 'active'`
+
+> **DOCS-CHANGE (Task 8, 2026-07-10):** the canonical `DebugHud` CSV columns (ARCHITECTURE §12) include `repState`, and `feed()`/`reset()` alone give no way to observe whether a rep is currently in progress. `'idle' | 'active'` is not defined elsewhere in the docs — it is the simplest honest exposure of the state `feed()` already tracks internally, named to match the `isReady()`/`isRunning()`/`isDemoMode()` boolean-query convention used elsewhere in this codebase.
 
 ---
 

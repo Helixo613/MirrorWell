@@ -175,6 +175,31 @@ describe('MetricEngine — ease-off (sustained > 0.60 for >= 300ms)', () => {
   });
 });
 
+describe('MetricEngine — getLastRaw() (DebugHud, Task 8)', () => {
+  it('is null before the first compute() call', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.reset();
+    expect(MetricEngine.getLastRaw()).toBeNull();
+  });
+
+  it('exposes the pre-smoothing raw values, distinct from the smoothed compute() result', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.reset();
+    MetricEngine.compute(frame('REGION_MOUTH_CORNER', 0.05, 0.05, 0), 'EX_SMILE'); // raw SI=1, effort=0.5
+    const smoothed = MetricEngine.compute(frame('REGION_MOUTH_CORNER', 0.09, 0.01, 10), 'EX_SMILE');
+    const raw = MetricEngine.getLastRaw();
+    expect(raw).not.toBeNull();
+    expect(raw!.symmetryIndex).toBeCloseTo(0.01 / 0.09, 6);
+    expect(raw!.effortIndex).toBeCloseTo(0.9, 6);
+    // Smoothed (2-frame median so far) differs from this frame's raw values — proves getLastRaw()
+    // is genuinely pre-smoothing, not an alias of the compute() result.
+    expect(smoothed.symmetryIndex).not.toBeCloseTo(raw!.symmetryIndex!, 3);
+    expect(smoothed.effortIndex).not.toBeCloseTo(raw!.effortIndex, 3);
+  });
+});
+
 describe('MetricEngine — reset()', () => {
   it('reset() clears smoothing window and ease-off state but retains the active baseline', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
@@ -187,6 +212,7 @@ describe('MetricEngine — reset()', () => {
 
     MetricEngine.reset();
     expect(MetricEngine.isEaseOffActive()).toBe(false);
+    expect(MetricEngine.getLastRaw()).toBeNull();
 
     // Baseline retained: compute() must not throw NO_BASELINE after reset().
     // Window cleared: a single frame's smoothed value equals its own raw value exactly.

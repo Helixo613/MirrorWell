@@ -65,13 +65,15 @@ Pure functions — no DOM, no camera, no storage; 100% branch coverage required 
 
 ```typescript
 // MetricEngine (stateful module singleton — holds baseline, smoothing window, ease-off
-// sustain timer; same pattern as NormalizationLayer §1.4. DOCS-CHANGE: API.md §8, Task 7)
+// sustain timer; same pattern as NormalizationLayer §1.4. DOCS-CHANGE: API.md §8, Task 7/8)
 setBaseline(b: CalibrationBaseline): void                          // throws NO_BASELINE
 compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample // symmetryIndex null under movementFloor; throws NO_BASELINE
 isEaseOffActive(): boolean                                        // effortIndex > 0.60 sustained >= 300ms
-reset(): void                                                     // clears smoothing window + ease-off timer
+getLastRaw(): RawMetricSample | null                              // dev-only, for DebugHud; null before first compute()/after reset()
+reset(): void                                                     // clears smoothing window, ease-off timer, getLastRaw()
 // RepDetector (stateful per exercise; reset() between exercises)
 feed(sample: MetricSample): RepEvent | null
+getState(): 'idle' | 'active'                                    // dev-only, for DebugHud (DOCS-CHANGE: API.md §9, Task 8)
 reset(): void
 ```
 

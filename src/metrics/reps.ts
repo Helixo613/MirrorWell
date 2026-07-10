@@ -8,6 +8,12 @@
 // sustained-threshold rule ARCHITECTURE §7 defines for MetricEngine.isEaseOffActive()
 // (effortIndex > easeOffThreshold sustained >= easeOffSustainMs) to flag the rep, rather than
 // widening the MetricSample contract for a per-rep summary bit.
+//
+// DOCS-CHANGE (Task 8, 2026-07-10): API.md §9 amended to add getState(). ARCHITECTURE §12's
+// canonical DebugHud CSV columns include repState, and feed()/reset() alone give no way to
+// observe whether a rep is currently in progress. 'idle' | 'active' isn't defined anywhere in
+// the docs — it's the simplest honest exposure of the internal `active` flag already tracked
+// above, named to match the isReady()/isRunning()/isDemoMode() query-method convention.
 import type { MetricSample } from './metrics.ts';
 import { thresholds } from '../config/thresholds.ts';
 
@@ -18,6 +24,8 @@ export interface RepEvent {
   durationMs: number;
   easeOffTriggered: boolean;
 }
+
+export type RepState = 'idle' | 'active';
 
 const { startThreshold, endThreshold, minDurationMs } = thresholds.reps;
 const { easeOffThreshold, easeOffSustainMs } = thresholds.metrics;
@@ -97,4 +105,8 @@ function feed(sample: MetricSample): RepEvent | null {
   return null;
 }
 
-export const RepDetector = { feed, reset };
+function getState(): RepState {
+  return active ? 'active' : 'idle';
+}
+
+export const RepDetector = { feed, getState, reset };

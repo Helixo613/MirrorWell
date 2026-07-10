@@ -132,6 +132,36 @@ describe('RepDetector — peak tracking', () => {
   });
 });
 
+describe('RepDetector — getState() (DebugHud, Task 8)', () => {
+  it('is idle after reset(), active once a rep starts, idle again once it ends', async () => {
+    const { RepDetector } = await import('../../src/metrics/reps.ts');
+    RepDetector.reset();
+    expect(RepDetector.getState()).toBe('idle');
+    RepDetector.feed(sample(0.3, 0));
+    expect(RepDetector.getState()).toBe('active');
+    RepDetector.feed(sample(0.05, 900)); // ends (accepted rep)
+    expect(RepDetector.getState()).toBe('idle');
+  });
+
+  it('returns to idle even when the rep is rejected as a twitch', async () => {
+    const { RepDetector } = await import('../../src/metrics/reps.ts');
+    RepDetector.reset();
+    RepDetector.feed(sample(0.3, 0));
+    expect(RepDetector.getState()).toBe('active');
+    RepDetector.feed(sample(0.05, 300)); // twitch, rejected
+    expect(RepDetector.getState()).toBe('idle');
+  });
+
+  it('reset() mid-rep forces idle', async () => {
+    const { RepDetector } = await import('../../src/metrics/reps.ts');
+    RepDetector.reset();
+    RepDetector.feed(sample(0.3, 0));
+    expect(RepDetector.getState()).toBe('active');
+    RepDetector.reset();
+    expect(RepDetector.getState()).toBe('idle');
+  });
+});
+
 describe('RepDetector — reset() prevents cross-exercise leakage', () => {
   it('reset() mid-rep discards all in-progress state; the next exercise starts clean', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');

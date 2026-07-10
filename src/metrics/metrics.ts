@@ -20,6 +20,18 @@ export interface MetricSample {
   timestampMs: number;
 }
 
+// DOCS-CHANGE (Task 8, 2026-07-10): API.md §8 amended to add getLastRaw(). ARCHITECTURE §12's
+// canonical DebugHud CSV columns include symmetryIndexRaw/effortIndexRaw alongside the smoothed
+// pair, and API.md §8 itself already stated "DebugHud shows both" — but MetricSample (consumed
+// by RepDetector/SessionController/storage) is deliberately smoothed-only, so raw values need a
+// separate dev-only accessor rather than widening the per-frame contract everything else relies
+// on. Captured as a side-value inside compute() itself (never a second compute() call, which
+// would double-push the smoothing window).
+export interface RawMetricSample {
+  symmetryIndex: number | null;
+  effortIndex: number;
+}
+
 const { movementFloorPct, easeOffThreshold, easeOffSustainMs, smoothingWindow } = thresholds.metrics;
 
 let activeBaseline: CalibrationBaseline | null = null;
@@ -27,6 +39,7 @@ let symmetryWindow: (number | null)[] = [];
 let effortWindow: number[] = [];
 let easeOffSustainStartMs: number | null = null;
 let easeOffActive = false;
+let lastRaw: RawMetricSample | null = null;
 
 function setBaseline(b: CalibrationBaseline): void {
   if (!b || !b.comfortableMax) {
@@ -40,6 +53,7 @@ function reset(): void {
   effortWindow = [];
   easeOffSustainStartMs = null;
   easeOffActive = false;
+  lastRaw = null;
 }
 
 function median(values: number[]): number {
@@ -76,6 +90,8 @@ function compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample {
   const comfortableMax = activeBaseline.comfortableMax[exerciseId];
   const rawEffortIndex = comfortableMax === undefined ? 0 : maxD / comfortableMax;
 
+  lastRaw = { symmetryIndex: rawSymmetryIndex, effortIndex: rawEffortIndex };
+
   symmetryWindow = pushWindowed(symmetryWindow, rawSymmetryIndex);
   effortWindow = pushWindowed(effortWindow, rawEffortIndex);
 
@@ -100,4 +116,8 @@ function isEaseOffActive(): boolean {
   return easeOffActive;
 }
 
-export const MetricEngine = { setBaseline, compute, isEaseOffActive, reset };
+function getLastRaw(): RawMetricSample | null {
+  return lastRaw;
+}
+
+export const MetricEngine = { setBaseline, compute, isEaseOffActive, getLastRaw, reset };
