@@ -205,6 +205,79 @@ export const strings = {
       caregiverAriaLabel: 'Open read-only caregiver view',
     },
   },
+  session: {
+    loading: 'Warming up the camera — about 3 seconds',
+    demoWatermark: 'DEMO — not for exercise use',
+    quickSetup: {
+      title: 'Quick setup',
+      body: 'Relax your face for a few seconds, then one gentle smile. This stays on your device only.',
+      action: 'Start quick setup',
+      running: 'Setting up…',
+    },
+    demo: {
+      ready: "I'm ready",
+      readyAriaLabel: 'Begin exercise reps',
+    },
+    repCounter: (done: number, total: number) => `${done} of ${total}`,
+    repCounterLabel: 'Rep progress',
+    easeOff: 'Ease off — stay gentle',
+    rest: {
+      title: 'Rest',
+      remaining: (seconds: number) => `${seconds} seconds left`,
+      extend: '+30 s',
+      extendAriaLabel: 'Add thirty seconds of rest',
+      skip: 'Continue',
+      skipAriaLabel: 'Continue to next exercise',
+    },
+    stop: {
+      label: 'Stop',
+      ariaLabel: 'Stop session',
+      dialogTitle: 'Stop for now?',
+      dialogBody: 'Was anything wrong during this session?',
+      justStop: 'I just needed to stop',
+      justStopAriaLabel: 'Stop session without reporting a problem',
+      feltWrong: 'I felt pain or something felt wrong',
+      feltWrongAriaLabel: 'Stop session and view safety guidance',
+      cancel: 'Keep going',
+      cancelAriaLabel: 'Return to session',
+    },
+    redFlag: {
+      title: 'Pause and check in',
+      body: [
+        'Stop your exercises for now and contact your clinician to describe what happened.',
+        'If you have severe or sudden symptoms — including new facial droop — seek urgent care.',
+      ],
+      done: 'Done',
+      doneAriaLabel: 'Return to home',
+    },
+    qualityOffer: {
+      title: 'Conditions are not great right now',
+      body: 'You can keep going or end this session and try again later.',
+      continue: 'Keep going',
+      end: 'End session',
+    },
+    repDiscarded: "That one didn't count — the light dipped. No worries.",
+    a11y: {
+      repCompleted: (done: number, total: number) =>
+        `Rep ${done} of ${total} complete`,
+      easeOffActive: 'Ease off — stay gentle',
+    },
+    errors: {
+      noBaseline: 'Please recalibrate before starting a session.',
+      notAttested: 'Please complete onboarding first.',
+    },
+  },
+  summary: {
+    title: 'Session complete',
+    done: 'Done',
+    doneAriaLabel: 'Return to home',
+    demoDone: 'Back to onboarding',
+    repsDone: (count: number) => `${count} reps completed`,
+    easeOffLine: (gentle: number, total: number) =>
+      `You kept it gentle ${gentle} of ${total} times`,
+    encouraging: 'Thank you for practicing today.',
+    demoWatermark: 'DEMO — not for exercise use',
+  },
   placeholders: {
     trends: {
       title: 'Trends',

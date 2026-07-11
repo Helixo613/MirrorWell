@@ -40,6 +40,10 @@ export const thresholds = Object.freeze({
   /** SessionController quality offer-stop — API.md §15 */
   session: {
     qualityProblemOfferStopMs: 30_000,
+    restExtendSeconds: 30,
+    metricEmitHz: 15,
+    guideRepDurationMs: 2_000,
+    repHapticMs: 30,
   },
   /** FRONTEND §2.3 — last-session lookback on HomeScreen */
   home: {

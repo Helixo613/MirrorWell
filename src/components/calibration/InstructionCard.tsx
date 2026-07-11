@@ -7,6 +7,8 @@ export interface InstructionCardProps {
   subtitle?: string | null;
   meta?: string;
   id?: string;
+  /** `inline` — compact copy under the preview; `card` — bordered panel (default). */
+  variant?: 'card' | 'inline';
   className?: string;
   children?: ReactNode;
 }
@@ -17,9 +19,34 @@ export function InstructionCard({
   subtitle,
   meta,
   id,
+  variant = 'card',
   className,
   children,
 }: InstructionCardProps) {
+  if (variant === 'inline') {
+    return (
+      <section className={cn('space-y-2 text-center', className)}>
+        <h1
+          id={id}
+          tabIndex={-1}
+          className="text-lg font-semibold leading-tight outline-none sm:text-xl"
+        >
+          {title}
+        </h1>
+        {meta ? (
+          <p className="text-sm font-medium text-primary">{meta}</p>
+        ) : null}
+        <p className="text-base leading-relaxed text-muted-foreground">{body}</p>
+        {subtitle ? (
+          <p className="text-base leading-relaxed text-muted-foreground">
+            {subtitle}
+          </p>
+        ) : null}
+        {children}
+      </section>
+    );
+  }
+
   return (
     <section
       className={cn(

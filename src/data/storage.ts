@@ -274,4 +274,79 @@ export const StorageService = {
 
     return fullSessions;
   },
+
+  async saveSession(session: SessionRecordFull): Promise<string> {
+    if (SafetyGate.isDemoMode()) {
+      throw new MirrorWellError(
+        'VALIDATION_FAILED',
+        'demo mode is read-only',
+        true,
+      );
+    }
+
+    await openDb();
+    assertDbOpen();
+
+    const profile = await StorageService.getProfile();
+    if (!profile || profile.profileId !== session.profileId) {
+      throw new MirrorWellError(
+        'VALIDATION_FAILED',
+        'profileId mismatch',
+        true,
+      );
+    }
+
+    const baselineRow = await db.calibration_baseline.get(session.baselineId);
+    if (!baselineRow) {
+      throw new MirrorWellError(
+        'VALIDATION_FAILED',
+        'unknown baselineId',
+        true,
+      );
+    }
+
+    if (new Date(session.endedAt).getTime() < new Date(session.startedAt).getTime()) {
+      throw new MirrorWellError(
+        'VALIDATION_FAILED',
+        'endedAt before startedAt',
+        true,
+      );
+    }
+
+    await db.transaction(
+      'rw',
+      db.session_record,
+      db.exercise_result,
+      db.rep_metric,
+      async () => {
+        await db.session_record.put({
+          sessionId: session.sessionId,
+          profileId: session.profileId,
+          baselineId: session.baselineId,
+          startedAt: session.startedAt,
+          endedAt: session.endedAt,
+          endReason: session.endReason,
+        });
+
+        for (const result of session.results) {
+          await db.exercise_result.put({
+            resultId: result.resultId,
+            sessionId: session.sessionId,
+            exerciseId: result.exerciseId,
+            repsCompleted: result.repsCompleted,
+            meanSymmetryIndex: result.meanSymmetryIndex,
+            meanEffortIndex: result.meanEffortIndex,
+            easeOffCount: result.easeOffCount,
+            lowQualityFramePct: result.lowQualityFramePct,
+          });
+
+          for (const rep of result.reps) {
+            await db.rep_metric.put(rep);
+          }
+        }
+      },
+    );
+
+    return session.sessionId;
+  },
 };

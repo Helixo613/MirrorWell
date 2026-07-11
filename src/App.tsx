@@ -6,6 +6,7 @@ import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { CalibrationScreen } from '@/screens/CalibrationScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { SessionScreen } from '@/screens/SessionScreen';
+import { SummaryScreen } from '@/screens/SummaryScreen';
 import {
   CaregiverScreen,
   ExportScreen,
@@ -52,6 +53,7 @@ export function App() {
             }
           >
             <Route path="/session" element={<SessionScreen />} />
+            <Route path="/summary" element={<SummaryScreen />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

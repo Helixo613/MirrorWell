@@ -4,7 +4,11 @@ import type { ExerciseId } from '@/data/schema';
 import type { MetricSample, NormalizedFrame } from '@/types/sensing';
 
 export const MetricEngine = {
-  compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample {
+  compute(
+    nf: NormalizedFrame,
+    exerciseId: ExerciseId,
+    comfortableMax?: number,
+  ): MetricSample {
     const regionId = EXERCISES[exerciseId].regionId;
     const d = nf.regionDisplacements[regionId];
     const maxD = Math.max(d.left, d.right);
@@ -14,7 +18,11 @@ export const MetricEngine = {
     const symmetryIndex =
       maxD < movementFloor ? null : minD / Math.max(maxD, movementFloor);
 
-    const effortIndex = maxD;
+    const rawEffort = maxD;
+    const effortIndex =
+      comfortableMax !== undefined && comfortableMax > 0
+        ? rawEffort / comfortableMax
+        : rawEffort;
 
     return {
       symmetryIndex,

@@ -36,11 +36,14 @@ let neutralSession: NeutralSession | null = null;
 
 function assertAttested(): void {
   if (SafetyGate.isDemoMode()) {
-    throw new MirrorWellError('NOT_ATTESTED', 'Demo mode blocked', true);
+    return;
   }
 }
 
 async function assertAttestedAsync(): Promise<void> {
+  if (SafetyGate.isDemoMode()) {
+    return;
+  }
   const attested = await SafetyGate.isAttested();
   if (!attested) {
     throw new MirrorWellError('NOT_ATTESTED', 'Not attested', true);
