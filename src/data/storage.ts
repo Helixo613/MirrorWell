@@ -3,7 +3,9 @@ import {
   db,
   type CalibrationBaseline,
   type ExerciseId,
+  type ExerciseResultFull,
   type RegionId,
+  type SessionRecordFull,
   type UserProfile,
 } from '@/data/schema';
 import { MirrorWellError } from '@/data/errors';
@@ -131,6 +133,33 @@ function validateBaseline(
   }
 }
 
+function parseUtcIso(iso: string): Date | null {
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function validateSessionDateRange(range: {
+  from: string;
+  to: string;
+}): void {
+  const from = parseUtcIso(range.from);
+  const to = parseUtcIso(range.to);
+  if (!from || !to) {
+    throw new MirrorWellError(
+      'VALIDATION_FAILED',
+      'malformed session date range',
+      true,
+    );
+  }
+  if (from.getTime() > to.getTime()) {
+    throw new MirrorWellError(
+      'VALIDATION_FAILED',
+      'session range from > to',
+      true,
+    );
+  }
+}
+
 async function openDb(): Promise<void> {
   try {
     if (!db.isOpen()) {
@@ -209,5 +238,40 @@ export const StorageService = {
       .equals(1)
       .toArray();
     return rows[0] ?? null;
+  },
+
+  async getSessions(range: {
+    from: string;
+    to: string;
+  }): Promise<SessionRecordFull[]> {
+    validateSessionDateRange(range);
+    await openDb();
+    assertDbOpen();
+
+    const sessions = await db.session_record
+      .where('startedAt')
+      .between(range.from, range.to, true, true)
+      .toArray();
+
+    sessions.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+
+    const fullSessions: SessionRecordFull[] = [];
+    for (const session of sessions) {
+      const results = await db.exercise_result
+        .where('sessionId')
+        .equals(session.sessionId)
+        .toArray();
+      const resultsWithReps: ExerciseResultFull[] = [];
+      for (const result of results) {
+        const reps = await db.rep_metric
+          .where('resultId')
+          .equals(result.resultId)
+          .sortBy('repIndex');
+        resultsWithReps.push({ ...result, reps });
+      }
+      fullSessions.push({ ...session, results: resultsWithReps });
+    }
+
+    return fullSessions;
   },
 };

@@ -41,4 +41,8 @@ export const thresholds = Object.freeze({
   session: {
     qualityProblemOfferStopMs: 30_000,
   },
+  /** FRONTEND §2.3 — last-session lookback on HomeScreen */
+  home: {
+    sessionLookbackDays: 7,
+  },
 });

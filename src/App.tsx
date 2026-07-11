@@ -1,10 +1,17 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppStateProvider } from '@/context/AppStateContext';
+import { CaregiverRoute } from '@/router/CaregiverRoute';
 import { GateRoute, RootRedirect } from '@/router/RouteGuard';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { CalibrationScreen } from '@/screens/CalibrationScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { SessionScreen } from '@/screens/SessionScreen';
+import {
+  CaregiverScreen,
+  ExportScreen,
+  SettingsScreen,
+  TrendsScreen,
+} from '@/screens/SecondaryScreens';
 
 export function App() {
   return (
@@ -27,6 +34,17 @@ export function App() {
           >
             <Route path="/calibration" element={<CalibrationScreen />} />
             <Route path="/home" element={<HomeScreen />} />
+            <Route path="/trends" element={<TrendsScreen />} />
+            <Route path="/export" element={<ExportScreen />} />
+            <Route path="/settings" element={<SettingsScreen />} />
+            <Route
+              path="/caregiver"
+              element={
+                <CaregiverRoute>
+                  <CaregiverScreen />
+                </CaregiverRoute>
+              }
+            />
           </Route>
           <Route
             element={

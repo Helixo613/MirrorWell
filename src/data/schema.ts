@@ -68,6 +68,16 @@ export interface RepMetric {
   easeOffTriggered: 0 | 1;
 }
 
+/** API.md §3 — exercise result with nested rep rows */
+export interface ExerciseResultFull extends ExerciseResult {
+  reps: RepMetric[];
+}
+
+/** API.md §3 — session with nested exercise results */
+export interface SessionRecordFull extends SessionRecord {
+  results: ExerciseResultFull[];
+}
+
 export interface AppSettingsRow {
   settingsId: 'singleton';
   highContrast: boolean;

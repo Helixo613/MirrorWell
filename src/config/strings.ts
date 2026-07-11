@@ -167,8 +167,62 @@ export const strings = {
   },
   home: {
     title: 'MirrorWell',
-    comingSoon: 'Home screen — coming next.',
+    subtitle: 'Your exercises, at your pace.',
     startExercises: 'Start my exercises',
+    startExercisesAriaLabel: 'Start your assigned exercises',
+    loading: 'Loading your home screen…',
+    empty: {
+      title: 'Ready when you are',
+      body: 'Whenever you feel up to it, tap below to begin. There is no schedule, no rush, and nothing to catch up on.',
+    },
+    lastSession: {
+      label: 'Last session',
+      allExercisesDone: (weekday: string) =>
+        `${weekday} — all exercises done`,
+      sessionCompleted: (weekday: string) => `${weekday} — session completed`,
+      stoppedEarly: (weekday: string) =>
+        `${weekday} — you stopped when you needed to`,
+      stoppedForSafety: (weekday: string) =>
+        `${weekday} — session ended for your safety`,
+      qualityEnded: (weekday: string) =>
+        `${weekday} — session paused when conditions were difficult`,
+    },
+    recalibration: {
+      title: 'Time for a quick refresh',
+      body: 'It has been a couple of weeks since your last calibration. A fresh baseline helps measurements stay accurate.',
+      action: 'Recalibrate',
+      actionAriaLabel: 'Go to calibration to refresh your baseline',
+    },
+    nav: {
+      label: 'More options',
+      trends: 'Trends',
+      trendsAriaLabel: 'View exercise trends over time',
+      export: 'Export',
+      exportAriaLabel: 'Export a summary for your care team',
+      settings: 'Settings',
+      settingsAriaLabel: 'Open settings',
+      caregiver: 'Caregiver view',
+      caregiverAriaLabel: 'Open read-only caregiver view',
+    },
+  },
+  placeholders: {
+    trends: {
+      title: 'Trends',
+      body: 'Long-term progress charts are coming next.',
+    },
+    export: {
+      title: 'Export',
+      body: 'Clinician summary export is coming next.',
+    },
+    settings: {
+      title: 'Settings',
+      body: 'Accessibility and app settings are coming next.',
+    },
+    caregiver: {
+      title: 'Caregiver view',
+      body: 'Read-only caregiver summary is coming next.',
+    },
+    backToHome: 'Back to home',
   },
 } as const;
 

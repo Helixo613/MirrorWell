@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { StickyScreenFooter } from '@/components/layout/StickyScreenFooter';
 import { cn } from '@/lib/utils';
 
 export interface OnboardingFooterProps {
@@ -15,12 +16,7 @@ export function OnboardingFooter({
   className,
 }: OnboardingFooterProps) {
   return (
-    <footer
-      className={cn(
-        'sticky bottom-0 z-10 -mx-4 mt-auto border-t border-border bg-background/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-sm sm:-mx-6 sm:px-6',
-        className,
-      )}
-    >
+    <StickyScreenFooter className={cn('border-border pt-4', className)}>
       {helperText ? (
         <p
           id={helperId}
@@ -31,6 +27,6 @@ export function OnboardingFooter({
         </p>
       ) : null}
       {children}
-    </footer>
+    </StickyScreenFooter>
   );
 }
