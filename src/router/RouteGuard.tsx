@@ -21,10 +21,15 @@ export function GateRoute({ allowed, redirectTo, children }: GateRouteProps) {
 }
 
 export function RootRedirect() {
-  const { gate } = useAppState();
+  const { gate, activeBaseline } = useAppState();
 
   if (gate === 'ATTESTED') {
-    return <Navigate to="/calibration" replace />;
+    return (
+      <Navigate
+        to={activeBaseline ? '/home' : '/calibration'}
+        replace
+      />
+    );
   }
   if (gate === 'DEMO') {
     return <Navigate to="/session" replace />;

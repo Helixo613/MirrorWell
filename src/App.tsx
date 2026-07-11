@@ -3,6 +3,7 @@ import { AppStateProvider } from '@/context/AppStateContext';
 import { GateRoute, RootRedirect } from '@/router/RouteGuard';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { CalibrationScreen } from '@/screens/CalibrationScreen';
+import { HomeScreen } from '@/screens/HomeScreen';
 import { SessionScreen } from '@/screens/SessionScreen';
 
 export function App() {
@@ -25,6 +26,7 @@ export function App() {
             }
           >
             <Route path="/calibration" element={<CalibrationScreen />} />
+            <Route path="/home" element={<HomeScreen />} />
           </Route>
           <Route
             element={

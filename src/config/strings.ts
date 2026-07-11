@@ -86,6 +86,89 @@ export const strings = {
       title: 'Something went wrong',
       body: 'Please go back and try again. If this keeps happening, restart the app.',
     },
+    MODEL_LOAD_FAILED: {
+      title: 'Camera setup could not start',
+      body: 'The face-tracking model did not load. Make sure model files are in place, then tap Try again.',
+    },
+    CAMERA_DENIED: {
+      title: 'Camera access is needed',
+      body: 'MirrorWell needs your camera to measure movement. Allow camera access in your browser settings, then tap Try again.',
+    },
+    CAMERA_UNAVAILABLE: {
+      title: 'Camera is not available',
+      body: 'No camera was found, or another app may be using it. Close other camera apps and tap Try again.',
+    },
+    QUALITY_TOO_LOW: {
+      title: 'That capture did not meet quality',
+      body: 'Try again with more light, a steady position, and your face centered. There is no rush.',
+    },
+  },
+  quality: {
+    QUALITY_OK: '',
+    LOW_LIGHT: 'More light needed',
+    FACE_LOST: "I can't see you — adjust the camera",
+    TOO_FAR: 'Come a little closer',
+    POSE_OUT_OF_RANGE: 'Face the camera straight on',
+    LOW_CONFIDENCE: 'Hold steady for a moment',
+  },
+  calibration: {
+    loading: 'Warming up the camera — about 3 seconds',
+    journey: {
+      progressLabel: 'Calibration progress',
+      labels: ['Relax your face', 'Gentle movements', 'Quiet moment'] as const,
+    },
+    phaseAnnouncement: {
+      neutral: (current: number, total: number) =>
+        `Relax your face. Neutral capture ${current} of ${total}.`,
+      comfortableMax: (exercise: string, current: number, total: number) =>
+        `${exercise}. Gentle rep ${current} of ${total}.`,
+      noiseFloor: 'One more quiet moment. Relax your face.',
+      complete: 'Calibration complete.',
+      saving: 'Saving your calibration.',
+    },
+    helpers: {
+      captureRemaining: (seconds: number) =>
+        `${seconds} seconds remaining — hold still`,
+      qualityNotReady: 'Adjust your position until the banner clears, then tap Capture.',
+      capturing: 'Capturing…',
+    },
+    neutral: {
+      title: 'Relax your face',
+      instruction:
+        'Sit comfortably and relax your face, like you are daydreaming. Tap Capture when you are ready.',
+      captureLabel: 'Capture',
+      redoLabel: 'Redo this capture',
+      captureProgress: (current: number, total: number) =>
+        `Neutral capture ${current} of ${total}`,
+    },
+    comfortableMax: {
+      instruction:
+        'Gentle — do not strain. Make a small, slow movement, then relax.',
+      captureLabel: 'Capture rep',
+      redoLabel: 'Redo this rep',
+      repProgress: (current: number, total: number) =>
+        `Gentle rep ${current} of ${total}`,
+    },
+    noiseFloor: {
+      title: 'One more quiet moment',
+      instruction:
+        'Relax your face again for a few seconds. This helps us tell real change from small natural wobble.',
+    },
+    saving: 'Saving your calibration…',
+    complete: 'Calibration complete',
+    actions: {
+      tryAgain: 'Try again',
+      continue: 'Continue to home',
+      skipUnavailable: 'Go back',
+    },
+    errors: {
+      notAttested: 'Please complete onboarding before calibrating.',
+    },
+  },
+  home: {
+    title: 'MirrorWell',
+    comingSoon: 'Home screen — coming next.',
+    startExercises: 'Start my exercises',
   },
 } as const;
 

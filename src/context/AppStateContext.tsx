@@ -9,7 +9,7 @@ import {
 import { hydrateAppState } from '@/context/hydrateAppState';
 import { SafetyGate } from '@/session/safety';
 import { strings } from '@/config/strings';
-import type { UserProfile } from '@/data/schema';
+import type { CalibrationBaseline, UserProfile } from '@/data/schema';
 import {
   DEFAULT_SETTINGS,
   type AppSettings,
@@ -21,8 +21,10 @@ export const AppStateContext = createContext<AppStateContextValue | null>(null);
 
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile | null>(null);
+  const [activeBaseline, setActiveBaselineState] =
+    useState<CalibrationBaseline | null>(null);
+  const [settings, setSettingsState] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [gate, setGateState] = useState<GateState>('UNATTESTED');
-  const [settings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -32,6 +34,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         return;
       }
       setProfileState(state.profile);
+      setActiveBaselineState(state.activeBaseline);
+      setSettingsState(state.settings);
       setGateState(SafetyGate.isDemoMode() ? 'DEMO' : state.gate);
       setHydrated(true);
     });
@@ -48,16 +52,29 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setGateState(next);
   }, []);
 
+  const setActiveBaseline = useCallback((next: CalibrationBaseline) => {
+    setActiveBaselineState(next);
+  }, []);
+
   const value = useMemo<AppStateContextValue>(
     () => ({
       profile,
-      activeBaseline: null,
+      activeBaseline,
       settings,
       gate,
       setProfile,
       setGate,
+      setActiveBaseline,
     }),
-    [profile, settings, gate, setProfile, setGate],
+    [
+      profile,
+      activeBaseline,
+      settings,
+      gate,
+      setProfile,
+      setGate,
+      setActiveBaseline,
+    ],
   );
 
   if (!hydrated) {

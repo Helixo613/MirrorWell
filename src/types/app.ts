@@ -1,4 +1,4 @@
-import type { UserProfile } from '@/data/schema';
+import type { CalibrationBaseline, UserProfile } from '@/data/schema';
 
 export type GateState = 'UNATTESTED' | 'ATTESTED' | 'DEMO';
 
@@ -17,11 +17,12 @@ export interface AppSettings {
 
 export interface AppStateContextValue {
   profile: UserProfile | null;
-  activeBaseline: null;
+  activeBaseline: CalibrationBaseline | null;
   settings: AppSettings;
   gate: GateState;
   setProfile: (profile: UserProfile) => void;
   setGate: (gate: GateState) => void;
+  setActiveBaseline: (baseline: CalibrationBaseline) => void;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {

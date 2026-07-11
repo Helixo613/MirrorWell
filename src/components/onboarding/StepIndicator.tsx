@@ -1,4 +1,5 @@
 import { strings } from '@/config/strings';
+import { SegmentProgress } from '@/components/progress/SegmentProgress';
 import { cn } from '@/lib/utils';
 
 export interface StepIndicatorProps {
@@ -30,21 +31,12 @@ export function StepIndicator({
         aria-valuemin={1}
         aria-valuemax={totalSteps}
         aria-label={label}
-        className="flex gap-1.5"
       >
-        {Array.from({ length: totalSteps }, (_, index) => {
-          const isReached = index <= currentStep;
-          return (
-            <div
-              key={index}
-              aria-hidden
-              className={cn(
-                'h-1 flex-1 rounded-full transition-colors duration-200',
-                isReached ? 'bg-primary' : 'bg-muted-foreground/25',
-              )}
-            />
-          );
-        })}
+        <SegmentProgress
+          total={totalSteps}
+          completed={currentStep}
+          highlightActive
+        />
       </div>
       <p className="mt-3 text-center text-sm text-muted-foreground">{label}</p>
     </nav>
