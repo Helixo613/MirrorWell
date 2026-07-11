@@ -272,11 +272,28 @@ export const strings = {
     done: 'Done',
     doneAriaLabel: 'Return to home',
     demoDone: 'Back to onboarding',
+    demoDoneAriaLabel: 'Return to onboarding',
     repsDone: (count: number) => `${count} reps completed`,
     easeOffLine: (gentle: number, total: number) =>
       `You kept it gentle ${gentle} of ${total} times`,
     encouraging: 'Thank you for practicing today.',
     demoWatermark: 'DEMO — not for exercise use',
+    symmetry: {
+      label: 'Movement symmetry',
+      noMovement: 'Minimal movement recorded',
+      mostlyEven: 'Mostly even',
+      fairlyEven: 'Fairly even',
+      someDifference: 'Some difference between sides',
+      moreOnOneSide: 'More movement on one side',
+      barAriaLabel: (plain: string) => `Movement symmetry: ${plain}`,
+    },
+    exerciseListLabel: 'Exercises from this session',
+    emptyResults: 'This session ended early, so there is nothing to show.',
+    a11y: {
+      announcement: 'Session complete.',
+      exerciseLine: (name: string, reps: number, symmetry: string) =>
+        `${name}: ${reps} reps, ${symmetry}.`,
+    },
   },
   placeholders: {
     trends: {

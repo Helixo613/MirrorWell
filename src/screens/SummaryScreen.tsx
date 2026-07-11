@@ -1,85 +1,105 @@
-import { useCallback } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { useMemo } from 'react';
 import { DemoWatermark } from '@/components/session/DemoWatermark';
+import { HomeHeader } from '@/components/home/HomeHeader';
+import { PrimaryActionButton } from '@/components/home/PrimaryActionButton';
 import { ScreenShell } from '@/components/layout/ScreenShell';
+import { StickyScreenFooter } from '@/components/layout/StickyScreenFooter';
+import { StaggerFadeIn } from '@/components/motion/StaggerFadeIn';
+import { SummaryExerciseCard } from '@/components/summary/SummaryExerciseCard';
 import { EXERCISES } from '@/config/exercises';
 import { strings } from '@/config/strings';
-import { useAppState } from '@/context/useAppState';
-import type { SessionRecordFull } from '@/data/schema';
+import { useSummaryScreen } from '@/hooks/useSummaryScreen';
+import { symmetryPlainLabel } from '@/lib/summaryMetrics';
 
-interface SummaryLocationState {
-  record: SessionRecordFull;
-  demo?: boolean;
-}
+const STAGGER_MS = 60;
 
 export function SummaryScreen() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { settings } = useAppState();
-  const state = location.state as SummaryLocationState | null;
-  const record = state?.record;
-  const isDemo = state?.demo ?? false;
+  const summary = useSummaryScreen();
+  const record = summary.record;
 
-  const handleDone = useCallback(() => {
-    navigate(isDemo ? '/onboarding' : '/home', { replace: true });
-  }, [navigate, isDemo]);
+  const announcement = useMemo(() => {
+    if (!record) {
+      return '';
+    }
+    const lines = record.results.map((result) =>
+      strings.summary.a11y.exerciseLine(
+        EXERCISES[result.exerciseId].displayName,
+        result.repsCompleted,
+        symmetryPlainLabel(result.meanSymmetryIndex),
+      ),
+    );
+    return [strings.summary.a11y.announcement, ...lines].join(' ');
+  }, [record]);
 
-  if (!record) {
-    navigate('/home', { replace: true });
+  if (summary.status === 'redirecting' || !record) {
     return null;
   }
 
-  const firstResult = record.results[0];
-  const easeOffTotal = firstResult?.reps.length ?? 0;
-  const easeOffCount = firstResult?.easeOffCount ?? 0;
+  const { isDemo, textScale, highContrast, handleDone, headingId } = summary;
+  const hasResults = record.results.length > 0;
 
   return (
-    <ScreenShell textScale={settings.textScale} className="gap-6">
-      <DemoWatermark
-        label={strings.summary.demoWatermark}
-        visible={isDemo}
-      />
+    <ScreenShell
+      textScale={textScale}
+      ariaLabelledBy={headingId}
+      className="gap-0 pb-0"
+    >
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
 
-      <header className="space-y-2 pt-8">
-        <h1 className="text-2xl font-semibold">{strings.summary.title}</h1>
-        <p className="text-base text-muted-foreground">
-          {strings.summary.encouraging}
-        </p>
-      </header>
+      <DemoWatermark label={strings.summary.demoWatermark} visible={isDemo} />
 
-      {firstResult ? (
-        <section
-          aria-labelledby="summary-result-title"
-          className="space-y-3 rounded-lg bg-secondary/40 p-5 sm:p-6"
-        >
-          <h2 id="summary-result-title" className="text-lg font-medium">
-            {EXERCISES[firstResult.exerciseId].displayName}
-          </h2>
-          <p className="text-base text-muted-foreground">
-            {strings.summary.repsDone(firstResult.repsCompleted)}
-          </p>
-          {easeOffTotal > 0 ? (
-            <p className="text-base text-muted-foreground">
-              {strings.summary.easeOffLine(easeOffCount, easeOffTotal)}
+      <div className="flex flex-1 flex-col gap-6 pb-6">
+        <StaggerFadeIn animationKey="summary-header">
+          <HomeHeader
+            title={strings.summary.title}
+            subtitle={strings.summary.encouraging}
+            headingId={headingId}
+          />
+        </StaggerFadeIn>
+
+        {hasResults ? (
+          <section
+            aria-label={strings.summary.exerciseListLabel}
+            className="flex flex-col gap-4"
+          >
+            {record.results.map((result, index) => (
+              <StaggerFadeIn
+                key={result.resultId}
+                animationKey={result.resultId}
+                delayMs={STAGGER_MS * (index + 1)}
+              >
+                <SummaryExerciseCard
+                  result={result}
+                  exerciseName={EXERCISES[result.exerciseId].displayName}
+                  headingId={`summary-exercise-${index}`}
+                  highContrast={highContrast}
+                  animateReveal
+                />
+              </StaggerFadeIn>
+            ))}
+          </section>
+        ) : (
+          <StaggerFadeIn animationKey="summary-empty" delayMs={STAGGER_MS}>
+            <p className="text-base leading-relaxed text-muted-foreground">
+              {strings.summary.emptyResults}
             </p>
-          ) : null}
-        </section>
-      ) : null}
+          </StaggerFadeIn>
+        )}
+      </div>
 
-      <Button
-        type="button"
-        size="lg"
-        className="mt-auto w-full"
-        aria-label={
-          isDemo
-            ? strings.summary.demoDone
-            : strings.summary.doneAriaLabel
-        }
-        onClick={handleDone}
-      >
-        {isDemo ? strings.summary.demoDone : strings.summary.done}
-      </Button>
+      <StickyScreenFooter>
+        <PrimaryActionButton
+          label={isDemo ? strings.summary.demoDone : strings.summary.done}
+          aria-label={
+            isDemo
+              ? strings.summary.demoDoneAriaLabel
+              : strings.summary.doneAriaLabel
+          }
+          onClick={handleDone}
+        />
+      </StickyScreenFooter>
     </ScreenShell>
   );
 }

@@ -49,4 +49,10 @@ export const thresholds = Object.freeze({
   home: {
     sessionLookbackDays: 7,
   },
+  /** FRONTEND §2.5 — plain-language symmetry buckets (no numeric grades) */
+  summary: {
+    symmetryMostlyEvenMin: 0.85,
+    symmetryFairlyEvenMin: 0.7,
+    symmetrySomeDifferenceMin: 0.55,
+  },
 });
