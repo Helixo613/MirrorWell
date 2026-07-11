@@ -1,15 +1,6 @@
 import { strings } from '@/config/strings';
 import { PlaceholderScreen } from '@/screens/PlaceholderScreen';
 
-export function TrendsScreen() {
-  return (
-    <PlaceholderScreen
-      title={strings.placeholders.trends.title}
-      body={strings.placeholders.trends.body}
-    />
-  );
-}
-
 export function ExportScreen() {
   return (
     <PlaceholderScreen

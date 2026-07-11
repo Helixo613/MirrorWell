@@ -55,4 +55,8 @@ export const thresholds = Object.freeze({
     symmetryFairlyEvenMin: 0.7,
     symmetrySomeDifferenceMin: 0.55,
   },
+  /** FRONTEND §2.6 — minimum periods before showing a trend chart */
+  trends: {
+    minPeriodsForChart: 2,
+  },
 });

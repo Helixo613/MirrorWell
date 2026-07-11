@@ -1,4 +1,7 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { ScreenShell } from '@/components/layout/ScreenShell';
+import { strings } from '@/config/strings';
 import { AppStateProvider } from '@/context/AppStateContext';
 import { CaregiverRoute } from '@/router/CaregiverRoute';
 import { GateRoute, RootRedirect } from '@/router/RouteGuard';
@@ -11,8 +14,28 @@ import {
   CaregiverScreen,
   ExportScreen,
   SettingsScreen,
-  TrendsScreen,
 } from '@/screens/SecondaryScreens';
+import { DEFAULT_SETTINGS } from '@/types/app';
+
+const TrendsScreen = lazy(() =>
+  import('@/screens/TrendsScreen').then((module) => ({
+    default: module.TrendsScreen,
+  })),
+);
+
+function TrendsRouteFallback() {
+  return (
+    <ScreenShell textScale={DEFAULT_SETTINGS.textScale}>
+      <p
+        className="flex flex-1 items-center justify-center text-muted-foreground"
+        role="status"
+        aria-live="polite"
+      >
+        {strings.trends.loading}
+      </p>
+    </ScreenShell>
+  );
+}
 
 export function App() {
   return (
@@ -35,7 +58,14 @@ export function App() {
           >
             <Route path="/calibration" element={<CalibrationScreen />} />
             <Route path="/home" element={<HomeScreen />} />
-            <Route path="/trends" element={<TrendsScreen />} />
+            <Route
+              path="/trends"
+              element={
+                <Suspense fallback={<TrendsRouteFallback />}>
+                  <TrendsScreen />
+                </Suspense>
+              }
+            />
             <Route path="/export" element={<ExportScreen />} />
             <Route path="/settings" element={<SettingsScreen />} />
             <Route

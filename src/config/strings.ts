@@ -295,6 +295,65 @@ export const strings = {
         `${name}: ${reps} reps, ${symmetry}.`,
     },
   },
+  trends: {
+    title: 'Trends',
+    subtitle: 'Your practice over time',
+    loading: 'Loading trends…',
+    empty: {
+      title: 'Not enough practice yet',
+      body: 'Trends appear after a couple of weeks of practice.',
+    },
+    exerciseSelectorLabel: 'Exercise',
+    granularity: {
+      label: 'Time range',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      weeklyAriaLabel: 'Show weekly trends',
+      monthlyAriaLabel: 'Show monthly trends',
+    },
+    steadyPill: 'Steady',
+    steadyPillForPeriod: (period: string) => `${period}: steady`,
+    caption: {
+      holdingSteady: (exercise: string) =>
+        `Your ${exercise} has been holding steady.`,
+      gettingMoreEven: (exercise: string, rangeLabel: string) =>
+        `Your ${exercise} has been getting more even over ${rangeLabel}.`,
+      stillCollecting: (exercise: string) =>
+        `Your ${exercise} practice is still building — check back after a few more sessions.`,
+    },
+    rangeLabel: {
+      twoMonths: 'the last two months',
+      fewWeeks: 'the last few weeks',
+    },
+    chart: {
+      ariaLabel: (exercise: string) => `Symmetry trend for ${exercise}`,
+    },
+    table: {
+      toggleShow: 'View as table',
+      toggleHide: 'View as chart',
+      toggleShowAriaLabel: 'Show trend data as a table for screen readers',
+      toggleHideAriaLabel: 'Show trend data as a chart',
+      caption: 'Symmetry trend data',
+      period: 'Period',
+      symmetry: 'Average symmetry',
+      sessions: 'Sessions',
+      change: 'Change',
+      steady: 'Steady',
+      noticeable: 'Noticeable change',
+    },
+    nav: {
+      back: 'Back to home',
+      backAriaLabel: 'Return to home',
+    },
+    refreshing: 'Updating trends…',
+    a11y: {
+      announcement: (exercise: string, caption: string) =>
+        `Trends for ${exercise}. ${caption}`,
+      steadyPeriodsLabel: 'Periods within measurement noise',
+      viewModeChart: 'Showing trend as chart',
+      viewModeTable: 'Showing trend data as table',
+    },
+  },
   placeholders: {
     trends: {
       title: 'Trends',
