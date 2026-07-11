@@ -59,4 +59,8 @@ export const thresholds = Object.freeze({
   trends: {
     minPeriodsForChart: 2,
   },
+  /** FRONTEND §2.8 — default export date window */
+  export: {
+    defaultRangeWeeks: 8,
+  },
 });

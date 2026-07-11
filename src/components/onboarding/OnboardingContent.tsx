@@ -121,32 +121,3 @@ export function OnboardingStepFrame({
     </div>
   );
 }
-
-export interface CollapsibleDetailsProps {
-  title: string;
-  children: ReactNode;
-  className?: string;
-}
-
-export function CollapsibleDetails({
-  title,
-  children,
-  className,
-}: CollapsibleDetailsProps) {
-  return (
-    <details className={cn('group rounded-lg border border-border bg-card', className)}>
-      <summary className="min-h-touch cursor-pointer list-none px-5 py-4 text-lg font-medium leading-snug marker:content-none [&::-webkit-details-marker]:hidden">
-        <span className="flex items-center justify-between gap-2">
-          {title}
-          <span
-            aria-hidden
-            className="text-muted-foreground transition-transform group-open:rotate-180"
-          >
-            ▾
-          </span>
-        </span>
-      </summary>
-      <div className="border-t border-border px-5 pb-5 pt-2">{children}</div>
-    </details>
-  );
-}

@@ -1,8 +1,8 @@
 import { strings } from '@/config/strings';
 import { CheckboxGroup } from '@/components/forms/CheckboxGroup';
+import { CollapsibleDetails } from '@/components/content/CollapsibleDetails';
 import {
   BulletList,
-  CollapsibleDetails,
   OnboardingStepFrame,
   ProseBlock,
   SafetyCallout,

@@ -354,6 +354,98 @@ export const strings = {
       viewModeTable: 'Showing trend data as table',
     },
   },
+  export: {
+    title: 'Export',
+    subtitle: 'Share a summary with your care team',
+    loading: 'Loading export…',
+    generating: 'Preparing your summary…',
+    scopeNoticeHeading: 'About this summary',
+    nonDiagnosticNotice:
+      "MirrorWell is an exercise-support tool. This summary describes exercise activity and movement symmetry relative to the user's own calibration. It is not a clinical assessment, score, or measure of recovery.",
+    dateRange: {
+      label: 'Date range',
+      from: 'From',
+      to: 'To',
+      fromAriaLabel: 'Export start date',
+      toAriaLabel: 'Export end date',
+    },
+    included: {
+      heading: "What's in this file",
+      items: [
+        'Practice sessions in your chosen date range',
+        'Symmetry trends for each assigned exercise',
+        'How often you practiced and session completion',
+        'Measurement quality indicators your clinician can review',
+      ] as const,
+    },
+    generate: 'Generate summary',
+    generateAriaLabel: 'Generate clinician summary for the selected date range',
+    empty: {
+      title: 'Nothing to export for these dates',
+      body: 'Try a wider date range, or finish a few practice sessions first.',
+    },
+    success: {
+      heading: 'Your summary is ready',
+      previewAriaLabel: 'Summary preview',
+      previewSessions: (count: number) =>
+        count === 1 ? '1 practice session' : `${count} practice sessions`,
+      previewRange: (from: string, to: string) => `${from} to ${to}`,
+      previewCompletion: (pct: number) => `${pct}% of sessions completed`,
+      previewExercises: (count: number) =>
+        count === 1 ? '1 exercise tracked' : `${count} exercises tracked`,
+      announcement: (
+        sessionCount: number,
+        from: string,
+        to: string,
+        completionPct: number,
+      ) =>
+        `Summary ready. ${sessionCount} practice sessions from ${from} to ${to}. ${completionPct} percent completed.`,
+      jsonTitle: 'Detailed data file',
+      jsonDescription: 'For clinical records systems that accept structured data',
+      jsonDownload: 'Download data file',
+      jsonDownloadAriaLabel: 'Download detailed data file for your care team',
+      htmlTitle: 'Printable summary',
+      htmlDescription: 'A one-page overview you can print or save as PDF',
+      htmlDownload: 'Download printable summary',
+      htmlDownloadAriaLabel: 'Download printable summary for your care team',
+    },
+    advisory: 'Share this file only with your care team.',
+    filename: (dateYmd: string) => `mirrorwell-summary-${dateYmd}`,
+    nav: {
+      back: 'Back to home',
+      backAriaLabel: 'Return to home',
+    },
+    html: {
+      affectedSideLeft: 'left side',
+      affectedSideRight: 'right side',
+      affectedSideUnknown: 'side not specified',
+      noTrendPoints: 'Not enough practice yet for a trend.',
+      period: 'Period',
+      symmetry: 'Symmetry',
+      sessions: 'Sessions',
+      reps: 'reps',
+      easeOff: (count: number) =>
+        count === 1 ? '1 ease-off cue' : `${count} ease-off cues`,
+      measurementQuality: (pct: string) => `${pct} low-quality frames`,
+      generated: (date: string) => `Generated ${date}`,
+      range: (from: string, to: string) => `Date range: ${from} to ${to}`,
+      profile: (side: string, exercises: string) =>
+        `Affected side: ${side}. Exercises: ${exercises}.`,
+      adherenceHeading: 'Practice adherence',
+      completionRate: (pct: string) => `Session completion rate: ${pct}`,
+      sessionsPerWeek: (counts: string) => `Sessions per week: ${counts}`,
+      trendsHeading: 'Symmetry trends',
+      sessionsHeading: (count: number) =>
+        count === 1 ? '1 session' : `${count} sessions`,
+      date: 'Date',
+      endReason: 'End reason',
+      details: 'Details',
+      moreSessions: (count: number) =>
+        count === 1
+          ? 'Plus 1 more session in the JSON file.'
+          : `Plus ${count} more sessions in the JSON file.`,
+    },
+  },
   placeholders: {
     trends: {
       title: 'Trends',

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { SoftPanel } from '@/components/layout/SoftPanel';
 import { strings } from '@/config/strings';
 import type { TrendsViewMode } from '@/types/trends';
 import { cn } from '@/lib/utils';
@@ -25,14 +26,11 @@ export function TrendsChartCard({
   className,
 }: TrendsChartCardProps) {
   return (
-    <section
-      aria-labelledby={!isRefreshing && caption ? 'trends-chart-caption' : undefined}
-      aria-label={isRefreshing ? strings.trends.refreshing : undefined}
-      aria-busy={isRefreshing}
-      className={cn(
-        'space-y-4 rounded-lg bg-secondary/30 p-5 sm:p-6',
-        className,
-      )}
+    <SoftPanel
+      labelledBy={!isRefreshing && caption ? 'trends-chart-caption' : undefined}
+      ariaLabel={isRefreshing ? strings.trends.refreshing : undefined}
+      ariaBusy={isRefreshing}
+      className={cn('space-y-4', className)}
     >
       <div
         className={cn(
@@ -79,6 +77,6 @@ export function TrendsChartCard({
           ? strings.trends.table.toggleShow
           : strings.trends.table.toggleHide}
       </Button>
-    </section>
+    </SoftPanel>
   );
 }

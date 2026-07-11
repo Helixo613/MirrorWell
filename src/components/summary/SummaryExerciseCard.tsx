@@ -1,4 +1,5 @@
 import { SymmetryBar } from '@/components/feedback/SymmetryBar';
+import { SoftPanel } from '@/components/layout/SoftPanel';
 import { strings } from '@/config/strings';
 import type { ExerciseResultFull } from '@/data/schema';
 import { gentleRepCounts, symmetryPlainLabel } from '@/lib/summaryMetrics';
@@ -25,12 +26,10 @@ export function SummaryExerciseCard({
   const { gentle, total } = gentleRepCounts(result.reps);
 
   return (
-    <article
-      aria-labelledby={headingId}
-      className={cn(
-        'space-y-4 rounded-lg bg-secondary/30 p-5 sm:p-6',
-        className,
-      )}
+    <SoftPanel
+      as="article"
+      labelledBy={headingId}
+      className={cn('space-y-4', className)}
     >
       <header className="space-y-1.5">
         <h2 id={headingId} className="text-lg font-semibold leading-snug">
@@ -66,6 +65,6 @@ export function SummaryExerciseCard({
           {strings.summary.easeOffLine(gentle, total)}
         </p>
       ) : null}
-    </article>
+    </SoftPanel>
   );
 }

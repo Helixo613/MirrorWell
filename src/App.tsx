@@ -10,9 +10,9 @@ import { CalibrationScreen } from '@/screens/CalibrationScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { SessionScreen } from '@/screens/SessionScreen';
 import { SummaryScreen } from '@/screens/SummaryScreen';
+import { ExportScreen } from '@/screens/ExportScreen';
 import {
   CaregiverScreen,
-  ExportScreen,
   SettingsScreen,
 } from '@/screens/SecondaryScreens';
 import { DEFAULT_SETTINGS } from '@/types/app';
