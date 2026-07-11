@@ -63,4 +63,11 @@ export const thresholds = Object.freeze({
   export: {
     defaultRangeWeeks: 8,
   },
+  /** FRONTEND §2.9 / §4 — text size control bounds */
+  settings: {
+    textScaleMin: 1.0,
+    textScaleMax: 2.0,
+    textScaleStep: 0.1,
+    saveFeedbackDismissMs: 2500,
+  },
 });

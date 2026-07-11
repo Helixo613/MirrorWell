@@ -11,10 +11,8 @@ import { HomeScreen } from '@/screens/HomeScreen';
 import { SessionScreen } from '@/screens/SessionScreen';
 import { SummaryScreen } from '@/screens/SummaryScreen';
 import { ExportScreen } from '@/screens/ExportScreen';
-import {
-  CaregiverScreen,
-  SettingsScreen,
-} from '@/screens/SecondaryScreens';
+import { SettingsScreen } from '@/screens/SettingsScreen';
+import { CaregiverScreen } from '@/screens/SecondaryScreens';
 import { DEFAULT_SETTINGS } from '@/types/app';
 
 const TrendsScreen = lazy(() =>

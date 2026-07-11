@@ -446,6 +446,100 @@ export const strings = {
           : `Plus ${count} more sessions in the JSON file.`,
     },
   },
+  settings: {
+    title: 'Settings',
+    subtitle: 'Choose what feels comfortable',
+    loading: 'Loading settings…',
+    saving: 'Saving…',
+    saved: (label: string) => `Saved · ${label}`,
+    savedAnnouncement: (label: string) => `${label} updated`,
+    sections: {
+      display: 'Display',
+      cues: 'Cues',
+      displayAndCues: 'Display & cues',
+      trends: 'Trends',
+      sharing: 'Sharing',
+      trendsAndSharing: 'Trends & sharing',
+      calibration: 'Calibration',
+      danger: 'Danger zone',
+    },
+    display: {
+      highContrast: {
+        label: 'High contrast',
+        description: 'Stronger colors for the symmetry bar and charts',
+      },
+      textScale: {
+        label: 'Text size',
+        value: (pct: number) => `${pct}%`,
+        decrease: 'Smaller text',
+        decreaseAriaLabel: 'Decrease text size by ten percent',
+        increase: 'Larger text',
+        increaseAriaLabel: 'Increase text size by ten percent',
+        sliderAriaLabel: 'Text size',
+      },
+      reducedFacePreview: {
+        label: 'Show me less of my face',
+        description: 'Dims the camera preview during exercises',
+      },
+      showAffectedSideMarker: {
+        label: 'Focus side marker',
+        description: 'Shows which side to pay attention to during exercises',
+      },
+    },
+    cues: {
+      haptics: {
+        label: 'Vibration cues',
+        description: 'Gentle pulses on rep completion (Android only)',
+      },
+      audio: {
+        label: 'Sound cues',
+        description: 'Soft tones for reps and quality reminders',
+      },
+    },
+    trends: {
+      granularityLabel: 'Trend time range',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      weeklyAriaLabel: 'Show weekly trends by default',
+      monthlyAriaLabel: 'Show monthly trends by default',
+    },
+    sharing: {
+      caregiver: {
+        label: 'Caregiver view',
+        description:
+          'Lets a trusted person see practice summaries on this device — read only, nothing is shared online',
+      },
+    },
+    calibration: {
+      navLabel: 'Calibration',
+      recalibrate: 'Recalibrate now',
+      recalibrateAriaLabel: 'Open calibration to capture a new baseline',
+      description: 'Update your neutral face reference if lighting or posture has changed',
+    },
+    delete: {
+      trigger: 'Delete everything',
+      triggerAriaLabel: 'Delete all data stored on this device',
+      dialogTitle: 'Delete all data?',
+      dialogBody:
+        'This removes all practice history, calibration, and settings from this device. This cannot be undone.',
+      confirmLabel: 'Type DELETE to confirm',
+      confirmPlaceholder: 'DELETE',
+      confirmToken: 'DELETE',
+      confirmButton: 'Delete everything',
+      confirmButtonAriaLabel: 'Permanently delete all data on this device',
+      cancel: 'Cancel',
+      cancelAriaLabel: 'Cancel deletion',
+      deleting: 'Deleting all data…',
+      doneAnnouncement: 'All data deleted.',
+    },
+    nav: {
+      back: 'Back to home',
+      backAriaLabel: 'Return to home',
+    },
+    a11y: {
+      updateFailed: 'Could not save that setting. Please try again.',
+    },
+  },
   placeholders: {
     trends: {
       title: 'Trends',

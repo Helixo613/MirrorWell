@@ -13,6 +13,7 @@ export interface SegmentedControlProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 export function SegmentedControl<T extends string>({
@@ -21,6 +22,7 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   className,
+  disabled = false,
 }: SegmentedControlProps<T>) {
   const groupId = `${label.replace(/\s+/g, '-').toLowerCase()}-group`;
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -75,6 +77,7 @@ export function SegmentedControl<T extends string>({
               aria-selected={selected}
               aria-label={option.ariaLabel ?? option.label}
               tabIndex={selected ? 0 : -1}
+              disabled={disabled}
               className={cn(
                 'min-h-touch rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 selected

@@ -349,4 +349,37 @@ export const StorageService = {
 
     return session.sessionId;
   },
+
+  async deleteAllData(): Promise<void> {
+    if (SafetyGate.isDemoMode()) {
+      throw new MirrorWellError(
+        'VALIDATION_FAILED',
+        'demo mode is read-only',
+        true,
+      );
+    }
+
+    await openDb();
+    assertDbOpen();
+
+    await db.transaction(
+      'rw',
+      [
+        db.user_profile,
+        db.calibration_baseline,
+        db.session_record,
+        db.exercise_result,
+        db.rep_metric,
+        db.app_settings,
+      ],
+      async () => {
+        await db.user_profile.clear();
+        await db.calibration_baseline.clear();
+        await db.session_record.clear();
+        await db.exercise_result.clear();
+        await db.rep_metric.clear();
+        await db.app_settings.clear();
+      },
+    );
+  },
 };

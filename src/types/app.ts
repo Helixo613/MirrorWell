@@ -20,9 +20,10 @@ export interface AppStateContextValue {
   activeBaseline: CalibrationBaseline | null;
   settings: AppSettings;
   gate: GateState;
-  setProfile: (profile: UserProfile) => void;
+  setProfile: (profile: UserProfile | null) => void;
   setGate: (gate: GateState) => void;
-  setActiveBaseline: (baseline: CalibrationBaseline) => void;
+  setActiveBaseline: (baseline: CalibrationBaseline | null) => void;
+  setSettings: (settings: AppSettings) => void;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {

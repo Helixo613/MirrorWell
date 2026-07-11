@@ -44,7 +44,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const setProfile = useCallback((next: UserProfile) => {
+  const setProfile = useCallback((next: UserProfile | null) => {
     setProfileState(next);
   }, []);
 
@@ -52,8 +52,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setGateState(next);
   }, []);
 
-  const setActiveBaseline = useCallback((next: CalibrationBaseline) => {
+  const setActiveBaseline = useCallback((next: CalibrationBaseline | null) => {
     setActiveBaselineState(next);
+  }, []);
+
+  const setSettings = useCallback((next: AppSettings) => {
+    setSettingsState(next);
   }, []);
 
   const value = useMemo<AppStateContextValue>(
@@ -65,6 +69,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setProfile,
       setGate,
       setActiveBaseline,
+      setSettings,
     }),
     [
       profile,
@@ -74,6 +79,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setProfile,
       setGate,
       setActiveBaseline,
+      setSettings,
     ],
   );
 
