@@ -1,0 +1,106 @@
+{
+  "subjectId": "S01",
+  "generatedAt": "2026-07-10T13:39:58.235Z",
+  "videoSpecs": {
+    "neutral": {
+      "width": 1280,
+      "height": 720,
+      "durationMs": 12161.667,
+      "totalSamples": 122,
+      "quality": {
+        "QUALITY_OK": 122
+      },
+      "okFrames": 122
+    },
+    "EX_SMILE": {
+      "width": 1280,
+      "height": 720,
+      "durationMs": 8689.5,
+      "totalSamples": 87,
+      "quality": {
+        "QUALITY_OK": 87
+      },
+      "okFrames": 87
+    },
+    "low_light": {
+      "width": 1280,
+      "height": 720,
+      "durationMs": 10257.633,
+      "totalSamples": 103,
+      "quality": {
+        "QUALITY_OK": 103
+      },
+      "okFrames": 103
+    },
+    "distance_2m": {
+      "width": 1280,
+      "height": 720,
+      "durationMs": 10433.567000000001,
+      "totalSamples": 105,
+      "quality": {
+        "FACE_LOST": 1,
+        "QUALITY_OK": 104
+      },
+      "okFrames": 104
+    },
+    "yaw_15": {
+      "width": 1280,
+      "height": 720,
+      "durationMs": 8945.6,
+      "totalSamples": 90,
+      "quality": {
+        "FACE_LOST": 1,
+        "POSE_OUT_OF_RANGE": 89
+      },
+      "okFrames": 0
+    }
+  },
+  "neutralStats": {
+    "REGION_BROW": {
+      "left": 0.40608668378162127,
+      "right": 0.4461401100610928
+    },
+    "REGION_EYELID": {
+      "left": 0.17991896470567398,
+      "right": 0.1756181947072081
+    },
+    "REGION_MOUTH_CORNER": {
+      "left": 0.8459595773592752,
+      "right": 0.8152769707157909
+    },
+    "REGION_LIP": {
+      "left": 0.29864727879956765,
+      "right": 0.28818595871287245
+    }
+  },
+  "bars": {
+    "B1": {
+      "metric": "symmetryIndex std at neutral (fallback: displacement std if SI mostly null)",
+      "siSampleCount": 1,
+      "siStd": null,
+      "displacementStd": 0.001304178969580831,
+      "threshold": 0.05,
+      "pass": true
+    },
+    "B2": {
+      "metric": "held-expression regional displacement max relative deviation across good/low_light/distance_2m",
+      "means": {
+        "EX_SMILE": 0.053878859330344336,
+        "low_light": 0.09432961661942423,
+        "distance_2m": 0.0676331772988606
+      },
+      "maxRelativeDeviation": 0.3110947104000187,
+      "threshold": 0.05,
+      "pass": false
+    },
+    "B3": {
+      "metric": "|mean SI(EX_SMILE) - mean SI(yaw_15)|",
+      "meanSiSmile": 0.92964186621743,
+      "meanSiYaw": null,
+      "delta": null,
+      "threshold": 0.05,
+      "pass": false
+    }
+  },
+  "overallPass": false
+}
