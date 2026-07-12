@@ -43,7 +43,7 @@ Cadence: `CaptureService → LandmarkEngine → QualityMonitor → Normalization
 | Language | TypeScript 5.9.3 | Typed contracts between tracks; AI-agent friendly. |
 | UI | React 18.3.1 + react-dom 18.3.1 | Mature, free, componentized screens. |
 | Build/PWA | Vite 5.4.21 + `@vitejs/plugin-react` 5.2.0 + `vite-plugin-pwa` 1.3.0 | Fast builds; offline-first install on both target platforms. |
-| Face landmarks | `@mediapipe/tasks-vision` FaceLandmarker 0.10.35 | Pretrained 478-point mesh + facial transformation matrix, on-device WASM/WebGPU, free. |
+| Face landmarks | `@mediapipe/tasks-vision` FaceLandmarker 0.10.35 | Pretrained 478-point mesh + facial transformation matrix, on-device WASM, GPU delegate (backend not asserted; WebGPU unverified for 0.10.35), free. |
 | Storage | Dexie 4.4.4 (IndexedDB) | Typed offline persistence for numeric metrics only. |
 | Charts | Recharts 2.15.4 | Declarative trends chart. |
 | Unit tests | Vitest 3.2.7 + `fake-indexeddb` 6.2.5 + `@vitest/coverage-v8` 3.2.7 | Fast TS-native tests for metric math and storage; coverage-v8 measures the Task 7 100%-branch-coverage hard requirement (TESTS.md §2). |
@@ -54,7 +54,7 @@ Cadence: `CaptureService → LandmarkEngine → QualityMonitor → Normalization
 
 **Resolution note (Task 1, 2026-07-09):** every exact version above is the latest stable release **within the major already fixed by this table** (Vite 5.x, React 18.x, TypeScript 5.x, Recharts 2.x, `@mediapipe/tasks-vision` 0.10.x, Playwright 1.x). Current npm `latest` tags for several of these packages point to newer majors (Vite 8, React 19, TypeScript 7, Recharts 3) that were **not** installed — bumping majors is a separate decision requiring its own doc amendment, not something Task 1's "resolve needs-verification" instruction authorizes. `@vitejs/plugin-react` 5.2.0 and `vitest` 3.2.7 were selected (over their newest majors, which require Vite ^8) specifically because their `peerDependencies` are compatible with the pinned Vite 5.x. `@types/node` 22.20.1 was added as a dev-only type-declarations package (not a stack "Concern" choice — required transitively by Vitest's own peer dependencies and by `process` usage in `playwright.config.ts`).
 
-**Supported platforms (hard gates):** Windows desktop (Chromium, Firefox) and Android (Chrome). **Apple platforms are out of scope** — no code path may depend on them; no test targets them. **PWA installation** is supported on Chromium desktop and Android Chrome only; Firefox desktop does not support PWA install and runs MirrorWell as an **offline-capable browser tab** (the service worker still works) — Firefox remains a hard test gate regardless.
+**Supported platforms (hard gates):** Windows desktop (Chromium, Firefox) and Android (Chrome). **Apple platforms are out of scope** — no code path may depend on them; no test targets them. **PWA installation** is supported on Chromium desktop and Android Chrome; Firefox 143+ on Windows supports web-app install; older Firefox runs as offline-capable tab; Firefox remains a hard test gate either way.
 
 ## 3. Components
 
@@ -116,11 +116,12 @@ Exactly **one** model, quarantined behind one interface. Everything downstream i
 |---|---|
 | Call site | `LandmarkEngine.detect(video, timestampMs)` — hot path, per frame |
 | Model | MediaPipe FaceLandmarker (`face_landmarker.task`, ~3 MB, bundled at `public/models/`) + the tasks-vision **WASM runtime bundled at `public/wasm/`** (copied from the npm package at postinstall; `FilesetResolver` points at it, never a CDN). Both hash-verified against `models.lock.json`. |
-| Inference | **On-device only** (WASM, WebGPU delegate where available). Remote inference is forbidden — it would violate the no-network rule and stream faces off-device. |
+| Inference | **On-device only** (WASM, GPU delegate — backend not asserted; WebGPU unverified for 0.10.35). Remote inference is forbidden — it would violate the no-network rule and stream faces off-device. |
 | Input | The playing `HTMLVideoElement` (camera stream ≥ 640×480) passed to `detectForVideo` with a timestamp — the model handles conversion internally; we never preprocess |
 | Output | `LandmarkFrame { landmarks: Point3D[478] (x,y,z floats, normalized image coords), headPose: Matrix4 (facial transformation matrix, row-major float[16]), facePresent: boolean (faceLandmarks non-empty — the result exposes no per-frame confidence; sensitivity is set via the minFaceDetectionConfidence/minFacePresenceConfidence/minTrackingConfidence options, defaults 0.5), timestampMs: number }` |
 | Failure | `MODEL_LOAD_FAILED` at init (blocking screen, retry); `INFERENCE_FAILED` per frame (counts as `FACE_LOST` for gating) |
 | Downstream | `NormalizationLayer` consumes **raw landmark coordinates**, not blendshapes — blendshapes are more prior-laden on atypical faces (MODEL_AND_DATA §2) |
+| Telemetry release blocker | MediaPipe repo privacy notice mentions Tasks API utilization metrics; runtime network inspection of the pinned package must prove zero telemetry before release. |
 
 ## 7. Metric definitions (canonical math)
 

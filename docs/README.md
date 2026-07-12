@@ -28,15 +28,15 @@ Facial **neuromuscular retraining (NMR) / mime therapy** for peripheral facial p
 
 | Layer | Choice | Why (one line) |
 |---|---|---|
-| Language / UI | TypeScript 5.x + React 18.x | Typed cross-module contracts; free; agent-friendly. |
-| Build / PWA | Vite 5.x + `vite-plugin-pwa` (version **needs verification**) | Offline-first; installable on Chromium desktop + Android Chrome; Firefox desktop runs as an offline-capable tab (no PWA install) but remains a hard test gate. |
-| Face sensing | `@mediapipe/tasks-vision` FaceLandmarker 0.10.x (**needs verification**) | Pretrained 478-landmark model + head pose, on-device WASM/WebGPU. |
-| Storage | Dexie 4.x over IndexedDB | Typed local persistence for numeric metrics only. |
-| Charts | Recharts 2.x (**needs verification**) | Declarative trends chart. |
-| Tests | Vitest + Playwright 1.x + `fake-indexeddb` + `@axe-core/playwright` (versions **needs verification**) | Unit metric math; deterministic E2E via fake camera; a11y scans. |
+| Language / UI | TypeScript 5.9.3 + React 18.3.1 | Typed cross-module contracts; free; agent-friendly. |
+| Build / PWA | Vite 5.4.21 + `vite-plugin-pwa` 1.3.0 | Offline-first; installable on Chromium desktop + Android Chrome; Firefox 143+ on Windows supports web-app install; older Firefox runs as offline-capable tab; Firefox remains a hard test gate either way. |
+| Face sensing | `@mediapipe/tasks-vision` FaceLandmarker 0.10.35 | Pretrained 478-landmark model + head pose, on-device WASM, GPU delegate (backend not asserted; WebGPU unverified for 0.10.35). |
+| Storage | Dexie 4.4.4 over IndexedDB | Typed local persistence for numeric metrics only. |
+| Charts | Recharts 2.15.4 | Declarative trends chart. |
+| Tests | Vitest 3.2.7 + Playwright 1.61.1 + `fake-indexeddb` 6.2.5 + `@axe-core/playwright` 4.12.1 | Unit metric math; deterministic E2E via fake camera; a11y scans. |
 | Server | **None — deliberately** | Health data never leaves the device; clinician review via export files. |
 
-**Version pinning rule:** Task 1 of `IMPLEMENTATION.md` resolves every "needs verification" version to latest stable and records it in ARCHITECTURE §2; the pinned table is thereafter canonical.
+**Version pinning rule:** exact versions are recorded in ARCHITECTURE §2; that table is canonical and no other dependency may be added without updating it.
 
 ## Non-goals (bounded scope is what makes this finishable)
 

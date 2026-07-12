@@ -31,7 +31,7 @@ These were verified against primary sources during doc review. Standard tutorial
 2. **The MediaPipe WASM runtime must be bundled, never CDN-loaded.** `FilesetResolver.forVisionTasks('/wasm')` points at `public/wasm/` (copied from `node_modules/@mediapipe/tasks-vision/wasm/` by `scripts/copy-wasm.ts` at postinstall). Every standard example uses a CDN URL — copying that pattern breaks the CI no-network gate and the offline PWA.
 3. **Chromium's `--use-file-for-fake-video-capture` accepts ONLY `.y4m` and `.mjpeg`.** Never point it at `.webm`/`.mp4`. Masters live in `tests/fixtures/masters/` (webm/mp4); Playwright replays use `tests/fixtures/replay/*.mjpeg` produced by `scripts/convert-fixtures.sh` (ffmpeg).
 4. **`detectForVideo` takes the `HTMLVideoElement` directly.** Do not construct WebCodecs `VideoFrame` objects (Firefox compatibility risk; also unnecessary).
-5. **Firefox desktop does not support PWA installation.** It runs the app as an offline-capable tab and remains a hard test gate. Do not add Firefox install flows or drop Firefox testing.
+5. **Firefox 143+ on Windows supports web-app install; older Firefox runs as offline-capable tab; Firefox remains a hard test gate either way.** Do not drop Firefox testing. Do not "correct" this back to "Firefox cannot install PWAs" — that was the pre-143 fact and is stale.
 6. **IndexedDB cannot index booleans.** Indexed flags are `0 | 1` in the schema (`isActive`, `easeOffTriggered`); `RepEvent.easeOffTriggered` is `boolean` on the event surface and `SessionController` converts during session assembly.
 
 ## Workflow per task

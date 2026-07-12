@@ -506,7 +506,7 @@ Operation × gate state. ✅ allowed · ❌ blocked (error in parentheses) · �
 | `enterDemoMode` | ✅ | ✅ | — |
 | `CalibrationFlow.*` | ❌ (`NOT_ATTESTED`) | ✅ | ◐ in-memory quick-calibration only |
 | `SessionController.start/advance/stop` | ❌ (`NOT_ATTESTED`) | ✅ | ◐ no persistence on `stop` |
-| `StorageService` reads | ✅ (gate needs profile) | ✅ | ✅ reads only |
+| `StorageService` reads | ✅ (gate needs profile) | ✅ | ❌ except non-sensitive static config (implementation deferred; documented intent) |
 | `StorageService` writes | ❌ except `saveProfile`/attestation | ✅ | ❌ (`VALIDATION_FAILED`, backstop) |
 | `TrendsScreen` / `TrendsService` | ❌ (redirect) | ✅ | ❌ (screen unreachable) |
 | `CaregiverScreen` | ❌ | ✅ **and** `caregiverViewEnabled === true` | ❌ |

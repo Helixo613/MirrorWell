@@ -4,9 +4,9 @@
 
 ## 1. Intended-use statement
 
-MirrorWell is an **educational exercise-support tool** for adults (18+) **already diagnosed with facial palsy** (e.g., Bell's palsy, post-surgical facial-nerve injury, facial trauma) who have been **assigned facial retraining exercises by a qualified clinician** (physician, facial therapist, SLP). It provides real-time visual feedback on movement symmetry and effort during those exercises, pacing, adherence history, and a patient-controlled export.
+MirrorWell is a **research prototype** and **educational exercise-support tool** for adults (18+) **already diagnosed with facial palsy** (e.g., Bell's palsy, post-surgical facial-nerve injury, facial trauma) who have been **assigned facial retraining exercises by a qualified clinician** (physician, facial therapist, SLP). It provides real-time visual feedback on movement symmetry and effort during those exercises, pacing, adherence history, and a patient-controlled export.
 
-MirrorWell is **NOT**: a medical device (not certified, cleared, or approved by any authority); a diagnostic, screening, assessment, grading, or prognostic tool; a treatment or source of exercise prescription; a substitute for professional care. **If the app and the clinician ever disagree, the clinician wins** — this sentence appears verbatim in onboarding.
+MirrorWell's **regulatory status is not determined**; it is **not cleared or approved by any regulator**. It is **NOT**: a diagnostic, screening, assessment, grading, or prognostic tool; a source of exercise prescription; a substitute for professional care. **If the app and the clinician ever disagree, the clinician wins** — this sentence appears verbatim in onboarding.
 
 **Known limitations (plain language, shown in onboarding):** camera measurement is approximate (lighting, distance, glasses, camera quality); the app measures visible movement only — not muscle activity, nerve function, or recovery; scores are relative to the user's own calibration and not comparable between people; the face-tracking model may be less precise on some faces, and the app is designed to say "I can't measure this right now" rather than guess.
 
@@ -55,6 +55,7 @@ No portal, no messaging, no alerts to clinicians — deliberately: an unmonitore
 
 Design principle: **the best protection for health data is not collecting it.** No server, no accounts, no telemetry, no third parties — the team can never see, sell, or leak user data because it never receives any.
 
+- **MediaPipe telemetry release blocker:** the MediaPipe repo privacy notice mentions Tasks API utilization metrics; runtime network inspection of the pinned `@mediapipe/tasks-vision` package must prove zero telemetry before release (ARCHITECTURE §6).
 - **What exists:** derived numeric metrics only (DATABASE.md), on the user's device. Frames and landmark arrays live in memory per frame and are discarded — never persisted (schema-file rule; CI no-network; DB inspection in TESTS.md).
 - **Consent flow:** onboarding obtains informed plain-language consent for local camera processing and local metric storage, versioned by `consentVersion` (bump → re-consent). Text states: what is processed (camera images, in memory only), what is stored (numbers about movement, on this device only), what never happens (uploads, sharing, sale — there is nowhere to upload to).
 - **Encryption:** *in transit* — not applicable by design (no transmission; CI-enforced). *At rest* — IndexedDB under the OS's protections (user accounts, full-disk encryption where enabled). Stated honestly: the prototype adds no app-level at-rest encryption; compensating controls are radical minimization (numbers, not images), onboarding device-lock guidance, and one-tap deletion. A documented trade-off — app-level encryption is listed as future hardening, not silently assumed.
@@ -67,7 +68,7 @@ Design principle: **the best protection for health data is not collecting it.** 
 
 - **India — DPDP Act, 2023:** consent-based processing, purpose limitation, minimization, right to erasure — satisfied by construction (no collection); applicability to purely on-device processing **needs verification**, and the design clears the stricter reading anyway.
 - **GDPR (reference principles):** health data as special category; explicit consent; privacy-by-design/default; right to erasure — same conclusion.
-- **Medical-device boundaries:** §1 wording is written to stay within "exercise support alongside professional care" and outside SaMD regimes (India's Medical Device Rules as amended; US FDA general-wellness policy; EU MDR concepts). Exact jurisdictional boundaries **need verification with the mentor**; the enforceable engineering rule is §8.
+- **Medical-device / regulatory status:** MirrorWell is a research prototype; regulatory status is not determined; it is not cleared or approved by any regulator. Exact jurisdictional boundaries under India's Medical Device Rules as amended, US FDA general-wellness policy, and EU MDR concepts **need verification with the mentor**; the enforceable engineering rule is §8.
 - **Accessibility:** WCAG 2.1 AA (FRONTEND §4).
 
 ## 8. Responsible-use limits & language audit
