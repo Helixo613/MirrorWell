@@ -77,17 +77,18 @@ These are project-set engineering bars, not published standards — stated as su
 
 ## 6. Measurement realism (accuracy bars — other docs reference, never restate)
 
-**Commodity camera + landmarks CAN reliably capture:** gross regional displacement (mouth-corner excursion, brow elevation, lid aperture) as *relative* measures vs. a same-baseline reference; left/right displacement ratios; movement timing; head pose within ±15°.
+**Commodity camera + landmarks CAN reliably capture:** gross regional displacement (mouth-corner excursion, brow elevation, lid aperture) as *relative* measures vs. a same-baseline reference; left/right displacement ratios and direction-aware symmetry (ARCHITECTURE §7); movement timing; head pose within ±15° (gate envelope, not corrected invariance).
 
-**CANNOT capture (and the app must never imply):** muscle force/activation (EMG's job); absolute millimeters (no metric scale reference); subtle synkinesis (near the noise floor — why synkinesis *detection* is a non-goal); nerve function, severity, prognosis (out of scope by design); week-over-week change below `noiseFloorSymmetry` (why the trends honesty rule exists).
+**CANNOT capture (and the app must never imply):** muscle force/activation (EMG's job); absolute millimeters (no metric scale reference); subtle synkinesis (near the noise floor — why synkinesis *detection* is a non-goal); nerve function, severity, prognosis (out of scope by design); week-over-week change below the active baseline's `noiseFloorSymmetry` (why the trends honesty rule exists); true pose-invariant geometry via inverse rotation (an isometry no-op — deleted; residual pose sensitivity is measured, not claimed away).
 
 **Accuracy bars** (verified at V1–V3; failing any bar → fix or narrow claims, never ship confident wrong numbers):
 
 | Bar | Requirement |
 |---|---|
-| **B1** Rest stability | `symmetryIndex` std at neutral ≤ **0.05** per subject, standard conditions (this measured value becomes that user's `noiseFloorSymmetry`) |
-| **B2** Held-expression repeatability | Regional displacement of a held expression varies < **5%** across two lighting conditions and two distances |
-| **B3** Pose invariance | ±15° yaw changes a held expression's `symmetryIndex` by < **0.05** |
+| **B1a** Rest displacement noise | Std of pre-floor `max(mL, mR)` over neutral `QUALITY_OK` frames ≤ **0.01 IOD** per subject, standard conditions → stored as that baseline's `noiseFloorDisplacement` |
+| **B1b** Held-SI noise | Std of smoothed `symmetryIndex` over a frontal held expression ≤ **0.05** → stored as that baseline's `noiseFloorSymmetry` (SI is defined during held movement; at pure rest it is `null` under `movementFloor`) |
+| **B2** Held-expression repeatability | For condition `c ∈ {dim, 2m}`: `\|mean_disp(c) − mean_disp(frontal)\| / mean_disp(frontal) < 0.05`, where `mean_disp` = mean of `max(mL, mR)` over the phase |
+| **B3** Pose residual (envelope, not invariance) | `\|mean SI(yaw_left) − mean SI(frontal)\| < 0.05` **and** same for `yaw_right`, with **measured** mean \|yaw\| ∈ [7°, 13°] (inside the ±15° gate; operator label is not evidence) |
 | **B4** Sensitivity | One-sided vs. symmetric expression separated **20/20 trials** (e.g., SI < 0.7 vs. > 0.85; exact cut set from pilot data into `thresholds.ts`) |
 | **B5** Rep fidelity | `RepDetector` within **±1 per 10 reps** of human count, all four exercises |
 | **B6** Latency | Capture-to-feedback ≤ **100 ms** (ARCHITECTURE §10) |
@@ -95,9 +96,39 @@ These are project-set engineering bars, not published standards — stated as su
 
 ## 7. Validation plan (V1 at IMPLEMENTATION Task 6; V2–V4 at Task 18)
 
+### V1 statistical protocol (B1a / B1b / B2 / B3) — kill-gate
+
+Per subject, **2 independent trials** (full re-setup between trials). Phases in order:
+
+1. Neutral 10 s  
+2. Frontal gentle smile held 8 s  
+3. Smile at left yaw ~10°  
+4. Smile at right yaw ~10°  
+5. Smile in dim light  
+6. Smile at 2 m  
+
+(dim + distance last). Per phase: valid only if ≥ **70%** of frames are `QUALITY_OK`, else **retry that phase** (predeclared). Yaw phases are valid only if measured mean \|yaw\| ∈ **[7°, 13°]** (from `headPose` recorded per frame — operator label is not evidence).
+
+| Bar | Computation | Pass |
+|---|---|---|
+| **B1a** | Std of pre-floor `max(mL, mR)` over neutral OK frames | ≤ 0.01 IOD → becomes `noiseFloorDisplacement` |
+| **B1b** | Std of smoothed SI over frontal-smile hold | ≤ 0.05 → becomes `noiseFloorSymmetry` |
+| **B2** | For `c ∈ {dim, 2m}`: `\|mean_disp(c) − mean_disp(frontal)\| / mean_disp(frontal)` | < 0.05 |
+| **B3** | `\|mean SI(yaw_left) − mean SI(frontal)\|` and same for yaw_right | each < 0.05 |
+
+**Rules (binding):**
+
+- Statistics are computed **per trial**. PASS requires **every trial of every subject** to pass every bar.
+- Missing or invalid cells = **FAIL** (blocked) — never substitute a fallback metric.
+- Reports are **candidate-versioned**; a failing report is preserved as rejected evidence (see `tests/analysis/rejected/`).
+- **Predeclared B2 confound:** B2 compares re-produced expressions, so human reproduction variance sits inside the 5% bar. If B2 fails **and** the two trials' frontal-smile mean displacements differ from each other by more than 5% (human reproduction alone exceeds the bar), the verdict is `PROTOCOL_LIMITED` — not an algorithm FAIL and not a PASS: refine the capture protocol (e.g. live target-band coaching on displacement during recording) and rerun. Declared here, before data collection, so it can never be a post-hoc excuse.
+
+Fail V1 → **stop feature work**; nothing downstream is valid until B1a/B1b/B2/B3 pass under this protocol.
+
+### V2–V4 (unchanged scope; run at Task 18+)
+
 | # | What | Protocol | Pass |
 |---|---|---|---|
-| **V1 Normalization invariance** (kill-gate) | B1–B3 | Replay fixture variants (lighting × distance × yaw) through the pipeline; compute spreads | B1, B2, B3 met. Fail → stop feature work; nothing downstream is valid |
 | **V2 Real-asymmetric-face gate** (earliest possible; no later than Task 18) | Does the canonical-face prior suppress real asymmetry? | MEEI Standard Set clips (open via the Sir Charles Bell Society — 25 flaccid + 25 synkinetic patients) as the primary material, plus ≥ 1 consented volunteer with genuine asymmetry for live-pipeline testing where possible; compare app `symmetryIndex` ordering vs. blinded human ordering of the same clips | B7 met + ordering agreement. Fail → §2 fallback ladder; longitudinal-trend claims dropped until a fallback passes |
 | **V3 Robustness matrix** | Devices × conditions | Full scripted protocol on: mid-range Windows laptop (Chromium + Firefox), mid-range Android (Chrome); glasses on/off; facial hair; lamp vs. daylight; 0.5 m vs. 1 m | B4, B5, B6 in every cell; a persistently failing cell must produce the correct `QualityState` (honest refusal), never metrics |
 | **V4 Fairness battery** (release blocker) | §5 metrics per subgroup | Identical protocol per fixture subject; FairFace stills + Casual Conversations subset (licenses permitting, **needs verification**) for larger-n detection/noise checks | All §5 gaps within bounds |

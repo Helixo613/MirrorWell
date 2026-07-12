@@ -85,10 +85,10 @@ Uncalibrated cross-session data is misleading; this protocol is what makes every
 
 1. **Attestation (`OnboardingScreen` → `SafetyGate.recordAttestation`)** — user confirms: diagnosed facial palsy; clinician-assigned exercises; 18+; understands the non-diagnostic scope. Red-flag education shown (SAFETY §3), including "new or sudden facial droop is a medical emergency." Cannot be skipped; re-runs if `consentVersion` changes. A clearly-labeled **"Try a demo"** path calls `SafetyGate.enterDemoMode()` instead (§12 Demo Mode rules: in-memory only, watermarked, nothing persisted, reload exits).
 2. **Exercise selection** — user enables only the subset of `EX_*` exercises their therapist assigned → `user_profile.assignedExercises`.
-3. **Neutral baseline (`CalibrationFlow.captureNeutral`)** — 3 captures × 3 s of relaxed face, live `QualityMonitor` coaching ("more light," "come closer"); median-aggregated per-region reference distances → `calibration_baseline.neutralStats`. `qualityScore` = fraction of capture frames that were `QUALITY_OK`; capture **rejected below 0.7** (`QUALITY_TOO_LOW`) — a bad baseline poisons everything downstream, so it is refused at the door.
-4. **Comfortable max (`CalibrationFlow.captureComfortableMax`)** per assigned exercise — 3 *gentle* max reps (copy explicitly says "gentle — do not strain", per the NMR small-movement principle); **median** peak displacement (not max) → `calibration_baseline.comfortableMax[exerciseId]`.
-5. **Noise-floor self-test** — 3 additional neutral captures under the user's real conditions; observed spread of `symmetryIndex` at rest → `app_settings.noiseFloorSymmetry` (default 0.05 until measured). `TrendsService` suppresses any period-over-period change smaller than this value (rendered "steady", `aboveNoiseFloor: false`).
-6. **Validity rules** — every `session_record` stores its `baselineId`; `TrendsService` never mixes baselines in one series. At each session start a 3 s silent neutral re-check runs; resting displacement deviating > 8% from `neutralStats` prompts recalibration instead of recording a misleading session (threshold in `thresholds.ts`, **needs verification**). Scheduled recalibration prompt every 14 days (design default, **needs verification**).
+3. **Neutral baseline (`CalibrationFlow.captureNeutral`)** — 3 captures × 3 s of relaxed face, live `QualityMonitor` coaching ("more light," "come closer"); median-aggregated per-region face-local vectors (`{left,right}×{u,v}` in IOD units) → `calibration_baseline.neutralStats`. `qualityScore` = fraction of capture frames that were `QUALITY_OK`; capture **rejected below 0.7** (`QUALITY_TOO_LOW`) — a bad baseline poisons everything downstream, so it is refused at the door.
+4. **Comfortable max (`CalibrationFlow.captureComfortableMax`)** per assigned exercise — 3 *gentle* max reps (copy explicitly says "gentle — do not strain", per the NMR small-movement principle); **median** peak displacement magnitude (not max) → `calibration_baseline.comfortableMax[exerciseId]`.
+5. **Noise-floor self-test (`CalibrationFlow.runNoiseFloorSelfTest`)** — measured during calibration under the user's real conditions and stored on the **same** `calibration_baseline` row (not `app_settings`): (a) `noiseFloorDisplacement` = std of pre-floor `max(mL,mR)` over neutral `QUALITY_OK` frames; (b) `noiseFloorSymmetry` = std of smoothed `symmetryIndex` over held comfortable-max captures (SI is defined during held expression; at pure rest it is `null` under `movementFloor`). `TrendsService` reads the **active baseline's** `noiseFloorSymmetry` and suppresses any period-over-period change smaller than this value (rendered "steady", `aboveNoiseFloor: false`).
+6. **Validity rules** — every `session_record` stores its `baselineId`; `TrendsService` never mixes baselines in one series. At each session start a 3 s silent neutral re-check runs (`CalibrationFlow.checkBaselineDrift`): per region/side, compare pre-floor displacement magnitudes `|m_current − m_neutral|` against stored neutral, aggregate as the median across regions; if that median exceeds `driftMaxPct` (0.08 in `thresholds.ts`, **needs verification**) → prompt recalibration instead of recording a misleading session. Scheduled recalibration prompt every 14 days (design default, **needs verification**).
 
 ## 5. Data flows — two full round trips
 
@@ -126,13 +126,76 @@ Exactly **one** model, quarantined behind one interface. Everything downstream i
 
 ## 7. Metric definitions (canonical math)
 
-For the active exercise's region pair with baseline-subtracted, pose-corrected, inter-ocular-scaled displacements `dL`, `dR`:
+Canonical face-local 2D vector geometry. There is **no inverse-rotation pose correction** — rotation is an isometry (`‖R(a)−R(b)‖ = ‖a−b‖`), so "pose correction" by inverse rotation was a no-op and is deleted. Yaw/pitch are bounded by the ±15° quality gate; residual pose sensitivity is measured by bar **B3** (MODEL_AND_DATA §6) — honest envelope, not false invariance.
 
-- `symmetryIndex = min(dL, dR) / max(dL, dR)` ∈ [0,1]; if `max(dL, dR) < movementFloor` (0.8% of inter-ocular distance) the sample is `null` — no movement, no score.
-- `effortIndex = max(dL, dR) / comfortableMax[exerciseId]`; `effortTargetZone = [0.30, 0.50]` (**needs verification**); ease-off cue fires when `effortIndex > 0.60` sustained ≥ 300 ms.
-- Both smoothed with a 5-frame rolling median before display or rep detection.
-- Rep = `effortIndex` rises above 0.15 (`repStartThreshold`), stays ≥ 800 ms (`repMinDurationMs`), falls below 0.10 (`repEndThreshold`).
-- All values live in `src/config/thresholds.ts`, each commented with its owning doc section; initial gate values: `LOW_LIGHT` mean luma < 60/255; `TOO_FAR` inter-ocular < 60 px; `POSE_OUT_OF_RANGE` |yaw|/|pitch|/|roll| > 15°; `LOW_CONFIDENCE` resting frame-to-frame landmark displacement > 0.5% of inter-ocular distance. All labeled "initial value — tuned against fixtures."
+### Pixel space
+
+`P = (x·W, y·H)` for landmark `(x, y)` and video frame size `W×H`. This maps MediaPipe's normalized image coords into pixel space and **fixes aspect distortion** (normalized coords alone stretch non-square frames). **Z is excluded in v1** (no defined metric scale on depth — documented; not a hidden assumption).
+
+### Face-local frame
+
+- `eyeR = landmarks[33]`, `eyeL = landmarks[263]` (anatomical left/right = **subject's** side, independent of mirrored preview).
+- `origin = (eyeR + eyeL) / 2`
+- `IOD = |eyeL − eyeR|` in pixels
+- `û = (eyeL − eyeR) / IOD`  (+u = subject's anatomical left)
+- `v̂` = `û` rotated 90° so +v points toward the forehead (sign fixed by a brow-raise fixture test)
+
+**Invariances claimed honestly:** roll free from eye alignment; scale free from IOD division. **Not corrected:** yaw and pitch — the `POSE_OUT_OF_RANGE` gate bounds them to ±15°, and B3 measures residual SI change inside that envelope.
+
+### Per-region features
+
+For each region side, feature vector in IOD units:
+
+`f = ((P_moving − P_anchor) · (û, v̂)) / IOD`  →  `{u, v}`
+
+Anchors / movers:
+
+| Region | Moving points | Anchor |
+|---|---|---|
+| `REGION_MOUTH_CORNER` | corners 61 / 291 | nose tip 1 |
+| `REGION_BROW` | brow points | same-side eye center |
+| `REGION_EYELID` | upper/lower lid gap vector | eye center |
+| `REGION_LIP` | lip corners | nose tip |
+
+Exact mesh indices are fixed in IMPLEMENTATION Task 6 / geometry kernel code against the MediaPipe mesh map.
+
+### NeutralStats
+
+`NeutralStats = Record<RegionId, { left: {u,v}, right: {u,v} }>` — median per component over neutral `QUALITY_OK` frames (see ARCHITECTURE §13). Stored on `calibration_baseline.neutralStats`.
+
+### Displacement, magnitudes, mirror
+
+- `ΔL = f_L − neutral_L`, `ΔR = f_R − neutral_R`
+- Mirror right onto left: `ΔR̃ = (−ΔR.u, ΔR.v)`
+- Magnitudes: `mL = |ΔL|`, `mR = |ΔR̃|`
+
+### symmetryIndex
+
+- If `max(mL, mR) < movementFloorPct` (0.008 IOD) → `null` (no movement, no score).
+- Else `SI = (min(mL, mR) / max(mL, mR)) · max(0, cosθ)`, where `cosθ = (ΔL · ΔR̃) / (mL · mR)` (0 if either magnitude is 0).
+- Equal same-direction motion → SI ≈ 1; **equal-opposite motion → cosθ = −1 → SI = 0**; unilateral → SI = 0.
+
+### effortIndex
+
+`effortIndex = max(mL, mR) / comfortableMax[exerciseId]`, where `comfortableMax[exerciseId]` is the median of per-rep peak `max(mL, mR)` captured at calibration. `effortTargetZone = [0.30, 0.50]` (**needs verification**); ease-off cue fires when `effortIndex > 0.60` sustained ≥ 300 ms.
+
+### Smoothing and gap rule
+
+- Both SI and effort are smoothed with a **trailing** 5-frame median (frames `t−4..t` only — **not** a centered window; no lookahead delay).
+- **Gap rule:** if the sample gap exceeds `metrics.gapResetMs` (250), the smoothing window and ease-off sustain accumulation **reset**; an active rep **aborts without emitting a `RepEvent`**.
+
+### Rep detection
+
+Rep = `effortIndex` rises above 0.15 (`repStartThreshold`), stays ≥ 800 ms (`repMinDurationMs`), falls below 0.10 (`repEndThreshold`). Gap abort (above) applies inside the active window.
+
+### Quality gates (thresholds)
+
+All values live in `src/config/thresholds.ts`, each commented with its owning doc section. Initial gate values (all labeled "initial value — tuned against fixtures"):
+
+- `LOW_LIGHT` — mean luma over the **face bounding box** (landmark bbox +10% margin, sampled from the 64×64 downsample) < `lumaMin` 60/255
+- `TOO_FAR` — inter-ocular distance < `interOcularMinFrac` × video width (`0.09`; fractional, not a fixed pixel count)
+- `POSE_OUT_OF_RANGE` — |yaw| / |pitch| / |roll| > `poseMaxDeg` 15°
+- `LOW_CONFIDENCE` — resting jitter (RMS second difference of landmarks / IOD) > `jitterMaxPct` 0.005
 
 ## 8. Fail-safe sensing (canonical)
 

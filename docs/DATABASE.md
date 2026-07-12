@@ -41,9 +41,13 @@ export interface CalibrationBaseline {
   baselineId: string;             // PK, uuid v4
   profileId: string;              // FK -> user_profile.profileId (enforced by StorageService)
   capturedAt: string;             // UTC ISO 8601
-  neutralStats: Record<RegionId, { left: number; right: number }>; // median normalized rest distances
-  comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max displacement, keys = assignedExercises
+  // Face-local vector medians in IOD units (ARCHITECTURE §7 / §13). Components are signed
+  // projections — legitimately negative; do NOT require > 0.
+  neutralStats: Record<RegionId, { left: { u: number; v: number }; right: { u: number; v: number } }>;
+  comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max peak max(mL,mR), keys = assignedExercises
   qualityScore: number;           // [0..1] = fraction of QUALITY_OK capture frames; >= 0.7 enforced
+  noiseFloorSymmetry: number;     // std of smoothed SI over held comfortable-max captures (B1b)
+  noiseFloorDisplacement: number; // std of pre-floor max(mL,mR) over neutral OK frames (B1a)
   isActive: 0 | 1;                // exactly one row with 1 (StorageService invariant)
 }
 
@@ -85,7 +89,7 @@ export interface AppSettings {
   audioCuesEnabled: boolean;      // default true
   reducedFacePreview: boolean;    // default false ("show me less of my face")
   trendGranularity: 'weekly' | 'monthly'; // default 'monthly'
-  noiseFloorSymmetry: number;     // default 0.05 until the noise-floor self-test measures it
+  // noiseFloorSymmetry lives on calibration_baseline (baseline-paired; DG-4), not here
   showAffectedSideMarker: boolean;// default true; no effect when affectedSide === 'unknown'
   caregiverViewEnabled: boolean;  // default false; the patient's consent act for CaregiverScreen
 }
@@ -122,8 +126,10 @@ export const db = new MirrorWellDB();
 | `user_profile.assignedExercises` | Non-empty array; every entry a valid `ExerciseId`; no duplicates |
 | `user_profile.affectedSide` | One of `left`/`right`/`unknown` |
 | `calibration_baseline.qualityScore` | `[0..1]`; **`< 0.7` rejected with `QUALITY_TOO_LOW` (not VALIDATION_FAILED)** |
-| `calibration_baseline.neutralStats` | All four `RegionId` keys present; all values finite and `> 0` |
+| `calibration_baseline.neutralStats` | All four `RegionId` keys present; each side has `{u, v}`; **all components finite only — NOT required `> 0`** (signed face-local projections are legitimately negative) |
 | `calibration_baseline.comfortableMax` | Keys ⊆ profile's `assignedExercises`; values finite `> 0` |
+| `calibration_baseline.noiseFloorSymmetry` | Finite `≥ 0` (held-SI noise; B1b) |
+| `calibration_baseline.noiseFloorDisplacement` | Finite `≥ 0` (rest displacement noise; B1a) |
 | `calibration_baseline.isActive` | `saveBaseline` sets new row to `1` and all others to `0` in one transaction — the "exactly one active" invariant |
 | `session_record.endedAt` | `>= startedAt`; both valid UTC ISO 8601 |
 | `session_record.baselineId` / `profileId` | Must reference existing rows (manual FK check) |
@@ -137,11 +143,11 @@ export const db = new MirrorWellDB();
 | Table | Stores | Written by | Read by | Retention |
 |---|---|---|---|---|
 | `user_profile` | The single local profile: affected side, assigned exercises, attestation | `OnboardingScreen` via `SafetyGate`/`StorageService.saveProfile` | `SafetyGate`, `SessionController`, `CaregiverScreen`, `ExportService` | Until user deletes (`deleteAllData` or clearing site data). No automatic expiry — it's the user's own device and data |
-| `calibration_baseline` | Neutral reference geometry + per-exercise comfortable max + capture quality | `CalibrationFlow` via `StorageService.saveBaseline` | `NormalizationLayer` (via `getActiveBaseline`), `MetricEngine`, `TrendsService` (partition key) | All baselines kept (historical sessions reference them); user deletion removes all |
+| `calibration_baseline` | Neutral vector geometry + per-exercise comfortable max + capture quality + baseline-paired noise floors (`noiseFloorSymmetry`, `noiseFloorDisplacement`) | `CalibrationFlow` via `StorageService.saveBaseline` (noise fields from `runNoiseFloorSelfTest` during held comfortable-max / neutral captures) | `NormalizationLayer` (via `getActiveBaseline`), `MetricEngine`, `TrendsService` (partition key + noise floor) | All baselines kept (historical sessions reference them); user deletion removes all |
 | `session_record` | One row per session: window, baseline link, end reason | `SessionController.stop` via `StorageService.saveSession` (single transaction with children) | `TrendsService`, `SummaryScreen`, `CaregiverScreen`, `ExportService` | Until user deletes |
 | `exercise_result` | Per-exercise aggregates within a session | Same transaction as parent | Same readers | Until user deletes |
 | `rep_metric` | Per-rep peaks and timing | Same transaction as parent | `SummaryScreen` (detail), `ExportService` | Until user deletes |
-| `app_settings` | Accessibility + honesty + consent-toggle settings singleton | `SettingsService.update`; `noiseFloorSymmetry` also by `CalibrationFlow` self-test | Every screen; `TrendsService` (noise floor, granularity); `SafetyGate` indirectly | Until user deletes |
+| `app_settings` | Accessibility + consent-toggle settings singleton (no noise-floor field) | `SettingsService.update` | Every screen; `TrendsService` (granularity only — noise floor comes from active baseline); `SafetyGate` indirectly | Until user deletes |
 
 **Global retention rules:** no automatic deletion or expiry — the data is the user's exercise history on their own device; `StorageService.deleteAllData()` (typed-confirmation in `SettingsScreen`) drops every table in one transaction; Demo Mode writes **nothing** to any table (structural rule, ARCHITECTURE §11).
 
@@ -152,7 +158,7 @@ There is no server; **100% of data is on-device**. Per-category privacy reasonin
 | Category | Tables/fields | Why on-device only |
 |---|---|---|
 | Condition-adjacent identity | `affectedSide`, `assignedExercises` | Reveals a medical condition; combined with any identifier off-device it becomes regulated health data. Locally it never joins an identity — the app stores no name, email, or account. |
-| Face-derived calibration geometry | `neutralStats`, `comfortableMax` | Derived from the user's face at rest. Deliberately reduced to a handful of region distances (not a biometric template, not landmarks), but face-derived data leaving the device would demand consent and security machinery a student project cannot honestly operate. |
+| Face-derived calibration geometry | `neutralStats`, `comfortableMax`, `noiseFloorSymmetry`, `noiseFloorDisplacement` | Derived from the user's face at rest / held gentle max. Deliberately reduced to a handful of region offsets (not a biometric template, not landmarks), but face-derived data leaving the device would demand consent and security machinery a student project cannot honestly operate. |
 | Exercise performance | `session_record`, `exercise_result`, `rep_metric` | Longitudinal health-behavior data. The clinician gets it via user-initiated export files; a server copy would add breach risk and zero product value. |
 | Preferences/consents | `app_settings`, attestation fields | Low sensitivity, but no reason to exist anywhere else. |
 
@@ -163,8 +169,8 @@ The **only** way any data leaves the device: `ExportService.generateSummary` pro
 Script: `scripts/seed-dev.ts`, run with `npm run seed:dev` (uses `fake-indexeddb` under Vitest; in the browser it runs via the `DebugHud` "seed" button, dev builds only).
 
 - Deterministic PRNG (seed `42`) so E2E assertions are stable.
-- Inserts: 1 `user_profile` (`affectedSide: 'left'`, all four exercises assigned, attested); 2 `calibration_baseline` rows (an old inactive one and the active one, `qualityScore` 0.82/0.91) — two baselines exist deliberately so the "trends never mix baselines" rule is testable; 6 weeks of `session_record`s (4–5/week, a few `user_stopped` and one `quality_abandoned`) with nested results/reps: `meanSymmetryIndex` trending 0.58 → 0.74 with realistic noise, `easeOffCount` trending 6 → 1 (the app's own efficacy signal), `lowQualityFramePct` 0.05–0.20.
-- `app_settings` with `noiseFloorSymmetry: 0.04`, `caregiverViewEnabled: true` (so `CaregiverScreen` is reachable in dev).
+- Inserts: 1 `user_profile` (`affectedSide: 'left'`, all four exercises assigned, attested); 2 `calibration_baseline` rows (an old inactive one and the active one, `qualityScore` 0.82/0.91, vector `neutralStats`, `noiseFloorSymmetry` / `noiseFloorDisplacement` populated) — two baselines exist deliberately so the "trends never mix baselines" rule is testable; 6 weeks of `session_record`s (4–5/week, a few `user_stopped` and one `quality_abandoned`) with nested results/reps: `meanSymmetryIndex` trending 0.58 → 0.74 with realistic noise, `easeOffCount` trending 6 → 1 (the app's own efficacy signal), `lowQualityFramePct` 0.05–0.20.
+- `app_settings` with `caregiverViewEnabled: true` (so `CaregiverScreen` is reachable in dev). Noise floors live on the baseline rows, not settings.
 - **RULE:** seed code is dev/test-only — excluded from the production bundle; the seed script must refuse to run when `import.meta.env.PROD`.
 
 Camera fixtures (masters `tests/fixtures/masters/*.{webm,mp4}` + Playwright replays `tests/fixtures/replay/*.mjpeg` + `fixtures_manifest.json`) are owned by MODEL_AND_DATA.md §4; they are test inputs, not database seeds.
@@ -172,6 +178,7 @@ Camera fixtures (masters `tests/fixtures/masters/*.{webm,mp4}` + Playwright repl
 ## 7. Migration / versioning
 
 - Dexie versioning: every schema change adds `this.version(n).stores({...}).upgrade(tx => ...)` — **never edit `version(1)` after first release**; history is append-only.
-- Additive-only policy: add fields with defaults in `upgrade()`; never rename or repurpose a field (add new + backfill + deprecate in comments instead). Removing a table requires an explicit data-export prompt to the user first — silently dropping health history is forbidden.
+- **Pre-release note (DG-5):** schema v1 is amended in place (vector `neutralStats`, baseline noise fields, `noiseFloorSymmetry` removed from `app_settings`). Dev DBs reset/reseed. The append-only migration policy above applies from **first release** onward — no migration code ships for this pre-release reset.
+- Additive-only policy (post-release): add fields with defaults in `upgrade()`; never rename or repurpose a field (add new + backfill + deprecate in comments instead). Removing a table requires an explicit data-export prompt to the user first — silently dropping health history is forbidden.
 - Every migration ships with a Vitest test: open a fixture DB at version *n−1* (JSON dump checked into `tests/unit/migrations/`), run the upgrade, assert row-level equality with expected output.
 - `consentVersion` (env `VITE_CONSENT_VERSION`) is **not** a schema version — bumping it re-runs onboarding but never migrates data.

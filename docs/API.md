@@ -110,18 +110,20 @@ Persists a new calibration and atomically deactivates the previous active baseli
   "profileId": "6f1a2c9e-8b1d-4e5f-9a3c-2d7b8e4f0a11",
   "capturedAt": "2026-07-01T09:25:11.000Z",
   "neutralStats": {
-    "REGION_BROW":        { "left": 0.418, "right": 0.421 },
-    "REGION_EYELID":      { "left": 0.112, "right": 0.108 },
-    "REGION_MOUTH_CORNER":{ "left": 0.507, "right": 0.503 },
-    "REGION_LIP":         { "left": 0.231, "right": 0.229 }
+    "REGION_BROW":         { "left": { "u": 0.0, "v": 0.418 }, "right": { "u": 0.0, "v": 0.421 } },
+    "REGION_EYELID":       { "left": { "u": 0.0, "v": 0.112 }, "right": { "u": 0.0, "v": 0.108 } },
+    "REGION_MOUTH_CORNER": { "left": { "u": 0.0, "v": 0.507 }, "right": { "u": 0.0, "v": 0.503 } },
+    "REGION_LIP":          { "left": { "u": 0.0, "v": 0.231 }, "right": { "u": 0.0, "v": 0.229 } }
   },
   "comfortableMax": { "EX_SMILE": 0.092, "EX_BROW_RAISE": 0.064 },
   "qualityScore": 0.91,
+  "noiseFloorSymmetry": 0.041,
+  "noiseFloorDisplacement": 0.008,
   "isActive": 1
 }
 ```
 **Response:** `"0b7e4d2a-1c3f-4a8b-b6d9-5e2f8a7c4d10"`
-**Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (missing region keys, non-finite values, `comfortableMax` keys ⊄ `assignedExercises`); `QUALITY_TOO_LOW` (`qualityScore < 0.7` — distinct code so `CalibrationScreen` can show capture coaching, not a generic error)
+**Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (missing region keys, non-finite vector components, missing noise fields, `comfortableMax` keys ⊄ `assignedExercises`); `QUALITY_TOO_LOW` (`qualityScore < 0.7` — distinct code so `CalibrationScreen` can show capture coaching, not a generic error)
 
 > **Rule:** the isActive flip (old → 0, new → 1) happens inside the same Dexie transaction as the insert. Two active baselines must be impossible at any observable instant.
 
@@ -420,7 +422,7 @@ Exact shape: ARCHITECTURE §13.
 ```
 **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (unknown exercise)
 
-> **Rules:** one series = one `baselineId` (the active one); `aboveNoiseFloor: false` when period-over-period change < `noiseFloorSymmetry` (baseline-paired; ARCHITECTURE §12) — UI renders those as "steady", never up/down; `quality_abandoned` and `red_flag_stopped` sessions are excluded from aggregation.
+> **Rules:** one series = one `baselineId` (the active one); `aboveNoiseFloor: false` when period-over-period change < the **active baseline's** `noiseFloorSymmetry` (read from `calibration_baseline`, never `app_settings`; ARCHITECTURE §4 / §12) — UI renders those as "steady", never up/down; `quality_abandoned` and `red_flag_stopped` sessions are excluded from aggregation.
 
 ### `getAdherence(range): Promise<Adherence>`
 
@@ -455,10 +457,9 @@ JSON validates against `tests/schemas/export.schema.json`. **Full example:**
 }
 ```
 
-The HTML blob is a printable one-page A4 summary with the same content and the same non-diagnostic header. **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (bad range)
+`noiseFloorSymmetry` in the export is sourced from the **active `calibration_baseline`** row (not `app_settings`). The HTML blob is a printable one-page A4 summary with the same content and the same non-diagnostic header. **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (bad range)
 
 > **Rules:** download only — no Web Share API, no clipboard auto-copy; no fields beyond the schema; `nonDiagnosticNotice` is mandatory and its text lives in `strings.ts` (audited, SAFETY §8).
-
 ---
 
 ## 14. SettingsService
@@ -469,7 +470,7 @@ The HTML blob is a printable one-page A4 summary with the same content and the s
 
 **`update` request example:** `{ "caregiverViewEnabled": true }` → **response:** the full updated `AppSettings` (shape: DATABASE §2). **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (e.g. `textScale` outside `[1.0..2.0]`)
 
-> **Rule:** `caregiverViewEnabled` may only be toggled from `SettingsScreen` (it is the patient's consent act for `CaregiverScreen`); `noiseFloorSymmetry` may only be written by `CalibrationFlow.runNoiseFloorSelfTest`.
+> **Rule:** `caregiverViewEnabled` may only be toggled from `SettingsScreen` (it is the patient's consent act for `CaregiverScreen`). Noise floors (`noiseFloorSymmetry`, `noiseFloorDisplacement`) live on `calibration_baseline` and are written only via `CalibrationFlow` → `StorageService.saveBaseline` — not through `SettingsService`.
 
 ---
 
@@ -494,7 +495,7 @@ All four `EX_*` entries follow this shape; `EX_EYE_CLOSURE.repsPerSet = 5` (eye-
 
 ### `src/config/thresholds.ts`
 
-Every tunable, exported as a single frozen object, each with a comment naming its owning doc section: `landmarker {minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5}` (FaceLandmarker option thresholds — the only confidence controls that exist), `qualityGates {lumaMin: 60, interOcularMinPx: 60, poseMaxDeg: 15, jitterMaxPct: 0.005}`, `metrics {movementFloorPct: 0.008, effortTargetZone: [0.30, 0.50], easeOffThreshold: 0.60, easeOffSustainMs: 300, smoothingWindow: 5}`, `reps {startThreshold: 0.15, endThreshold: 0.10, minDurationMs: 800, minQualityFramePct: 0.60}`, `calibration {minQualityScore: 0.7, neutralCaptures: 3, captureSeconds: 3, driftMaxPct: 0.08, staleDays: 14}`, `session {qualityProblemOfferStopMs: 30000}`.
+Every tunable, exported as a single frozen object, each with a comment naming its owning doc section: `landmarker {minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5}` (FaceLandmarker option thresholds — the only confidence controls that exist), `qualityGates {lumaMin: 60, interOcularMinFrac: 0.09, poseMaxDeg: 15, jitterMaxPct: 0.005}` (`interOcularMinFrac` replaces the retired `interOcularMinPx` — distance gate is a fraction of video width so the same face scale passes at 640×480 and 1280×720; 0.09 is the planned code value for B5), `metrics {movementFloorPct: 0.008, effortTargetZone: [0.30, 0.50], easeOffThreshold: 0.60, easeOffSustainMs: 300, smoothingWindow: 5, gapResetMs: 250}`, `reps {startThreshold: 0.15, endThreshold: 0.10, minDurationMs: 800, minQualityFramePct: 0.60}`, `calibration {minQualityScore: 0.7, neutralCaptures: 3, captureSeconds: 3, driftMaxPct: 0.08, staleDays: 14}`, `session {qualityProblemOfferStopMs: 30000}`.
 
 > **Rule:** a numeric literal used by any service that does not come from this file is a review-blocking defect.
 

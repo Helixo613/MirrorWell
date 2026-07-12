@@ -52,7 +52,7 @@ Gate order (first failure wins): `FACE_LOST` (`lf === null` or `facePresent === 
 
 ### 1.4 `NormalizationLayer` (`src/metrics/normalize.ts` + geometry kernel `src/metrics/geometry.ts`)
 
-Responsibility: make geometry comparable across scale, lighting, and sessions via a baseline-free measurement kernel and baseline-relative normalization.
+Responsibility: make geometry comparable across scale, lighting, and sessions via a baseline-free measurement kernel and baseline-relative normalization. Canonical math: ARCHITECTURE §7.
 
 ```typescript
 // Geometry kernel (src/metrics/geometry.ts) — baseline-free bootstrap (DG-2)
@@ -64,30 +64,43 @@ normalize(af: ApprovedFrame): NormalizedFrame          // throws NO_BASELINE onl
 clearBaseline(): void
 ```
 
-Pipeline per approved frame: (1) `measureAbsolute(af)` → face-local vector features per region/side; (2) subtract stored `neutralStats` → vector `regionDisplacements` (ARCHITECTURE §13). Calibration bootstrap uses `measureAbsolute` directly — **zero/default/ephemeral baselines are forbidden**.
+**Kernel internals (`measureAbsolute`)** — per ARCHITECTURE §7:
 
-**Never:** run `normalize` without an explicit real baseline (no silent identity defaults, no zero `neutralStats`); accept a raw `LandmarkFrame` (compile error — `ApprovedFrame` only); mutate the input frame; consume blendshapes.
+1. Pixel-space: `P = (x·W, y·H)` from `ApprovedFrame.lf.landmarks` + `videoWidth`/`videoHeight` (aspect-correct; Z excluded in v1).
+2. Face-local frame from eyes 33/263: origin, IOD, `û` (anatomical left), `v̂` (toward forehead). **No inverse-rotation pose correction** — roll free from eye alignment; yaw/pitch bounded by the quality gate only.
+3. Per region/side: `f = ((P_moving − P_anchor) · (û, v̂)) / IOD` → `{u, v}` using the region anchors in §7.
+
+**Normalize pipeline** per approved frame: (1) `measureAbsolute(af)` → face-local vector features per region/side (`AbsoluteFeatures`); (2) subtract stored vector `neutralStats` component-wise → vector `regionDisplacements` (ARCHITECTURE §13). Calibration bootstrap uses `measureAbsolute` directly — **zero/default/ephemeral baselines are forbidden**.
+
+**Never:** run `normalize` without an explicit real baseline (no silent identity defaults, no zero `neutralStats`); accept a raw `LandmarkFrame` (compile error — `ApprovedFrame` only); mutate the input frame; consume blendshapes; apply inverse-rotation "pose correction" (isometry no-op — deleted).
 
 ### 1.5 `MetricEngine` (`src/metrics/metrics.ts`) and `RepDetector` (`src/metrics/reps.ts`)
 
 Pure functions — no DOM, no camera, no storage; 100% branch coverage required (TESTS.md §2). Canonical math in ARCHITECTURE §7.
 
 ```typescript
-// MetricEngine (stateful module singleton — holds baseline, smoothing window, ease-off
-// sustain timer; same pattern as NormalizationLayer §1.4. DOCS-CHANGE: API.md §8, Task 7/8)
+// MetricEngine (stateful module singleton — holds baseline, trailing smoothing window, ease-off
+// sustain timer, last sample timestamp; same pattern as NormalizationLayer §1.4)
 setBaseline(b: CalibrationBaseline): void                          // throws NO_BASELINE
-compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample // symmetryIndex null under movementFloor; throws NO_BASELINE
+compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample // SI null under movementFloor; throws NO_BASELINE
 isEaseOffActive(): boolean                                        // effortIndex > 0.60 sustained >= 300ms
 getLastRaw(): RawMetricSample | null                              // dev-only, for DebugHud; null before first compute()/after reset()
-reset(): void                                                     // clears smoothing window, ease-off timer, getLastRaw()
+reset(): void                                                     // clears smoothing window, ease-off timer, getLastRaw(), last timestamp
 // RepDetector (stateful per exercise; reset() between exercises)
 feed(sample: MetricSample): RepEvent | null
-getState(): 'idle' | 'active'                                    // dev-only, for DebugHud (DOCS-CHANGE: API.md §9, Task 8)
+getState(): 'idle' | 'active'                                    // dev-only, for DebugHud
 reset(): void
 ```
 
-**Never:** emit a rep shorter than `repMinDurationMs`; carry state across exercises (SessionController must call `reset()` — a unit test asserts leakage impossible); round or clamp values before storage (store raw, format only in UI).
+**Metric internals (per active exercise region, ARCHITECTURE §7):**
 
+1. Read vector displacements `ΔL`, `ΔR` from `nf.regionDisplacements[regionId]`; mirror `ΔR̃ = (−ΔR.u, ΔR.v)`; magnitudes `mL = |ΔL|`, `mR = |ΔR̃|`.
+2. `symmetryIndex`: if `max(mL,mR) < movementFloorPct` → `null`; else `(min/max) · max(0, cosθ)` with `cosθ = (ΔL·ΔR̃)/(mL·mR)`. Equal-opposite → 0; unilateral → 0; same-direction equal → 1.
+3. `effortIndex = max(mL,mR) / comfortableMax[exerciseId]` (from baseline).
+4. Smooth both with a **trailing** 5-frame median (frames `t−4..t` only).
+5. **Gap rule:** if `timestampMs` gap from previous sample > `metrics.gapResetMs` (250): reset smoothing window + ease-off sustain; if `RepDetector` is `active`, abort the rep without emitting an event.
+
+**Never:** emit a rep shorter than `repMinDurationMs`; carry state across exercises (SessionController must call `reset()` — a unit test asserts leakage impossible); round or clamp values before storage (store raw, format only in UI); use a centered median window (lookahead forbidden).
 ### 1.6 `SessionController` (`src/session/controller.ts`)
 
 Responsibility: the session state machine, the event surface, session assembly.
@@ -108,15 +121,25 @@ State machine per exercise: `DEMO → REPS → REST`; transitions: `advance()` (
 
 ```typescript
 captureNeutral(): Promise<NeutralCaptureResult>                 // 3×3 s, measureAbsolute + median; throws QUALITY_TOO_LOW
-captureComfortableMax(exerciseId: ExerciseId): Promise<number>  // 3 gentle reps, median; throws QUALITY_TOO_LOW
-runNoiseFloorSelfTest(): Promise<number>                        // baseline-paired noise fields (ARCHITECTURE §12)
-checkBaselineDrift(): Promise<'ok' | 'recalibrate'>             // 3 s silent re-check, >8% drift → 'recalibrate'
+captureComfortableMax(exerciseId: ExerciseId): Promise<number>  // 3 gentle reps, median peak max(mL,mR); throws QUALITY_TOO_LOW
+runNoiseFloorSelfTest(): Promise<{ noiseFloorSymmetry: number; noiseFloorDisplacement: number }>
+// Measured during held comfortable-max captures (SI noise) + neutral frames (displacement noise);
+// written onto calibration_baseline by saveBaseline — never into app_settings (DG-4)
+checkBaselineDrift(): Promise<'ok' | 'recalibrate'>             // 3 s silent re-check; see drift statistic below
 ```
 
-`captureNeutral` uses the baseline-free geometry kernel `measureAbsolute` on `QUALITY_OK` `ApprovedFrame`s, aggregates to `NeutralStats` (ARCHITECTURE §13), and returns `{ neutralStats, qualityScore }`. **Never** invents a zero/default baseline to call `normalize` during bootstrap.
+`captureNeutral` uses the baseline-free geometry kernel `measureAbsolute` on `QUALITY_OK` `ApprovedFrame`s, aggregates to vector `NeutralStats` (ARCHITECTURE §13), and returns `{ neutralStats, qualityScore }`. **Never** invents a zero/default baseline to call `normalize` during bootstrap.
 
-**Never:** accept a capture with `qualityScore < 0.7`; use max instead of median for `comfortableMax` (median resists the straining outlier); persist anything in Demo Mode (its quick-calibration lives in memory only).
+**Noise-floor self-test (writes `calibration_baseline` fields):**
 
+- `noiseFloorDisplacement` — std of pre-floor `max(mL, mR)` over neutral `QUALITY_OK` frames (B1a).
+- `noiseFloorSymmetry` — std of smoothed SI over held comfortable-max captures for the calibrated exercises (B1b; SI is defined during held expression).
+
+Both land on the same `CalibrationBaseline` row via `StorageService.saveBaseline`.
+
+**Baseline-drift statistic (P1-11):** during the silent 3 s re-check, for each region/side compute pre-floor displacement magnitude of the current neutral vs stored neutral: `|m_current − m_neutral|`. Aggregate as the **median across regions**. If that median exceeds `calibration.driftMaxPct` (0.08) → `'recalibrate'`; else `'ok'`.
+
+**Never:** accept a capture with `qualityScore < 0.7`; use max instead of median for `comfortableMax` (median resists the straining outlier); write noise floors into `app_settings`; persist anything in Demo Mode (its quick-calibration lives in memory only).
 ### 1.8 `SafetyGate` (`src/session/safety.ts`)
 
 ```typescript
@@ -147,7 +170,7 @@ SettingsService.get(): Promise<AppSettings>
 SettingsService.update(partial: Partial<AppSettings>): Promise<AppSettings>
 ```
 
-`TrendsService` **never** mixes `baselineId`s in one series; marks points `aboveNoiseFloor: false` when period-over-period change < `noiseFloorSymmetry`; excludes `quality_abandoned` and `red_flag_stopped` sessions from aggregates. `ExportService` **never** adds fields beyond `tests/schemas/export.schema.json`, never auto-shares (download only), and always embeds the non-diagnostic header (SAFETY §5).
+`TrendsService` **never** mixes `baselineId`s in one series; marks points `aboveNoiseFloor: false` when period-over-period change < the **active baseline's** `noiseFloorSymmetry` (baseline-paired source — not `app_settings`); excludes `quality_abandoned` and `red_flag_stopped` sessions from aggregates. `ExportService` **never** adds fields beyond `tests/schemas/export.schema.json`, never auto-shares (download only), and always embeds the non-diagnostic header (SAFETY §5); export `noiseFloorSymmetry` is read from the active `calibration_baseline`.
 
 ## 2. Internal call graph
 
