@@ -1,6 +1,6 @@
 # MirrorWell — BACKEND.md
 
-> **For AI coding agents:** "backend" = the local service layer (`src/sensing/`, `src/metrics/`, `src/session/`, `src/data/`). There is no server. Read `ARCHITECTURE.md` §12 for canonical identifiers and `API.md` for the exact public contracts before modifying any service. Global non-negotiables: **no network calls; no persistence of frames/landmarks; metric code never runs on a non-`QUALITY_OK` frame; every tunable lives in `src/config/thresholds.ts`; every user-facing string lives in `src/config/strings.ts`.**
+> **For AI coding agents:** "backend" = the local service layer (`src/sensing/`, `src/metrics/`, `src/session/`, `src/data/`). There is no server. Read `ARCHITECTURE.md` §12 for canonical identifiers, §13 for exact type shapes, and `API.md` for the exact public contracts before modifying any service. Global non-negotiables: **no network calls; no persistence of frames/landmarks; metric code never runs on a non-`QUALITY_OK` frame (`ApprovedFrame` type barrier — ARCHITECTURE §13); every tunable lives in `src/config/thresholds.ts`; every user-facing string lives in `src/config/strings.ts`.**
 
 ## 1. Service internals
 
@@ -17,7 +17,7 @@ isRunning(): boolean
 
 Internals: `getUserMedia({video: {facingMode: 'user', width: {ideal: 640}, height: {ideal: 480}}})`; frame loop via `video.requestVideoFrameCallback` with `requestAnimationFrame` fallback (detect once at startup, log which). The callback delivers the live `HTMLVideoElement` + timestamp — no `VideoFrame`/WebCodecs construction (MediaPipe's `detectForVideo` accepts the video element directly; this also sidesteps a Firefox WebCodecs compatibility risk). Latest-frame-wins: if a callback is still processing, drop the incoming tick — **never queue frames** (queuing trades latency for staleness; a therapy mirror must be live).
 
-**Never:** hold more than one frame in memory; keep the stream open outside `CalibrationScreen`/`SessionScreen`; auto-restart after `stop()` without an explicit user action.
+**Never:** hold more than one frame in memory; keep the stream open outside `CalibrationScreen`/`SessionScreen` in production (narrow exception: dev-only harnesses under `src/dev/`, excluded from the prod bundle — API.md §4); auto-restart after `stop()` without an explicit user action.
 
 ### 1.2 `LandmarkEngine` (`src/sensing/landmarks.ts`)
 
@@ -35,29 +35,38 @@ Internals: `FilesetResolver.forVisionTasks('/wasm')` pointed at the **bundled** 
 
 ### 1.3 `QualityMonitor` (`src/sensing/quality.ts`)
 
-Responsibility: emit exactly one `QualityState` per frame; the fail-safe core.
+Responsibility: return exactly one discriminated `QualityResult` per frame; the fail-safe core and sole constructor of `ApprovedFrame`.
 
 ```typescript
-evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityState
+evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityResult
+// QualityResult = { state: 'QUALITY_OK', frame: ApprovedFrame }
+//               | { state: Exclude<QualityState, 'QUALITY_OK'> }  // no frame key
+// shapes: ARCHITECTURE §13
 ```
 
-Gate order (first failure wins): `FACE_LOST` (`lf === null`, `facePresent === false` — i.e. empty `faceLandmarks` — or `INFERENCE_FAILED` upstream; sensitivity is governed by the FaceLandmarker option thresholds in §1.2, not by any per-frame score) → `LOW_LIGHT` (mean luma of a 64×64 canvas downsample of the video < 60/255) → `TOO_FAR` (inter-ocular pixel distance < 60 px) → `POSE_OUT_OF_RANGE` (|yaw|, |pitch| or |roll| from `headPose` > 15°) → `LOW_CONFIDENCE` (rolling resting jitter > 0.5% inter-ocular) → `QUALITY_OK`. All values from `thresholds.ts`.
+Gate order (first failure wins): `FACE_LOST` (`lf === null` or `facePresent === false` — i.e. empty `faceLandmarks`; sensitivity is governed by the FaceLandmarker option thresholds in §1.2, not by any per-frame score) → `LOW_LIGHT` (mean luma of a 64×64 canvas downsample of the video < 60/255) → `TOO_FAR` (inter-ocular pixel distance < 60 px) → `POSE_OUT_OF_RANGE` (|yaw|, |pitch| or |roll| from `headPose` > 15°) → `LOW_CONFIDENCE` (rolling resting jitter > 0.5% inter-ocular) → `QUALITY_OK` (construct branded `ApprovedFrame` with `lf` + `video.videoWidth`/`videoHeight`). All values from `thresholds.ts`.
 
-**Never:** return more than one state; let a frame pass to `NormalizationLayer` unless the state is `QUALITY_OK` (the pipeline wiring makes this structural — `QualityMonitor` is the only caller of `NormalizationLayer.normalize`); phrase any state as a statement about the user's face or health (strings live in `strings.ts` and describe *conditions*: light, distance, angle — see SAFETY §8).
+`INFERENCE_FAILED` is converted by the **orchestrator** (SessionController / harness) before `evaluate`: catch from `LandmarkEngine.detect`, call `evaluate(video, null)` → `{ state: 'FACE_LOST' }`.
 
-### 1.4 `NormalizationLayer` (`src/metrics/normalize.ts`)
+**Never:** return more than one state; construct `ApprovedFrame` outside this module; phrase any state as a statement about the user's face or health (strings live in `strings.ts` and describe *conditions*: light, distance, angle — see SAFETY §8). Type barrier: `normalize` / `measureAbsolute` accept only `ApprovedFrame` — bad-frame metrics are a compile error.
 
-Responsibility: make geometry comparable across pose, distance, lighting, and sessions.
+### 1.4 `NormalizationLayer` (`src/metrics/normalize.ts` + geometry kernel `src/metrics/geometry.ts`)
+
+Responsibility: make geometry comparable across scale, lighting, and sessions via a baseline-free measurement kernel and baseline-relative normalization.
 
 ```typescript
-setBaseline(b: CalibrationBaseline): void                       // throws NO_BASELINE if b invalid
-normalize(lf: LandmarkFrame): NormalizedFrame                   // throws NO_BASELINE | POSE_OUT_OF_RANGE
+// Geometry kernel (src/metrics/geometry.ts) — baseline-free bootstrap (DG-2)
+measureAbsolute(af: ApprovedFrame): AbsoluteFeatures   // face-local Vec2 features in IOD units; ARCHITECTURE §13
+
+// NormalizationLayer
+setBaseline(b: CalibrationBaseline): void              // throws NO_BASELINE if b invalid
+normalize(af: ApprovedFrame): NormalizedFrame          // throws NO_BASELINE only
 clearBaseline(): void
 ```
 
-Pipeline per frame: (1) scale all landmark coordinates by inter-ocular distance; (2) rotate into canonical head pose using the inverse of `headPose`; (3) compute per-region distances (region → landmark indices from `exercises.ts`); (4) subtract `neutralStats` reference → `regionDisplacements: Record<RegionId, {left, right}>`.
+Pipeline per approved frame: (1) `measureAbsolute(af)` → face-local vector features per region/side; (2) subtract stored `neutralStats` → vector `regionDisplacements` (ARCHITECTURE §13). Calibration bootstrap uses `measureAbsolute` directly — **zero/default/ephemeral baselines are forbidden**.
 
-**Never:** run without an explicit baseline (no silent identity defaults); mutate the input frame; consume blendshapes.
+**Never:** run `normalize` without an explicit real baseline (no silent identity defaults, no zero `neutralStats`); accept a raw `LandmarkFrame` (compile error — `ApprovedFrame` only); mutate the input frame; consume blendshapes.
 
 ### 1.5 `MetricEngine` (`src/metrics/metrics.ts`) and `RepDetector` (`src/metrics/reps.ts`)
 
@@ -87,22 +96,24 @@ Responsibility: the session state machine, the event surface, session assembly.
 start(exerciseIds: ExerciseId[]): Promise<void>   // throws NOT_ATTESTED | NO_BASELINE | CAMERA_* 
 advance(): void                                   // user taps "I'm ready" / "next"
 extendRest(seconds: number): void                 // extension only; shortening does not exist
-stop(reason: EndReason): Promise<SessionRecord>   // always saves partials (except Demo Mode)
+stop(reason: EndReason): Promise<SessionRecordFull> // always saves partials (except Demo Mode); shape: ARCHITECTURE §13
 on<E extends SessionEvent>(event: E, cb): () => void  // events: ARCHITECTURE §12, no others
 ```
 
-State machine per exercise: `DEMO → REPS → REST`; transitions: `advance()` (DEMO→REPS), rep count reached (REPS→REST), `restSeconds` elapsed or `advance()` (REST→next exercise DEMO or session end). Quality problems persisting > 30 s in REPS → offer stop (`quality_abandoned`). Rep discard rule: < 60% `QUALITY_OK` frames within the rep window → not counted, `strings.ts` explanation emitted.
+State machine per exercise: `DEMO → REPS → REST`; transitions: `advance()` (DEMO→REPS), rep count reached (REPS→REST), `restSeconds` elapsed or `advance()` (REST→next exercise DEMO or session end). Hot-path orchestration: on each frame, catch `INFERENCE_FAILED` → `evaluate(video, null)`; on `QualityResult` with `state === 'QUALITY_OK'`, pass `frame` (`ApprovedFrame`) to `normalize` / metrics; otherwise emit `qualityUpdate` and skip geometry. Quality problems persisting > 30 s in REPS → offer stop (`quality_abandoned`). Rep discard rule: < 60% `QUALITY_OK` frames within the rep window → not counted, `strings.ts` explanation emitted.
 
-**Never:** start unattested (Demo Mode excepted, `SafetyGate` decides); write to storage when `SafetyGate.isDemoMode()` is true; auto-progress difficulty or dosing (dosing is fixed config — the app never prescribes); emit events not listed in ARCHITECTURE §12.
+**Never:** start unattested (Demo Mode excepted, `SafetyGate` decides); write to storage when `SafetyGate.isDemoMode()` is true; auto-progress difficulty or dosing (dosing is fixed config — the app never prescribes); emit events not listed in ARCHITECTURE §12; pass a raw `LandmarkFrame` into `normalize` / `measureAbsolute`.
 
 ### 1.7 `CalibrationFlow` (`src/session/calibration.ts`)
 
 ```typescript
-captureNeutral(): Promise<NeutralStats>                         // 3×3 s, median; throws QUALITY_TOO_LOW
+captureNeutral(): Promise<NeutralCaptureResult>                 // 3×3 s, measureAbsolute + median; throws QUALITY_TOO_LOW
 captureComfortableMax(exerciseId: ExerciseId): Promise<number>  // 3 gentle reps, median; throws QUALITY_TOO_LOW
-runNoiseFloorSelfTest(): Promise<number>                        // writes app_settings.noiseFloorSymmetry
+runNoiseFloorSelfTest(): Promise<number>                        // baseline-paired noise fields (ARCHITECTURE §12)
 checkBaselineDrift(): Promise<'ok' | 'recalibrate'>             // 3 s silent re-check, >8% drift → 'recalibrate'
 ```
+
+`captureNeutral` uses the baseline-free geometry kernel `measureAbsolute` on `QUALITY_OK` `ApprovedFrame`s, aggregates to `NeutralStats` (ARCHITECTURE §13), and returns `{ neutralStats, qualityScore }`. **Never** invents a zero/default baseline to call `normalize` during bootstrap.
 
 **Never:** accept a capture with `qualityScore < 0.7`; use max instead of median for `comfortableMax` (median resists the straining outlier); persist anything in Demo Mode (its quick-calibration lives in memory only).
 
@@ -143,21 +154,25 @@ SettingsService.update(partial: Partial<AppSettings>): Promise<AppSettings>
 ```mermaid
 flowchart LR
     subgraph hot["Hot path (per frame, outside React)"]
-        CS[CaptureService] --> LE[LandmarkEngine] --> QM[QualityMonitor]
-        QM -->|QUALITY_OK only| NL[NormalizationLayer] --> ME[MetricEngine] --> RD[RepDetector]
+        CS[CaptureService] --> LE[LandmarkEngine]
+        LE -->|LandmarkFrame or INFERENCE_FAILED| ORCH[Orchestrator]
+        ORCH -->|lf or null| QM[QualityMonitor]
+        QM -->|QualityResult QUALITY_OK + ApprovedFrame| NL[NormalizationLayer\nmeasureAbsolute / normalize]
+        QM -->|QualityResult non-OK| FR[FeedbackRenderer]
+        NL --> ME[MetricEngine] --> RD[RepDetector]
     end
     RD --> SC[SessionController]
-    QM -->|QualityState| SC
-    ME -->|MetricSample| FR[FeedbackRenderer]
-    QM -->|QualityState| FR
+    QM -->|QualityResult| SC
+    ME -->|MetricSample| FR
     SC -->|events| FR & UI[Screens]
     SG[SafetyGate] -.gates.-> SC & CF[CalibrationFlow]
-    CF --> NL & SS[StorageService]
+    CF -->|ApprovedFrame → measureAbsolute| NL
+    CF --> SS[StorageService]
     SC --> SS
     TS[TrendsService] & ES[ExportService] & SET[SettingsService] --> SS
 ```
 
-No queues, no streams, no workers in v1. The single "scheduler" is a **date-only** staleness check on `HomeScreen` mount: compare the active baseline's `capturedAt` against `staleDays` (14, design default, **needs verification**) — **no camera involved**; the camera opens only on `CalibrationScreen`/`SessionScreen` per §1.1. The 3 s `CalibrationFlow.checkBaselineDrift()` capture runs only inside `SessionController.start` preconditions, where the camera is legitimately live.
+No queues, no streams, no workers in v1. The single "scheduler" is a **date-only** staleness check on `HomeScreen` mount: compare the active baseline's `capturedAt` against `staleDays` (14, design default, **needs verification**) — **no camera involved**; the camera opens only on `CalibrationScreen`/`SessionScreen` in production (dev harnesses under `src/dev/` may open it — API.md §4). The 3 s `CalibrationFlow.checkBaselineDrift()` capture runs only inside `SessionController.start` preconditions, where the camera is legitimately live.
 
 ## 3. State & long-running work
 

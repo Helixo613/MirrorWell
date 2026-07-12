@@ -11,9 +11,10 @@ flowchart TD
     subgraph Device["User device — browser PWA, fully offline after first load"]
         CAM[Camera] --> CS[CaptureService]
         CS -->|video element + timestamp ~30fps| LE[LandmarkEngine\nMediaPipe FaceLandmarker]
-        LE -->|LandmarkFrame| QM[QualityMonitor]
-        QM -->|QUALITY_OK frames only| NL[NormalizationLayer]
-        QM -->|QualityState| FR[FeedbackRenderer]
+        LE -->|LandmarkFrame| ORCH[Orchestrator\nSessionController / harness]
+        ORCH -->|INFERENCE_FAILED → null / FACE_LOST| QM[QualityMonitor]
+        QM -->|QualityResult QUALITY_OK + ApprovedFrame| NL[NormalizationLayer\nmeasureAbsolute / normalize]
+        QM -->|QualityResult non-OK state| FR[FeedbackRenderer]
         NL -->|NormalizedFrame| ME[MetricEngine]
         ME -->|MetricSample| RD[RepDetector]
         ME --> FR
@@ -34,7 +35,7 @@ flowchart TD
     ES -->|user-initiated file download\nJSON + printable HTML| CLIN[Clinician / SLP\nreviews offline]
 ```
 
-Cadence: `CaptureService → LandmarkEngine → QualityMonitor → NormalizationLayer → MetricEngine → RepDetector → FeedbackRenderer` is the **hot path**, per-frame at ≥ 24 fps, running outside React. Everything below `SessionController` is event-driven.
+Cadence: `CaptureService → LandmarkEngine → QualityMonitor → NormalizationLayer → MetricEngine → RepDetector → FeedbackRenderer` is the **hot path**, per-frame at ≥ 24 fps, running outside React. The orchestrator (`SessionController`, or a dev harness under `src/dev/`) converts `INFERENCE_FAILED` before `evaluate` and only passes `ApprovedFrame` into geometry/normalize. Everything below `SessionController` is event-driven.
 
 ## 2. Canonical tech stack
 
@@ -62,8 +63,8 @@ Cadence: `CaptureService → LandmarkEngine → QualityMonitor → Normalization
 |---|---|---|---|
 | `CaptureService` | Own the camera: permission flow, frame loop (`requestVideoFrameCallback`, rAF fallback), teardown | `getUserMedia`, 640×480 min, front camera | → `LandmarkEngine` (video element + timestamp); ← `SessionController`/`CalibrationFlow` (start/stop) |
 | `LandmarkEngine` | One job: frames in, landmarks out. Wraps the bundled FaceLandmarker model (`public/models/face_landmarker.task`) **and its bundled WASM runtime (`public/wasm/`, copied from the npm package at postinstall)** — both served same-origin, never CDN | MediaPipe tasks-vision, VIDEO mode via `detectForVideo`, transformation matrix enabled | ← `CaptureService`; → `QualityMonitor` |
-| `QualityMonitor` | Gate every frame; emit exactly one `QualityState`; the fail-safe core | Pure TS; gates in `thresholds.ts` | ← `LandmarkEngine`; → `NormalizationLayer` (pass) or `FeedbackRenderer` (block reason) |
-| `NormalizationLayer` | Make geometry pose/scale/identity-invariant: inter-ocular scaling, head-pose correction, neutral-baseline subtraction | Pure TS math | ← `QualityMonitor`; ← `CalibrationFlow` (baseline); → `MetricEngine` |
+| `QualityMonitor` | Gate every frame; return a discriminated `QualityResult` (`QUALITY_OK` carries branded `ApprovedFrame`; non-OK states carry no frame) | Pure TS; gates in `thresholds.ts`; `ApprovedFrame` constructible only inside `quality.ts` | ← orchestrator (`SessionController` / harness); → `NormalizationLayer`/`geometry` (via `ApprovedFrame`) or `FeedbackRenderer` (block reason) |
+| `NormalizationLayer` | Make geometry scale/identity-invariant via the face-local geometry kernel (`measureAbsolute`) and neutral-baseline subtraction (`normalize`); both accept **only** `ApprovedFrame` | Pure TS math (`src/metrics/geometry.ts` kernel + `normalize.ts`) | ← `ApprovedFrame` from `QualityMonitor`; ← `CalibrationFlow` (baseline / bootstrap via `measureAbsolute`); → `MetricEngine` |
 | `MetricEngine` | Compute `symmetryIndex` + `effortIndex` per frame for the active exercise; smoothing; ease-off condition | Pure TS math (deterministic, unit-tested) | ← `NormalizationLayer`; → `RepDetector`, `FeedbackRenderer` |
 | `RepDetector` | Rep state machine over `MetricSample` streams | Pure TS | ← `MetricEngine`; → `SessionController` |
 | `SessionController` | Session state machine (per exercise: DEMO→REPS→REST), event emitter (the frontend contract), session assembly + save | TS event emitter | ← `RepDetector`, `QualityMonitor`; → `StorageService`, `FeedbackRenderer`, screens |
@@ -95,10 +96,10 @@ Uncalibrated cross-session data is misleading; this protocol is what makes every
 
 1. `HomeScreen` → "Start my exercises" → `SessionController.start(profile.assignedExercises)`. `SafetyGate.isAttested()` must return true (else `NOT_ATTESTED` and redirect to `OnboardingScreen`). `NormalizationLayer.setBaseline(activeBaseline)`; silent neutral re-check (§4.6) passes.
 2. `SessionController` enters `DEMO` for `EX_SMILE` (plays `demoAssetPath` WebM); user taps "I'm ready" → `REPS`. `CaptureService.start()` begins delivering the video element + timestamps per frame tick.
-3. Per frame: `LandmarkEngine.detect(video, timestampMs)` → `LandmarkFrame {landmarks[478], headPose, facePresent, timestampMs}` → `QualityMonitor.evaluate(video, lf)` → `QUALITY_OK` → `NormalizationLayer.normalize(lf)` → `NormalizedFrame {regionDisplacements: {REGION_MOUTH_CORNER: {left: 0.041, right: 0.028}}}` → `MetricEngine.compute(nf, 'EX_SMILE')` → `MetricSample {symmetryIndex: 0.68, effortIndex: 0.44, timestampMs}` (in `effortTargetZone`, no cue).
+3. Per frame: `LandmarkEngine.detect(video, timestampMs)` → `LandmarkFrame` (shape: §13) → orchestrator catches `INFERENCE_FAILED` and passes `null` → `QualityMonitor.evaluate(video, lf)` → `QualityResult`. On `{ state: 'QUALITY_OK', frame: ApprovedFrame }` → `NormalizationLayer.normalize(af)` → `NormalizedFrame` with vector `regionDisplacements` (shape: §13) → `MetricEngine.compute(nf, 'EX_SMILE')` → `MetricSample` (in `effortTargetZone`, no cue). Non-OK `QualityResult` has no `frame` key — `normalize`/`measureAbsolute` are uncallable.
 4. `FeedbackRenderer` updates the symmetry bar and arc ≤ 100 ms after capture; `SessionController` emits `metricUpdate` (throttled ~15 Hz) and `qualityUpdate` events consumed by `SessionScreen`.
-5. `RepDetector.feed(sample)` sees effort cross `repStartThreshold` 0.15 → hold ≥ 800 ms → fall below `repEndThreshold` 0.10 → emits `RepEvent {repIndex: 4, peakSymmetryIndex: 0.71, peakEffortIndex: 0.47, durationMs: 1900, easeOffTriggered: false}` → `SessionController` emits `repCompleted` → tick + haptic (Android) / tone (desktop).
-6. Mid-rep failure case: user's lamp dips → `QualityMonitor` returns `LOW_LIGHT` → hot path short-circuits **before** `NormalizationLayer` (structural, not policy) → `FeedbackRenderer` shows "More light needed", scoring paused → if < 60% of the rep's frames were `QUALITY_OK`, the rep is discarded with a gentle explanation.
+5. `RepDetector.feed(sample)` sees effort cross `repStartThreshold` 0.15 → hold ≥ 800 ms → fall below `repEndThreshold` 0.10 → emits `RepEvent` (shape: §13) → `SessionController` emits `repCompleted` → tick + haptic (Android) / tone (desktop).
+6. Mid-rep failure case: user's lamp dips → `QualityMonitor` returns `{ state: 'LOW_LIGHT' }` (no `frame`) → hot path cannot call `normalize` (type barrier, not policy) → `FeedbackRenderer` shows "More light needed", scoring paused → if < 60% of the rep's frames were `QUALITY_OK`, the rep is discarded with a gentle explanation.
 7. After configured `repsPerSet`, state → `REST` (`restSeconds`, extendable, never shortenable by pressure); next exercise; on completion `SessionController.stop('completed')` assembles `SessionRecord` + nested `exercise_result` + `rep_metric` rows → `StorageService.saveSession(s)` in **one Dexie transaction** → `sessionEnded` event → `SummaryScreen` renders from the returned record. All frames/landmarks from the session are already garbage-collected; nothing visual was ever persisted.
 
 ### 5.2 Caregiver/clinician reviewing progress
@@ -135,7 +136,7 @@ For the active exercise's region pair with baseline-subtracted, pose-corrected, 
 
 ## 8. Fail-safe sensing (canonical)
 
-`QualityMonitor` emits exactly one state per frame: `QUALITY_OK`, `LOW_LIGHT`, `FACE_LOST`, `TOO_FAR`, `POSE_OUT_OF_RANGE`, `LOW_CONFIDENCE`. Hard rules: metrics are computed **only** on `QUALITY_OK` frames (enforced structurally — the quality gate sits before `NormalizationLayer` in the pipeline); a rep with < 60% `QUALITY_OK` frames is discarded and gently explained; problems persisting > 30 s offer session end (`endReason: 'quality_abandoned'`, excluded from trends). The app never shows a confident number derived from bad input — the UX for each state is specified in FRONTEND.md §5.
+`QualityMonitor.evaluate` returns exactly one `QualityResult` per frame. States: `QUALITY_OK`, `LOW_LIGHT`, `FACE_LOST`, `TOO_FAR`, `POSE_OUT_OF_RANGE`, `LOW_CONFIDENCE`. Hard rules: metrics are computed **only** on `QUALITY_OK` frames, enforced by a compile-time type barrier — `ApprovedFrame` is constructible only inside `quality.ts`; `normalize` / `measureAbsolute` accept only `ApprovedFrame`, so bad-frame metrics are a **compile error**, not a runtime policy. A rep with < 60% `QUALITY_OK` frames is discarded and gently explained; problems persisting > 30 s offer session end (`endReason: 'quality_abandoned'`, excluded from trends). The app never shows a confident number derived from bad input — the UX for each state is specified in FRONTEND.md §5.
 
 ## 9. Secrets & config
 
@@ -174,13 +175,140 @@ VITE_DEMO_MODE_ENABLED=true     # shows "Try a demo" entry on OnboardingScreen
 | Services | `CaptureService`, `LandmarkEngine`, `QualityMonitor`, `NormalizationLayer`, `MetricEngine`, `RepDetector`, `SessionController`, `FeedbackRenderer`, `CalibrationFlow`, `SafetyGate`, `StorageService`, `TrendsService`, `ExportService`, `SettingsService`, `DebugHud` (dev) |
 | Screens | `OnboardingScreen`, `CalibrationScreen`, `HomeScreen`, `SessionScreen`, `SummaryScreen`, `TrendsScreen`, `CaregiverScreen`, `ExportScreen`, `SettingsScreen` |
 | Database | `mirrorwell_db` v1; tables `user_profile`, `calibration_baseline`, `session_record`, `exercise_result`, `rep_metric`, `app_settings` (full DDL: DATABASE.md) |
-| Key fields | `profileId`, `affectedSide`, `assignedExercises`, `attestedAt`, `consentVersion`, `baselineId`, `neutralStats`, `comfortableMax`, `qualityScore`, `isActive`, `sessionId`, `startedAt`, `endedAt`, `endReason`, `resultId`, `exerciseId`, `repsCompleted`, `meanSymmetryIndex`, `meanEffortIndex`, `easeOffCount`, `lowQualityFramePct`, `repId`, `repIndex`, `peakSymmetryIndex`, `peakEffortIndex`, `durationMs`, `easeOffTriggered`, `settingsId`, `highContrast`, `textScale`, `hapticsEnabled`, `audioCuesEnabled`, `reducedFacePreview`, `trendGranularity`, `noiseFloorSymmetry`, `showAffectedSideMarker`, `caregiverViewEnabled` |
+| Key fields | `profileId`, `affectedSide`, `assignedExercises`, `attestedAt`, `consentVersion`, `baselineId`, `neutralStats`, `comfortableMax`, `qualityScore`, `isActive`, `noiseFloorSymmetry` (on `calibration_baseline`, not `app_settings`), `noiseFloorDisplacement` (on `calibration_baseline`), `sessionId`, `startedAt`, `endedAt`, `endReason`, `resultId`, `exerciseId`, `repsCompleted`, `meanSymmetryIndex`, `meanEffortIndex`, `easeOffCount`, `lowQualityFramePct`, `repId`, `repIndex`, `peakSymmetryIndex`, `peakEffortIndex`, `durationMs`, `easeOffTriggered`, `settingsId`, `highContrast`, `textScale`, `hapticsEnabled`, `audioCuesEnabled`, `reducedFacePreview`, `trendGranularity`, `showAffectedSideMarker`, `caregiverViewEnabled` |
 | Exercises (`ExerciseId`) | `EX_BROW_RAISE`, `EX_EYE_CLOSURE`, `EX_SMILE`, `EX_PUCKER` — config fields per exercise: `exerciseId`, `regionId`, landmark indices, display name, instruction, `demoAssetPath`, `repsPerSet` (10; `EX_EYE_CLOSURE` 5), `sets` (1), `restSeconds` (20) — dosing fixed in v1, **needs verification** |
 | Regions (`RegionId`) | `REGION_BROW`, `REGION_EYELID`, `REGION_MOUTH_CORNER`, `REGION_LIP` (1:1 with exercises above) |
-| Metrics & types | `symmetryIndex`, `effortIndex`, `effortTargetZone`, `movementFloor`, `MetricSample`, `RepEvent`, `LandmarkFrame`, `NormalizedFrame`, `NeutralStats`, `UserProfile`, `CalibrationBaseline`, `SessionRecord`, `SessionRecordInput`, `SessionRecordFull`, `AppSettings`, `AppStateContext`, `TrendSeries`, `MirrorWellError` |
+| Metrics & types | `symmetryIndex`, `effortIndex`, `effortTargetZone`, `movementFloor`, `LandmarkFrame`, `ApprovedFrame`, `QualityResult`, `AbsoluteFeatures`, `NeutralStats`, `NormalizedFrame`, `MetricSample`, `RepEvent`, `NeutralCaptureResult`, `UserProfile`, `CalibrationBaseline`, `SessionRecord`, `SessionRecordInput`, `SessionRecordFull`, `AppSettings`, `AppStateContext`, `TrendSeries`, `Adherence`, `MirrorWellError` — exact TS shapes: **§13** |
 | Quality states (`QualityState`) | `QUALITY_OK`, `LOW_LIGHT`, `FACE_LOST`, `TOO_FAR`, `POSE_OUT_OF_RANGE`, `LOW_CONFIDENCE` |
 | Session states / `EndReason` | `DEMO`, `REPS`, `REST`; `'completed' \| 'user_stopped' \| 'red_flag_stopped' \| 'quality_abandoned'` |
 | `SessionController` events | `stateChanged {exerciseId, state}`, `metricUpdate {sample}`, `qualityUpdate {state}`, `repCompleted {event}`, `easeOff {active}`, `sessionEnded {record}` — no other events exist |
 | Error codes | `DB_UNAVAILABLE`, `VALIDATION_FAILED`, `QUALITY_TOO_LOW`, `MODEL_LOAD_FAILED`, `NOT_INITIALIZED`, `INFERENCE_FAILED`, `NO_BASELINE`, `POSE_OUT_OF_RANGE`, `NOT_ATTESTED`, `CAMERA_DENIED`, `CAMERA_UNAVAILABLE` (shapes: API.md §1) |
 | Config files | `src/config/exercises.ts`, `src/config/thresholds.ts`, `src/config/strings.ts`; env flags `VITE_CONSENT_VERSION`, `VITE_ENABLE_DEBUG_HUD`, `VITE_DEMO_MODE_ENABLED` |
 | Test artifacts | masters `tests/fixtures/masters/fixture_<subjectId>_<condition>.{webm,mp4}` + Playwright replays `tests/fixtures/replay/fixture_<subjectId>_<condition>.mjpeg` (ffmpeg-converted — Chromium fake capture accepts only `.y4m`/`.mjpeg`), `tests/fixtures/fixtures_manifest.json` (tracks both paths), `tests/schemas/export.schema.json`, DebugHud CSV columns `timestampMs, exerciseId, qualityState, symmetryIndexRaw, symmetryIndexSmoothed, effortIndexRaw, effortIndexSmoothed, repState, fps` |
+
+## 13. Canonical type definitions
+
+Exact TypeScript shapes for every load-bearing pipeline and session type. Other docs **reference this section** instead of restating full shapes. Row types (`UserProfile`, `CalibrationBaseline`, `SessionRecord`, `ExerciseResult`, `RepMetric`, `AppSettings`) remain owned by `DATABASE.md` §2 and are not duplicated here.
+
+```typescript
+// --- Hot-path sensing & geometry ---
+
+type LandmarkFrame = {
+  landmarks: { x: number; y: number; z: number }[]; // length 478
+  headPose: number[]; // 16 floats, row-major 4×4 facial transformation matrix
+  facePresent: boolean; // faceLandmarks non-empty (no per-frame confidence field exists)
+  timestampMs: number;
+};
+
+// Branded ApprovedFrame — brand symbol is not exported; only quality.ts constructs
+type ApprovedFrame = {
+  readonly __approved: unique symbol; // brand, not for external construction
+  lf: LandmarkFrame;
+  videoWidth: number;
+  videoHeight: number;
+};
+
+type QualityState =
+  | 'QUALITY_OK'
+  | 'LOW_LIGHT'
+  | 'FACE_LOST'
+  | 'TOO_FAR'
+  | 'POSE_OUT_OF_RANGE'
+  | 'LOW_CONFIDENCE';
+
+type QualityResult =
+  | { state: 'QUALITY_OK'; frame: ApprovedFrame }
+  | { state: Exclude<QualityState, 'QUALITY_OK'> }; // no frame key
+
+// Face-local 2D vector features in inter-ocular-distance (IOD) units
+type Vec2 = { u: number; v: number };
+type AbsoluteFeatures = Record<RegionId, { left: Vec2; right: Vec2 }>;
+type NeutralStats = Record<RegionId, { left: Vec2; right: Vec2 }>;
+
+// NormalizedFrame carries vector displacements (not scalars)
+type NormalizedFrame = {
+  regionDisplacements: Record<RegionId, { left: Vec2; right: Vec2 }>;
+  timestampMs: number;
+};
+
+type MetricSample = {
+  symmetryIndex: number | null; // null under movementFloor
+  effortIndex: number;
+  timestampMs: number;
+};
+
+type RepEvent = {
+  repIndex: number;
+  peakSymmetryIndex: number | null;
+  peakEffortIndex: number;
+  durationMs: number;
+  easeOffTriggered: boolean; // boolean on the event surface; StorageService stores 0|1
+};
+
+type NeutralCaptureResult = {
+  neutralStats: NeutralStats;
+  qualityScore: number; // [0..1]; < 0.7 → QUALITY_TOO_LOW
+};
+
+// --- Session assembly (StorageService / SessionController) ---
+
+// Nested write shape for saveSession (one transaction).
+// easeOffTriggered is 0|1 here for IndexedDB indexability (DATABASE.md §1).
+type SessionRecordInput = {
+  sessionId: string;
+  profileId: string;
+  baselineId: string;
+  startedAt: string; // UTC ISO 8601
+  endedAt: string;
+  endReason: EndReason;
+  results: Array<{
+    resultId: string;
+    exerciseId: ExerciseId;
+    repsCompleted: number;
+    meanSymmetryIndex: number | null;
+    meanEffortIndex: number | null;
+    easeOffCount: number;
+    lowQualityFramePct: number;
+    reps: Array<{
+      repId: string;
+      repIndex: number;
+      peakSymmetryIndex: number | null;
+      peakEffortIndex: number;
+      durationMs: number;
+      easeOffTriggered: 0 | 1;
+    }>;
+  }>;
+};
+
+// Nested read shape returned by getSessions / SessionController.stop / sessionEnded
+type SessionRecordFull = SessionRecordInput;
+
+// --- Trends & UI shell ---
+
+type TrendSeries = {
+  exerciseId: ExerciseId;
+  granularity: 'weekly' | 'monthly';
+  baselineId: string;
+  points: Array<{
+    periodStart: string; // calendar date in local time, ISO date
+    meanSymmetryIndex: number;
+    sampleCount: number;
+    aboveNoiseFloor: boolean;
+  }>;
+};
+
+type Adherence = {
+  sessionsPerWeek: number[];
+  completionRate: number; // completed sessions / started sessions in range
+};
+
+// Root React context (FRONTEND.md §3) — not a pipeline type
+type AppStateContext = {
+  profile: UserProfile | null;
+  activeBaseline: CalibrationBaseline | null;
+  settings: AppSettings;
+  gate: 'UNATTESTED' | 'ATTESTED' | 'DEMO';
+};
+```
+
+**Type-barrier rule (binding):** `ApprovedFrame` is constructible only inside `src/sensing/quality.ts`. `NormalizationLayer.normalize` and the geometry kernel `measureAbsolute` accept only `ApprovedFrame`. Passing a raw `LandmarkFrame` into either is a compile error — metric code on a non-`QUALITY_OK` frame is structurally impossible.

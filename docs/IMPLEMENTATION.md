@@ -81,7 +81,7 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 
 **Objective:** Exactly one `QualityState` per frame; the structural fail-safe gate.
 
-- Implement `evaluate` with the BACKEND §1.3 gate order and `thresholds.ts` values (luma via 64×64 downsample; inter-ocular pixel distance; pose from `headPose`; rolling jitter). Wire the pipeline so `QualityMonitor` is the **only** caller of `NormalizationLayer.normalize` (Task 6) — bad-frame metrics must be structurally impossible.
+- Implement `evaluate` returning discriminated `QualityResult` (ARCHITECTURE §13 / API.md §6) with the BACKEND §1.3 gate order and `thresholds.ts` values (luma via 64×64 downsample; inter-ocular pixel distance; pose from `headPose`; rolling jitter). On `QUALITY_OK`, construct branded `ApprovedFrame` **only inside `quality.ts`**. Wire the pipeline so `normalize` / geometry accept only `ApprovedFrame` — bad-frame metrics must be a **compile error**, not a runtime policy (Task 6 consumes this barrier).
 
 **Test:** Unit boundary tests per gate with synthetic `LandmarkFrame`s. Scripted manual protocol, each detected < 500 ms: cover lamp → `LOW_LIGHT`; leave frame → `FACE_LOST`; step to 2 m → `TOO_FAR`; turn 30° → `POSE_OUT_OF_RANGE`.
 
@@ -93,10 +93,10 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 
 - Record the MODEL_AND_DATA §4 fixture set (consent forms first — SAFETY §6): per subject, neutral / four gentle exercises / over-effort / one-sided expression, plus degraded variants (low light, ~15° yaw, 2 m). Masters as webm/mp4 under `tests/fixtures/masters/`; write `scripts/convert-fixtures.sh` (ffmpeg) producing `.mjpeg` replays under `tests/fixtures/replay/` — **Chromium's fake capture accepts only `.y4m`/`.mjpeg`, and y4m is uncompressed/too large to commit**. `fixtures_manifest.json` tracks both paths per fixture. (Dev prerequisite: `ffmpeg` on PATH.)
 - Fix the **landmark indices** per region in `exercises.ts` (brow: eyebrow-to-eye vertical distances; eyelid: lid apertures; mouth corner: excursion from neutral; lip: corner convergence) — comment each with the MediaPipe mesh point IDs chosen.
-- Implement `NormalizationLayer` per API.md §7: inter-ocular scaling → inverse-`headPose` rotation → per-region distances → baseline subtraction → `regionDisplacements`.
+- Implement the geometry kernel + `NormalizationLayer` per API.md §7: `measureAbsolute(af: ApprovedFrame): AbsoluteFeatures` (baseline-free bootstrap) and `normalize(af: ApprovedFrame): NormalizedFrame` (kernel minus stored `neutralStats` → vector `regionDisplacements`). Both accept **only** `ApprovedFrame`; zero/default baselines forbidden. Calibration bootstrap uses `measureAbsolute` directly.
 - Run **V1** (MODEL_AND_DATA §7): replay fixture variants; compute B1/B2/B3 spreads in a `tests/analysis/` notebook from DebugHud-format CSVs (write a minimal headless CSV dumper now; full DebugHud is Task 8).
 
-**Test:** V1 passes — B1 rest std ≤ 0.05; B2 held-expression variation < 5% across lighting/distance; B3 ±15° yaw shifts SI < 0.05. **If V1 fails, stop all feature work and fix normalization; nothing downstream is valid.** Unit: `normalize` without `setBaseline` throws `NO_BASELINE`.
+**Test:** V1 passes — B1 rest std ≤ 0.05; B2 held-expression variation < 5% across lighting/distance; B3 ±15° yaw shifts SI < 0.05. **If V1 fails, stop all feature work and fix normalization; nothing downstream is valid.** Unit: `normalize` without `setBaseline` throws `NO_BASELINE`; passing a raw `LandmarkFrame` to `normalize`/`measureAbsolute` fails to compile.
 
 ---
 
@@ -236,7 +236,7 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 
 ## Fail-safe behavior (implementation view)
 
-The `QualityState` short-circuit is **structural**: `QualityMonitor` is the only caller of `NormalizationLayer.normalize` (Task 5/6 wiring), so metric code cannot run on a bad frame. Rep-discard, the 30 s offer-stop, `quality_abandoned` exclusion from trends, and the frozen-bar rule are individually tested (Tasks 11, 14, 16). Quality messages describe conditions, never faces (strings audit).
+The quality short-circuit is **structural via a type barrier**: `ApprovedFrame` is constructible only inside `quality.ts`; `normalize` / `measureAbsolute` accept only `ApprovedFrame` (Task 5/6 wiring), so metric code on a non-`QUALITY_OK` frame is a compile error. Rep-discard, the 30 s offer-stop, `quality_abandoned` exclusion from trends, and the frozen-bar rule are individually tested (Tasks 11, 14, 16). Quality messages describe conditions, never faces (strings audit).
 
 ## Efficacy & outcomes (anti-gimmick — from the app's own local data only)
 

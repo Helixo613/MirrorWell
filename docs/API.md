@@ -189,7 +189,8 @@ Clears all six tables in one transaction. **Errors:** `DB_UNAVAILABLE`
 | `onFrame(cb)` | `(video: HTMLVideoElement, timestampMs: number) => void` | `() => void` unsubscribe | — |
 | `isRunning()` | — | `boolean` | — |
 
-> **Rule:** latest-frame-wins; never queue. > **Rule:** the stream may be open only while `CalibrationScreen` or `SessionScreen` is mounted.
+> **Rule:** latest-frame-wins; never queue.
+> **Rule (camera lifecycle):** in production, the stream may be open only while `CalibrationScreen` or `SessionScreen` is mounted. Narrow exception: **dev-only harnesses under `src/dev/`** (excluded from the prod bundle) may open the camera for validation and live tooling; no production screen or service may rely on that path.
 
 ---
 
@@ -221,7 +222,7 @@ Passes the playing video element straight to FaceLandmarker's `detectForVideo` �
 
 Returns `true` after a successful `init()`.
 
-**Errors (detect):** `NOT_INITIALIZED` (call `init()` first), `INFERENCE_FAILED` (treated as `FACE_LOST` by `QualityMonitor` — never crashes a session)
+**Errors (detect):** `NOT_INITIALIZED` (call `init()` first), `INFERENCE_FAILED` (orchestrator converts to `FACE_LOST` **before** `QualityMonitor.evaluate` by passing `null` — never crashes a session)
 
 > **Rule:** MediaPipe types never escape this module. Downstream consumes `LandmarkFrame` only, and **raw landmark geometry only — never blendshapes** (MODEL_AND_DATA §2).
 
@@ -231,37 +232,54 @@ Returns `true` after a successful `init()`.
 
 `src/sensing/quality.ts`.
 
-### `evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityState`
+### `evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityResult`
 
-Returns exactly one of `"QUALITY_OK" | "LOW_LIGHT" | "FACE_LOST" | "TOO_FAR" | "POSE_OUT_OF_RANGE" | "LOW_CONFIDENCE"`. Gate order and initial thresholds: BACKEND §1.3 / ARCHITECTURE §7.
+Returns a discriminated `QualityResult` (exact shape: ARCHITECTURE §13):
 
-> **Rule (structural fail-safe):** `QualityMonitor` is the only caller of `NormalizationLayer.normalize`, and calls it only on `QUALITY_OK`. Metric code running on a bad frame must be *impossible*, not just avoided.
+- `{ state: 'QUALITY_OK', frame: ApprovedFrame }` — only branch that carries a frame
+- `{ state: <non-OK QualityState> }` — **no** `frame` key
+
+`QualityState` values: `"QUALITY_OK" | "LOW_LIGHT" | "FACE_LOST" | "TOO_FAR" | "POSE_OUT_OF_RANGE" | "LOW_CONFIDENCE"`. Gate order and initial thresholds: BACKEND §1.3 / ARCHITECTURE §7.
+
+`INFERENCE_FAILED` is **not** observed inside `evaluate`. The orchestrator (`SessionController` or a `src/dev/` harness) catches it from `LandmarkEngine.detect` and calls `evaluate(video, null)`, which yields `{ state: 'FACE_LOST' }`.
+
+> **Rule (structural fail-safe / type barrier):** `ApprovedFrame` is constructible only inside `quality.ts`; `normalize` / geometry (`measureAbsolute`) accept only `ApprovedFrame` — bad-frame metrics are a **compile error**, not a runtime policy.
 
 ---
 
 ## 7. NormalizationLayer
 
-`src/metrics/normalize.ts`.
+`src/metrics/normalize.ts` (+ geometry kernel `src/metrics/geometry.ts`).
+
+### Geometry kernel (baseline-free bootstrap)
+
+```typescript
+measureAbsolute(af: ApprovedFrame): AbsoluteFeatures
+```
+
+`AbsoluteFeatures` = face-local vector features per region/side in IOD units (ARCHITECTURE §13). Used by calibration bootstrap (`CalibrationFlow.captureNeutral`) and as the inner step of `normalize`. **Baseline-free by design (DG-2):** this is the only path that may produce geometry without a stored baseline. **Zero baselines, identity defaults, and ephemeral fake baselines are explicitly forbidden** — if no real baseline exists yet, call `measureAbsolute`, never invent neutral zeros.
 
 ### `setBaseline(b: CalibrationBaseline): void` · `clearBaseline(): void`
 
 **Errors:** `NO_BASELINE` (invalid/missing baseline object)
 
-### `normalize(lf: LandmarkFrame): NormalizedFrame`
+### `normalize(af: ApprovedFrame): NormalizedFrame`
+
+Accepts **only** `ApprovedFrame` (ARCHITECTURE §13). Pipeline: `measureAbsolute(af)` → subtract stored `neutralStats` → vector `regionDisplacements`.
 
 **Response example:**
 ```json
 {
   "regionDisplacements": {
-    "REGION_BROW":        { "left": 0.004, "right": 0.005 },
-    "REGION_EYELID":      { "left": 0.001, "right": 0.002 },
-    "REGION_MOUTH_CORNER":{ "left": 0.041, "right": 0.028 },
-    "REGION_LIP":         { "left": 0.006, "right": 0.007 }
+    "REGION_BROW":         { "left": { "u": 0.001, "v": 0.004 }, "right": { "u": -0.001, "v": 0.005 } },
+    "REGION_EYELID":       { "left": { "u": 0.0,   "v": 0.001 }, "right": { "u": 0.0,    "v": 0.002 } },
+    "REGION_MOUTH_CORNER": { "left": { "u": 0.041, "v": 0.012 }, "right": { "u": -0.028, "v": 0.010 } },
+    "REGION_LIP":          { "left": { "u": 0.006, "v": 0.0   }, "right": { "u": -0.007, "v": 0.0   } }
   },
   "timestampMs": 187423.6
 }
 ```
-Values are displacements from `neutralStats`, in inter-ocular-distance units, pose-corrected. **Errors:** `NO_BASELINE`, `POSE_OUT_OF_RANGE` (defensive; normally pre-gated)
+Values are vector displacements from `neutralStats`, in inter-ocular-distance units. **Errors:** `NO_BASELINE` only. `POSE_OUT_OF_RANGE` is **not** thrown here — pose is gated inside `QualityMonitor` before an `ApprovedFrame` can exist, so that error is unreachable behind the type barrier (removed from this contract).
 
 ---
 
@@ -343,11 +361,11 @@ Preconditions checked in order: gate (ATTESTED or DEMO) → active baseline exis
 
 `advance` moves DEMO→REPS or ends REST early. `extendRest` adds time — **shortening does not exist** (accessibility no-time-pressure rule, FRONTEND §4).
 
-### `stop(reason: EndReason): Promise<SessionRecord>`
+### `stop(reason: EndReason): Promise<SessionRecordFull>`
 
 Always persists the partial/full session (except DEMO, where it returns the record without persisting).
 
-**Response:** the saved `SessionRecordFull` (shape as §3 `saveSession` request).
+**Response:** the saved `SessionRecordFull` (exact shape: ARCHITECTURE §13; nested results + reps as in §3 `saveSession` request).
 
 ### `on(event, cb): () => void` — the event surface (complete)
 
@@ -368,12 +386,12 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 
 `src/session/calibration.ts`. Gated: ATTESTED only (DEMO uses its own in-memory quick-calibration; UNATTESTED blocked).
 
-| Method | Output example | Errors |
+| Method | Signature / output | Errors |
 |---|---|---|
-| `captureNeutral()` | `{"neutralStats": {"REGION_BROW": {"left": 0.418, "right": 0.421}, "…": "…"}, "qualityScore": 0.91}` | `QUALITY_TOO_LOW` (coaching UI, retry), `CAMERA_*`, `NOT_ATTESTED` |
-| `captureComfortableMax("EX_SMILE")` | `0.092` | same |
-| `runNoiseFloorSelfTest()` | `0.041` (persisted to `app_settings.noiseFloorSymmetry`) | same + `DB_UNAVAILABLE` |
-| `checkBaselineDrift()` | `"ok"` \| `"recalibrate"` | `NO_BASELINE`, `CAMERA_*` |
+| `captureNeutral()` | `Promise<NeutralCaptureResult>` — `{ neutralStats, qualityScore }` (exact shape: ARCHITECTURE §13). Example: `{"neutralStats": {"REGION_BROW": {"left": {"u": 0.0, "v": 0.418}, "right": {"u": 0.0, "v": 0.421}}, "…": "…"}, "qualityScore": 0.91}` | `QUALITY_TOO_LOW` (coaching UI, retry), `CAMERA_*`, `NOT_ATTESTED` |
+| `captureComfortableMax("EX_SMILE")` | `Promise<number>` — e.g. `0.092` | same |
+| `runNoiseFloorSelfTest()` | `Promise<number>` — e.g. `0.041` (persisted with the active baseline; field ownership: ARCHITECTURE §12) | same + `DB_UNAVAILABLE` |
+| `checkBaselineDrift()` | `Promise<'ok' \| 'recalibrate'>` | `NO_BASELINE`, `CAMERA_*` |
 
 > **Rule:** `comfortableMax` = **median** of 3 gentle reps, never max (resists the straining outlier). Copy for these captures must include the word "gentle" (SAFETY §8 audit checks this).
 
@@ -384,6 +402,8 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 `src/data/trends.ts`. Consumers: `TrendsScreen`, `CaregiverScreen`, `ExportService`.
 
 ### `getTrend(exerciseId: ExerciseId, granularity: 'weekly' | 'monthly'): Promise<TrendSeries>`
+
+Exact shape: ARCHITECTURE §13.
 
 **Response example:**
 ```json
@@ -400,9 +420,11 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 ```
 **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (unknown exercise)
 
-> **Rules:** one series = one `baselineId` (the active one); `aboveNoiseFloor: false` when period-over-period change < `app_settings.noiseFloorSymmetry` — UI renders those as "steady", never up/down; `quality_abandoned` and `red_flag_stopped` sessions are excluded from aggregation.
+> **Rules:** one series = one `baselineId` (the active one); `aboveNoiseFloor: false` when period-over-period change < `noiseFloorSymmetry` (baseline-paired; ARCHITECTURE §12) — UI renders those as "steady", never up/down; `quality_abandoned` and `red_flag_stopped` sessions are excluded from aggregation.
 
 ### `getAdherence(range): Promise<Adherence>`
+
+Exact shape: ARCHITECTURE §13.
 
 **Response example:**
 ```json
@@ -487,9 +509,9 @@ Every tunable, exported as a single frozen object, each with a comment naming it
 | `QUALITY_TOO_LOW` | CalibrationFlow / saveBaseline | true | Capture coaching UI ("more light", "come closer") + retry |
 | `MODEL_LOAD_FAILED` | LandmarkEngine.init | **false** | Blocking retry screen before calibration/session |
 | `NOT_INITIALIZED` | LandmarkEngine.detect | true | Internal ordering bug; screens show generic error |
-| `INFERENCE_FAILED` | LandmarkEngine.detect | true | Absorbed by QualityMonitor as `FACE_LOST`; never user-visible as an error |
+| `INFERENCE_FAILED` | LandmarkEngine.detect | true | Orchestrator converts to `FACE_LOST` before `evaluate` (passes `null`); never user-visible as an error |
 | `NO_BASELINE` | NormalizationLayer, SessionController | true | Route to `CalibrationScreen` |
-| `POSE_OUT_OF_RANGE` | NormalizationLayer (defensive) | true | Absorbed by quality UX ("face the camera straight on") |
+| `POSE_OUT_OF_RANGE` | QualityMonitor only (`QualityResult` state; not thrown by `normalize`) | true | Quality UX ("face the camera straight on") |
 | `NOT_ATTESTED` | SafetyGate-gated methods | true | Redirect to `OnboardingScreen` |
 | `CAMERA_DENIED` | CaptureService.start | true | Permission guidance screen with retry |
 | `CAMERA_UNAVAILABLE` | CaptureService.start | true | Device guidance screen ("is another app using the camera?") |

@@ -15,8 +15,8 @@ These rules are binding on every change in this repository. The ten documents in
 
 - **No network calls, ever.** No fetch, no CDN, no telemetry, no crash reporting, no analytics. CI fails the build on any non-same-origin request. If a feature seems to need a network call, the feature is wrong — stop.
 - **No camera frame, video, or raw landmark array is ever persisted or logged.** Only derived numeric metrics reach IndexedDB.
-- **The camera stream may be open only while `CalibrationScreen` or `SessionScreen` is mounted.** Never on `HomeScreen` or anywhere else.
-- **Metric code must be structurally unable to run on a non-`QUALITY_OK` frame.** `QualityMonitor` is the only caller of `NormalizationLayer.normalize`.
+- **The camera stream may be open only while `CalibrationScreen` or `SessionScreen` is mounted** in production. Narrow exception: dev-only harnesses under `src/dev/` (excluded from the prod bundle) may open the camera. Never on `HomeScreen` or any other production screen.
+- **Metric code must be structurally unable to run on a non-`QUALITY_OK` frame.** `ApprovedFrame` is constructible only inside `quality.ts`; `normalize` / geometry accept only `ApprovedFrame` — bad-frame metrics are a compile error.
 - **Every tunable lives in `src/config/thresholds.ts`; every user-facing string lives in `src/config/strings.ts`.** A numeric literal or inline string anywhere else is a review-blocking defect.
 - **No identifier may be invented.** Every component, screen, table, field, event, error code, and type must exist in `docs/ARCHITECTURE.md` §12. If you need a new one, the glossary is amended first.
 - **No new dependencies** beyond the pinned table in `docs/ARCHITECTURE.md` §2. No Redux/Zustand/state libraries.

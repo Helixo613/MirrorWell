@@ -102,7 +102,7 @@ The app must **never**, in any screen, cue, summary, export, or listing:
 | `red_flag_stopped`/`quality_abandoned` excluded from trends (§3, §4) | `TrendsService.getTrend` | §2 (TrendsService unit) |
 | Ease-off / restraint mechanic (§2, §4) | `MetricEngine` ease-off condition + `FeedbackRenderer` cue; `effortTargetZone` in `thresholds.ts` | §2 (MetricEngine), §5 journey 1 |
 | "Gentle" calibration, median-of-3 (§2) | `CalibrationFlow.captureComfortableMax`; strings audit | §2 (CalibrationFlow), §4.6 |
-| No metrics on bad frames (§4) | Pipeline structure: `QualityMonitor` sole caller of `normalize`; frozen-bar rule in `FeedbackRenderer` | §3.3 fail-safe suite |
+| No metrics on bad frames (§4) | Type barrier: `ApprovedFrame` constructible only in `quality.ts`; `normalize`/`measureAbsolute` accept only `ApprovedFrame` (bad-frame metrics are a compile error); frozen-bar rule in `FeedbackRenderer` | §3.3 fail-safe suite |
 | Noise-floor honesty (§4) | `TrendsService` `aboveNoiseFloor`; `SummaryScreen` no-comparison rule | §2 (TrendsService), §4.5 |
 | Demo Mode bounded (§2) | `SafetyGate.enterDemoMode` + `StorageService` write backstop + route guards + watermark | §4.3 |
 | Caregiver view read-only, patient-toggled (§5) | `CaregiverScreen` guard on `caregiverViewEnabled`; zero mutating controls | §4.4 |
