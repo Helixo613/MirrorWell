@@ -176,6 +176,19 @@ if (sec12 && sec13) {
       }
     }
   }
+
+  // Reverse direction: every type/interface declared in §13 must appear in the
+  // §12 glossary — a §13-only type is an invented identifier.
+  const declared = [...sec13.matchAll(/^\s*(?:export\s+)?(?:type|interface)\s+([A-Z][A-Za-z0-9]+)\b/gm)].map(
+    (m) => m[1],
+  );
+  for (const t of new Set(declared)) {
+    if (!new RegExp('`' + t + '`').test(sec12)) {
+      errors.push(
+        `ARCHITECTURE.md §13 declares \`${t}\` but §12 glossary does not list it (no identifier may exist outside §12)`,
+      );
+    }
+  }
 }
 
 // ── (2) Cross-references ───────────────────────────────────────────────────

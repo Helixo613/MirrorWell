@@ -70,7 +70,7 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 - Download `face_landmarker.task` once; commit to `public/models/`.
 - **Bundle the WASM runtime (mandatory — the CDN default breaks our own rules):** write `scripts/copy-wasm.ts` copying the `@mediapipe/tasks-vision` WASM/JS runtime files from `node_modules/@mediapipe/tasks-vision/wasm/` into `public/wasm/`, wired to `postinstall`; point `FilesetResolver.forVisionTasks('/wasm')` at that local path. Standard examples load the runtime from a CDN via `FilesetResolver` — as-is that would either fail the CI no-network gate or silently break the no-network rule and the offline PWA.
 - Write `models.lock.json` (SHA-256 of the model **and every copied runtime file**) and `scripts/verify-model.ts` wired to `postinstall`.
-- Implement `init()` (FaceLandmarker VIDEO mode, `outputFacialTransformationMatrixes: true`, `numFaces: 1`, option thresholds from `thresholds.ts` `landmarker` block, WebGPU→WASM fallback logged) and `detect(video, timestampMs)` via `detectForVideo`, returning the API.md §5 shape (`facePresent` = `faceLandmarks` non-empty). MediaPipe types stay inside the module; blendshapes are not exposed.
+- Implement `init()` (FaceLandmarker VIDEO mode, `outputFacialTransformationMatrixes: true`, `numFaces: 1`, option thresholds from `thresholds.ts` `landmarker` block, GPU-delegate→WASM fallback logged — backend not asserted; WebGPU unverified for 0.10.35) and `detect(video, timestampMs)` via `detectForVideo`, returning the API.md §5 shape (`facePresent` = `faceLandmarks` non-empty). MediaPipe types stay inside the module; blendshapes are not exposed.
 - Extend the dev harness: landmark dots overlaid on the preview.
 
 **Test:** Harness shows 478 stable dots at ≥ 24 fps end-to-end on the dev laptop; unit tests with a mocked wasm runtime cover `NOT_INITIALIZED` and `INFERENCE_FAILED`; `verify-model` fails loudly on a corrupted model **or runtime** file; the network log during `init()` shows **only same-origin `/models/` and `/wasm/` requests** — CI no-network green proves the FilesetResolver CDN default is fully bypassed.
@@ -227,7 +227,7 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 |---|---|
 | Landmark model attenuates real palsy asymmetry (canonical-face prior) | V1 at Task 6 and V2 as early as a volunteer is available; fallback ladder MODEL_AND_DATA §2 (raw geometry → hybrid optical flow → live-feedback-only claims) |
 | Jittery symmetry bar | 5-frame median (Task 7); eased bar animation; `LOW_CONFIDENCE` gate blocks unstable frames rather than showing noise |
-| Latency > 100 ms on weak hardware | WebGPU→WASM fallback; drop to 480p before dropping fps; reduce UI cadence; never queue frames |
+| Latency > 100 ms on weak hardware | GPU-delegate→WASM fallback; drop to 480p before dropping fps; reduce UI cadence; never queue frames |
 | Bad calibration poisons downstream data | `qualityScore ≥ 0.7` hard gate; session-start drift check; trends partitioned by `baselineId` |
 | Device/user variation (webcams, glasses, facial hair, elderly head tremor) | Per-user calibration absorbs anatomy/optics; quality gates absorb the rest; V3 covers glasses/beard cells; persistent failure → honest refusal, never guessing |
 | `comfortableMax` captured while straining | "Gentle" copy + demo; median-of-3; one-tap recalibration in `SettingsScreen` |
