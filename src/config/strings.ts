@@ -1,5 +1,92 @@
 /**
  * Every user-facing string in MirrorWell lives here (English-only; audited per
- * docs/SAFETY_AND_COMPLIANCE.md §8). Empty keyed structure — populated task by task.
+ * docs/SAFETY_AND_COMPLIANCE.md §8). Populated task by task — never inline UI copy.
  */
-export const strings = Object.freeze({}) as Readonly<Record<string, string>>;
+export const strings = Object.freeze({
+  v1Harness: Object.freeze({
+    title: 'Live V1 protocol harness',
+    intro:
+      'Two trials of six phases. Hold one gentle half-smile across smile, yaw, dim light, and distance. Neutral is relaxed only. Quality must stay OK; yaw target is about 10° (measured 7–13°).',
+    startCamera: 'Start camera',
+    stopCamera: 'Stop camera',
+    startProtocol: 'Start protocol',
+    startDisabledHint: 'Start is available after quality is OK',
+    beginRecording: 'Begin recording',
+    acceptPhase: 'Accept phase',
+    retryPhase: 'Retry phase',
+    nextTrial: 'Continue to next trial',
+    downloadJson: 'Download JSON',
+    downloadCsv: 'Download CSV',
+    resetProtocol: 'Reset protocol',
+    diagnosticsToggle: 'Diagnostics (raw decimals)',
+    cameraNotReady: 'Camera not started',
+    qualityLabel: 'Quality',
+    fpsLabel: 'fps',
+    trialLabel: 'Trial',
+    phaseLabel: 'Phase',
+    statusLabel: 'Status',
+    secondsLeftLabel: 'Seconds left',
+    validFramesLabel: 'Valid frames',
+    okPercentLabel: 'OK percent',
+    yawLabel: 'Yaw',
+    pitchLabel: 'Pitch',
+    rollLabel: 'Roll',
+    yawBandLabel: 'Yaw target band',
+    movementLabel: 'Movement',
+    movementDetected: 'detected',
+    movementNotDetected: 'not detected',
+    siLabel: 'SI',
+    displacementLabel: 'Mouth max |Δ|',
+    livePoseLabel: 'Live pose (deg)',
+    phaseStatusSetup: 'Setup — confirm camera and quality, then start the protocol',
+    phaseStatusPrepare: 'Prepare — read the instruction, then begin recording',
+    phaseStatusRecording: 'Recording samples for this phase',
+    phaseStatusReview: 'Review — accept this phase or retry it',
+    phaseStatusReport: 'Report — protocol complete; export results',
+    captureValid: 'Capture valid',
+    captureInvalid: 'Capture invalid — retry this phase',
+    invalidLowOkPct: 'Too few QUALITY_OK frames (need ≥70%)',
+    invalidYawBand: 'Measured mean |yaw| outside 7–13° band',
+    measurementFail: 'Measurement bar failed (see report)',
+    acceptedPhasesLabel: 'Accepted this trial',
+    noneAccepted: 'none yet',
+    reportTitle: 'Protocol report',
+    reportTrialHeading: 'Trial summary',
+    exportStarted: 'Export download started.',
+    errorPrefix: 'Error',
+    qualityFixLowLight: 'Add light',
+    qualityFixTooFar: 'Come closer',
+    qualityFixPose: 'Face the camera more straight (within pose gate)',
+    qualityFixFaceLost: 'Center your face',
+    qualityFixLowConfidence: 'Hold still',
+    qualityOk: 'OK',
+    phaseNeutralTitle: '1 — Neutral',
+    phaseNeutralInstruction:
+      'Face the camera. Relax completely. Good light. About arm’s length. Hold still.',
+    phaseFrontalSmileTitle: '2 — Frontal gentle smile',
+    phaseFrontalSmileInstruction:
+      'Make a small half-smile and freeze it. Same light and distance as neutral. Do not talk.',
+    phaseLeftYawTitle: '3 — Smile, left yaw ~10°',
+    phaseLeftYawInstruction:
+      'Keep the same frozen half-smile. Turn head left about 10° (not more). Stay QUALITY_OK.',
+    phaseRightYawTitle: '4 — Smile, right yaw ~10°',
+    phaseRightYawInstruction:
+      'Keep the same frozen half-smile. Turn head right about 10° (not more). Stay QUALITY_OK.',
+    phaseDimLightTitle: '5 — Same smile, dim light',
+    phaseDimLightInstruction:
+      'Keep the exact same half-smile frozen. Dim the room carefully so quality can stay OK.',
+    phaseDistance2mTitle: '6 — Same smile, ~2 m',
+    phaseDistance2mInstruction:
+      'Restore light. Step back about 2 m. Keep the same frozen half-smile, face the camera.',
+    durationLabel: 'Duration',
+    prepWindowLabel: 'Prep window',
+    secondsUnit: 's',
+    yawInBand: 'in band',
+    yawOutOfBand: 'out of band',
+    trial1Short: 'T1',
+    trial2Short: 'T2',
+    floorLabel: 'floor',
+  }),
+});
+
+export type Strings = typeof strings;

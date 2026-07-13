@@ -3,13 +3,16 @@
 // false there, so esbuild eliminates these branches and the src/dev/ imports entirely from the
 // bundle (same mechanism as src/log.ts's debug/info stripping). DebugHud is additionally gated
 // at runtime by VITE_ENABLE_DEBUG_HUD (docs/ARCHITECTURE.md §9) — off by default even in dev.
+// LiveV1Harness is always available in DEV so Task 6 V1 can be run without env flags.
 import { CaptureHarness } from './dev/CaptureHarness';
 import { DebugHud } from './dev/DebugHud';
+import { LiveV1Harness } from './dev/LiveV1Harness';
 
 export default function App() {
   return (
     <div>
       MirrorWell
+      {import.meta.env.DEV && <LiveV1Harness />}
       {import.meta.env.DEV && <CaptureHarness />}
       {import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEBUG_HUD === 'true' && <DebugHud />}
     </div>

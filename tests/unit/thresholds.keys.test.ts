@@ -6,7 +6,7 @@ import { thresholds } from '../../src/config/thresholds';
 describe('thresholds', () => {
   it('exports the full key list from API.md §15', () => {
     expect(Object.keys(thresholds).sort()).toEqual(
-      ['calibration', 'landmarker', 'metrics', 'qualityGates', 'reps', 'session'].sort(),
+      ['calibration', 'landmarker', 'metrics', 'qualityGates', 'reps', 'session', 'v1Protocol'].sort(),
     );
   });
 
@@ -51,6 +51,25 @@ describe('thresholds', () => {
 
   it('session exposes the quality-problem stop-offer tunable', () => {
     expect(Object.keys(thresholds.session).sort()).toEqual(['qualityProblemOfferStopMs'].sort());
+  });
+
+  it('v1Protocol exposes MODEL_AND_DATA §7 capture tunables', () => {
+    expect(Object.keys(thresholds.v1Protocol).sort()).toEqual(
+      [
+        'minOkFramePct',
+        'neutralMs',
+        'prepMs',
+        'qualityOkRecentMs',
+        'smileHoldMs',
+        'trials',
+        'yawTargetMaxDeg',
+        'yawTargetMinDeg',
+      ].sort(),
+    );
+    expect(thresholds.v1Protocol.trials).toBe(2);
+    expect(thresholds.v1Protocol.yawTargetMinDeg).toBe(7);
+    expect(thresholds.v1Protocol.yawTargetMaxDeg).toBe(13);
+    expect(thresholds.v1Protocol.minOkFramePct).toBe(0.7);
   });
 
   it('is frozen (cannot be mutated at runtime)', () => {

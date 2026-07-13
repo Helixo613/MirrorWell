@@ -55,6 +55,20 @@ export const thresholds = Object.freeze({
   session: Object.freeze({
     qualityProblemOfferStopMs: 30000,
   }),
+
+  // Live V1 protocol harness (dev-only). Owning section: docs/MODEL_AND_DATA.md §7
+  // (B1a/B1b/B2/B3 statistical protocol: 2 trials × 6 phases, ≥70% OK, yaw band [7°,13°]).
+  v1Protocol: Object.freeze({
+    neutralMs: 10_000,
+    smileHoldMs: 8_000,
+    prepMs: 3_000,
+    yawTargetMinDeg: 7,
+    yawTargetMaxDeg: 13,
+    trials: 2,
+    minOkFramePct: 0.7,
+    /** Start-protocol enable window: last QUALITY_OK must be within this many ms. */
+    qualityOkRecentMs: 2_000,
+  }),
 });
 
 export type Thresholds = typeof thresholds;
