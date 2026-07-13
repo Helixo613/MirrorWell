@@ -11,9 +11,9 @@ import { thresholds } from '../config/thresholds.ts';
 export type QualityState = 'QUALITY_OK' | 'LOW_LIGHT' | 'FACE_LOST' | 'TOO_FAR' | 'POSE_OUT_OF_RANGE' | 'LOW_CONFIDENCE';
 
 // Brand is module-private — not exported. Outside this file, ApprovedFrame is only obtainable
-// via evaluate() returning QUALITY_OK. Runtime Symbol (not `declare const`) so approve() can
-// set the key; unique-symbol typing still makes the brand unforgeable at compile time.
-const approvedBrand: unique symbol = Symbol('ApprovedFrame') as unique symbol;
+// via evaluate() returning QUALITY_OK. Runtime Symbol so approve() can set the key; const
+// Symbol() is a unique typeof that makes the brand unforgeable at compile time.
+const approvedBrand = Symbol('ApprovedFrame');
 
 export type ApprovedFrame = {
   readonly [approvedBrand]: true;

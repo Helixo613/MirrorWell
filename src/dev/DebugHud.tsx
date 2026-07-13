@@ -95,15 +95,15 @@ export function DebugHud() {
         lf = null; // INFERENCE_FAILED absorbed as FACE_LOST, same as QualityMonitor's own rule
       }
 
-      const quality = QualityMonitor.evaluate(video, lf);
-      setQualityState(quality);
+      const qr = QualityMonitor.evaluate(video, lf);
+      setQualityState(qr.state);
 
       let raw: MetricSample | null = null;
       let smoothed: MetricSample | null = null;
       let currentRepState: RepState = RepDetector.getState();
 
-      if (quality === 'QUALITY_OK' && baseline) {
-        const nf = NormalizationLayer.normalize(lf!);
+      if (qr.state === 'QUALITY_OK' && baseline) {
+        const nf = NormalizationLayer.normalize(qr.frame);
         smoothed = MetricEngine.compute(nf, exerciseIdRef.current);
         const lastRaw = MetricEngine.getLastRaw();
         raw = lastRaw ? { ...lastRaw, timestampMs: nf.timestampMs } : null;
@@ -117,7 +117,7 @@ export function DebugHud() {
         recordedRowsRef.current.push({
           timestampMs,
           exerciseId: exerciseIdRef.current,
-          qualityState: quality,
+          qualityState: qr.state,
           symmetryIndexRaw: raw?.symmetryIndex ?? null,
           symmetryIndexSmoothed: smoothed?.symmetryIndex ?? null,
           effortIndexRaw: raw?.effortIndex ?? null,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LandmarkFrame } from '../../src/sensing/landmarks.ts';
+import type { ApprovedFrame } from '../../src/sensing/quality.ts';
 import type { CalibrationBaseline } from '../../src/data/schema.ts';
 
 /**
@@ -73,6 +74,11 @@ function makeFrame(landmarks: Point[], headPose: number[] = identityHeadPose()):
   return { landmarks, headPose, facePresent: true, timestampMs: 0 };
 }
 
+/** Test-only: forge ApprovedFrame without going through QualityMonitor (brand is private). */
+function asApproved(lf: LandmarkFrame): ApprovedFrame {
+  return { lf, videoWidth: 640, videoHeight: 480 } as unknown as ApprovedFrame;
+}
+
 function zeroBaseline(): CalibrationBaseline {
   return {
     baselineId: 'b1',
@@ -94,7 +100,7 @@ describe('NormalizationLayer — NO_BASELINE', () => {
   it('normalize() throws NO_BASELINE without setBaseline()', async () => {
     const { NormalizationLayer } = await import('../../src/metrics/normalize.ts');
     NormalizationLayer.clearBaseline();
-    expect(() => NormalizationLayer.normalize(makeFrame(baseLandmarks()))).toThrow(
+    expect(() => NormalizationLayer.normalize(asApproved(makeFrame(baseLandmarks())))).toThrow(
       expect.objectContaining({ code: 'NO_BASELINE' }),
     );
   });
@@ -110,7 +116,7 @@ describe('NormalizationLayer — NO_BASELINE', () => {
     const { NormalizationLayer } = await import('../../src/metrics/normalize.ts');
     NormalizationLayer.setBaseline(zeroBaseline());
     NormalizationLayer.clearBaseline();
-    expect(() => NormalizationLayer.normalize(makeFrame(baseLandmarks()))).toThrow(
+    expect(() => NormalizationLayer.normalize(asApproved(makeFrame(baseLandmarks())))).toThrow(
       expect.objectContaining({ code: 'NO_BASELINE' }),
     );
   });
@@ -124,8 +130,8 @@ describe('NormalizationLayer — synthetic scale invariance (not V1)', () => {
     const original = baseLandmarks();
     const scaled = scaleAround(original, { x: 0.5, y: 0.5, z: 0 }, 1.7);
 
-    const resultOriginal = NormalizationLayer.normalize(makeFrame(original));
-    const resultScaled = NormalizationLayer.normalize(makeFrame(scaled));
+    const resultOriginal = NormalizationLayer.normalize(asApproved(makeFrame(original)));
+    const resultScaled = NormalizationLayer.normalize(asApproved(makeFrame(scaled)));
 
     for (const region of ['REGION_BROW', 'REGION_EYELID', 'REGION_MOUTH_CORNER', 'REGION_LIP'] as const) {
       expect(resultScaled.regionDisplacements[region].left).toBeCloseTo(resultOriginal.regionDisplacements[region].left, 5);
@@ -143,8 +149,8 @@ describe('NormalizationLayer — synthetic rotation self-consistency (not V1)', 
     const center = { x: 0.5, y: 0.5, z: 0 };
     const rotated = rotateYAround(original, center, 20);
 
-    const resultOriginal = NormalizationLayer.normalize(makeFrame(original, identityHeadPose()));
-    const resultRotated = NormalizationLayer.normalize(makeFrame(rotated, yawHeadPose(20)));
+    const resultOriginal = NormalizationLayer.normalize(asApproved(makeFrame(original, identityHeadPose())));
+    const resultRotated = NormalizationLayer.normalize(asApproved(makeFrame(rotated, yawHeadPose(20))));
 
     for (const region of ['REGION_BROW', 'REGION_EYELID', 'REGION_MOUTH_CORNER', 'REGION_LIP'] as const) {
       expect(resultRotated.regionDisplacements[region].left).toBeCloseTo(resultOriginal.regionDisplacements[region].left, 4);
@@ -159,7 +165,7 @@ describe('NormalizationLayer — timestampMs passthrough', () => {
     NormalizationLayer.setBaseline(zeroBaseline());
     const frame = makeFrame(baseLandmarks());
     frame.timestampMs = 187423.6;
-    const result = NormalizationLayer.normalize(frame);
+    const result = NormalizationLayer.normalize(asApproved(frame));
     expect(result.timestampMs).toBe(187423.6);
   });
 });
@@ -171,7 +177,7 @@ describe('NormalizationLayer — baseline subtraction', () => {
 
     // First pass with a zero baseline to measure the raw region distances.
     NormalizationLayer.setBaseline(zeroBaseline());
-    const raw = NormalizationLayer.normalize(frame);
+    const raw = NormalizationLayer.normalize(asApproved(frame));
 
     // Now set neutralStats to those exact raw values and re-normalize the SAME frame.
     const matchedBaseline = zeroBaseline();
@@ -185,7 +191,7 @@ describe('NormalizationLayer — baseline subtraction', () => {
       REGION_LIP: { left: raw.regionDisplacements.REGION_LIP.left, right: raw.regionDisplacements.REGION_LIP.right },
     };
     NormalizationLayer.setBaseline(matchedBaseline);
-    const result = NormalizationLayer.normalize(frame);
+    const result = NormalizationLayer.normalize(asApproved(frame));
 
     for (const region of ['REGION_BROW', 'REGION_EYELID', 'REGION_MOUTH_CORNER', 'REGION_LIP'] as const) {
       expect(result.regionDisplacements[region].left).toBeCloseTo(0, 6);
