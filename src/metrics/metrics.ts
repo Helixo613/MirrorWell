@@ -8,6 +8,9 @@
 // condition to MetricEngine — cross-frame state a single compute(nf, exerciseId) call cannot
 // hold on its own. Mirrors NormalizationLayer's existing setBaseline/module-singleton pattern
 // (src/metrics/normalize.ts) — no new identifiers invented.
+//
+// DOCS-CHANGE (Task B4): API.md §15 — metrics.gapResetMs added. Direction-aware SI via
+// mirrored right vector + cosθ; trailing median; gap > gapResetMs resets smoothing + ease-off.
 import type { NormalizedFrame } from './normalize.ts';
 import type { CalibrationBaseline, ExerciseId, RegionId } from '../data/schema.ts';
 import { MirrorWellError } from '../data/errors.ts';
@@ -32,7 +35,13 @@ export interface RawMetricSample {
   effortIndex: number;
 }
 
-const { movementFloorPct, easeOffThreshold, easeOffSustainMs, smoothingWindow } = thresholds.metrics;
+const {
+  movementFloorPct,
+  easeOffThreshold,
+  easeOffSustainMs,
+  smoothingWindow,
+  gapResetMs,
+} = thresholds.metrics;
 
 let activeBaseline: CalibrationBaseline | null = null;
 let symmetryWindow: (number | null)[] = [];
@@ -40,20 +49,28 @@ let effortWindow: number[] = [];
 let easeOffSustainStartMs: number | null = null;
 let easeOffActive = false;
 let lastRaw: RawMetricSample | null = null;
+let lastTimestampMs: number | null = null;
 
 function setBaseline(b: CalibrationBaseline): void {
+  // MetricEngine only needs comfortableMax for effort; noise-floor fields live on the baseline
+  // for TrendsService and are not validated here (BACKEND §1.5 forbids storage access).
   if (!b || !b.comfortableMax) {
     throw new MirrorWellError('NO_BASELINE', 'setBaseline called with an invalid or incomplete baseline');
   }
   activeBaseline = b;
 }
 
-function reset(): void {
+function clearSmoothingAndEaseOff(): void {
   symmetryWindow = [];
   effortWindow = [];
   easeOffSustainStartMs = null;
   easeOffActive = false;
+}
+
+function reset(): void {
+  clearSmoothingAndEaseOff();
   lastRaw = null;
+  lastTimestampMs = null;
 }
 
 function median(values: number[]): number {
@@ -73,27 +90,59 @@ function smoothedSymmetry(window: (number | null)[]): number | null {
   return present.length === 0 ? null : median(present);
 }
 
+/**
+ * Direction-aware SI (ARCHITECTURE §7):
+ *   ΔR̃ = (−ΔR.u, ΔR.v); mL = |ΔL|; mR = |ΔR̃|
+ *   if max(mL,mR) < movementFloorPct → null
+ *   else SI = (min/max) · max(0, cosθ), cosθ = (ΔL·ΔR̃)/(mL·mR) (0 if either mag is 0)
+ */
+function rawSymmetryAndEffort(
+  left: { u: number; v: number },
+  right: { u: number; v: number },
+  comfortableMax: number | undefined,
+): { symmetryIndex: number | null; effortIndex: number } {
+  const dLu = left.u;
+  const dLv = left.v;
+  const dRTu = -right.u; // mirrored right
+  const dRTv = right.v;
+
+  const mL = Math.hypot(dLu, dLv);
+  const mR = Math.hypot(dRTu, dRTv);
+  const maxM = Math.max(mL, mR);
+  const minM = Math.min(mL, mR);
+
+  let symmetryIndex: number | null;
+  if (maxM < movementFloorPct) {
+    symmetryIndex = null;
+  } else {
+    const cosTheta = mL * mR === 0 ? 0 : (dLu * dRTu + dLv * dRTv) / (mL * mR);
+    symmetryIndex = (minM / maxM) * Math.max(0, cosTheta);
+  }
+
+  const effortIndex = comfortableMax === undefined ? 0 : maxM / comfortableMax;
+  return { symmetryIndex, effortIndex };
+}
+
 function compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample {
   if (!activeBaseline) {
     throw new MirrorWellError('NO_BASELINE', 'compute called without setBaseline');
   }
 
+  // Gap rule: sample gap > gapResetMs resets trailing windows + ease-off sustain (partial reset).
+  if (lastTimestampMs !== null && nf.timestampMs - lastTimestampMs > gapResetMs) {
+    clearSmoothingAndEaseOff();
+  }
+  lastTimestampMs = nf.timestampMs;
+
   const config = exercises[exerciseId]!;
   const disp = nf.regionDisplacements[config.regionId as RegionId];
-  const dL = Math.abs(disp.left);
-  const dR = Math.abs(disp.right);
-  const maxD = Math.max(dL, dR);
-  const minD = Math.min(dL, dR);
-
-  const rawSymmetryIndex = maxD < movementFloorPct ? null : minD / maxD;
-
   const comfortableMax = activeBaseline.comfortableMax[exerciseId];
-  const rawEffortIndex = comfortableMax === undefined ? 0 : maxD / comfortableMax;
+  const raw = rawSymmetryAndEffort(disp.left, disp.right, comfortableMax);
 
-  lastRaw = { symmetryIndex: rawSymmetryIndex, effortIndex: rawEffortIndex };
+  lastRaw = { symmetryIndex: raw.symmetryIndex, effortIndex: raw.effortIndex };
 
-  symmetryWindow = pushWindowed(symmetryWindow, rawSymmetryIndex);
-  effortWindow = pushWindowed(effortWindow, rawEffortIndex);
+  symmetryWindow = pushWindowed(symmetryWindow, raw.symmetryIndex);
+  effortWindow = pushWindowed(effortWindow, raw.effortIndex);
 
   const symmetryIndex = smoothedSymmetry(symmetryWindow);
   const effortIndex = median(effortWindow);

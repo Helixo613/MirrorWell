@@ -20,7 +20,7 @@ export const thresholds = Object.freeze({
     jitterMaxPct: 0.005,
   }),
 
-  // MetricEngine tunables (movement floor, effort zone, ease-off). Owning section:
+  // MetricEngine tunables (movement floor, effort zone, ease-off, gap). Owning section:
   // docs/API.md §15 / docs/BACKEND.md (MetricEngine).
   metrics: Object.freeze({
     movementFloorPct: 0.008,
@@ -28,6 +28,7 @@ export const thresholds = Object.freeze({
     easeOffThreshold: 0.6,
     easeOffSustainMs: 300,
     smoothingWindow: 5,
+    gapResetMs: 250,
   }),
 
   // RepDetector tunables. Owning section: docs/API.md §15 / docs/BACKEND.md (RepDetector).

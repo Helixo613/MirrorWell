@@ -22,10 +22,18 @@ describe('thresholds', () => {
     );
   });
 
-  it('metrics exposes all five metric tunables', () => {
+  it('metrics exposes all six metric tunables (incl. gapResetMs)', () => {
     expect(Object.keys(thresholds.metrics).sort()).toEqual(
-      ['easeOffSustainMs', 'easeOffThreshold', 'effortTargetZone', 'movementFloorPct', 'smoothingWindow'].sort(),
+      [
+        'easeOffSustainMs',
+        'easeOffThreshold',
+        'effortTargetZone',
+        'gapResetMs',
+        'movementFloorPct',
+        'smoothingWindow',
+      ].sort(),
     );
+    expect(thresholds.metrics.gapResetMs).toBe(250);
   });
 
   it('reps exposes all four rep-detection tunables', () => {

@@ -14,6 +14,9 @@
 // observe whether a rep is currently in progress. 'idle' | 'active' isn't defined anywhere in
 // the docs — it's the simplest honest exposure of the internal `active` flag already tracked
 // above, named to match the isReady()/isRunning()/isDemoMode() query-method convention.
+//
+// DOCS-CHANGE (Task B4): gap > metrics.gapResetMs while active aborts the rep without emitting
+// a RepEvent (repIndex not consumed); ease-off tracking for that rep is cleared.
 import type { MetricSample } from './metrics.ts';
 import { thresholds } from '../config/thresholds.ts';
 
@@ -28,7 +31,7 @@ export interface RepEvent {
 export type RepState = 'idle' | 'active';
 
 const { startThreshold, endThreshold, minDurationMs } = thresholds.reps;
-const { easeOffThreshold, easeOffSustainMs } = thresholds.metrics;
+const { easeOffThreshold, easeOffSustainMs, gapResetMs } = thresholds.metrics;
 
 let repIndex = 0;
 let active = false;
@@ -37,9 +40,9 @@ let peakSymmetryIndex: number | null = null;
 let peakEffortIndex = 0;
 let easeOffSustainStartMs: number | null = null;
 let easeOffFired = false;
+let lastTimestampMs: number | null = null;
 
-function reset(): void {
-  repIndex = 0;
+function clearActiveRepState(): void {
   active = false;
   startTimestampMs = 0;
   peakSymmetryIndex = null;
@@ -48,7 +51,19 @@ function reset(): void {
   easeOffFired = false;
 }
 
+function reset(): void {
+  repIndex = 0;
+  clearActiveRepState();
+  lastTimestampMs = null;
+}
+
 function feed(sample: MetricSample): RepEvent | null {
+  // Gap rule: while active, a sample gap > gapResetMs aborts without emitting a RepEvent.
+  if (active && lastTimestampMs !== null && sample.timestampMs - lastTimestampMs > gapResetMs) {
+    clearActiveRepState();
+  }
+  lastTimestampMs = sample.timestampMs;
+
   if (!active) {
     if (sample.effortIndex > startThreshold) {
       active = true;
@@ -88,12 +103,7 @@ function feed(sample: MetricSample): RepEvent | null {
       easeOffTriggered: easeOffFired,
     };
 
-    active = false;
-    startTimestampMs = 0;
-    peakSymmetryIndex = null;
-    peakEffortIndex = 0;
-    easeOffSustainStartMs = null;
-    easeOffFired = false;
+    clearActiveRepState();
 
     if (durationMs < minDurationMs) {
       return null;
