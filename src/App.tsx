@@ -1,20 +1,41 @@
 // Placeholder root component. Route wiring lands in Task 13 (HomeScreen + route completion).
-// The dev-only mounts below are dead code in production: import.meta.env.DEV is a compile-time
-// false there, so esbuild eliminates these branches and the src/dev/ imports entirely from the
-// bundle (same mechanism as src/log.ts's debug/info stripping). DebugHud is additionally gated
-// at runtime by VITE_ENABLE_DEBUG_HUD (docs/ARCHITECTURE.md §9) — off by default even in dev.
-// LiveV1Harness is always available in DEV so Task 6 V1 can be run without env flags.
-import { CaptureHarness } from './dev/CaptureHarness';
-import { DebugHud } from './dev/DebugHud';
-import { LiveV1Harness } from './dev/LiveV1Harness';
+// Dev-only mounts use dynamic import() inside `import.meta.env.DEV` branches so production
+// builds drop the entire src/dev/ graph (static imports are hoisted and would ship harness
+// strings into the prod bundle — B8 verification forbids that).
+import { lazy, Suspense, type ComponentType } from 'react';
+
+function DevOnly({ loader }: { loader: () => Promise<{ default: ComponentType }> }) {
+  const Comp = lazy(loader);
+  return (
+    <Suspense fallback={null}>
+      <Comp />
+    </Suspense>
+  );
+}
 
 export default function App() {
   return (
     <div>
       MirrorWell
-      {import.meta.env.DEV && <LiveV1Harness />}
-      {import.meta.env.DEV && <CaptureHarness />}
-      {import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEBUG_HUD === 'true' && <DebugHud />}
+      {import.meta.env.DEV && (
+        <DevOnly
+          loader={() =>
+            import('./dev/LiveV1Harness').then((m) => ({ default: m.LiveV1Harness }))
+          }
+        />
+      )}
+      {import.meta.env.DEV && (
+        <DevOnly
+          loader={() =>
+            import('./dev/CaptureHarness').then((m) => ({ default: m.CaptureHarness }))
+          }
+        />
+      )}
+      {import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEBUG_HUD === 'true' && (
+        <DevOnly
+          loader={() => import('./dev/DebugHud').then((m) => ({ default: m.DebugHud }))}
+        />
+      )}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 {
   "subjectId": "S01",
   "candidateId": "face-local-vector-v1",
-  "generatedAt": "2026-07-13T15:22:31.674Z",
-  "gitSha": "2aa3b2468f0f10014c12d6e43a689f63656c1222",
+  "generatedAt": "2026-07-13T15:23:09.197Z",
+  "gitSha": "32576be839db0cae3eae639b6c08c64ccfa6b076",
   "protocol": {
     "doc": "docs/MODEL_AND_DATA.md §7",
     "phases": [

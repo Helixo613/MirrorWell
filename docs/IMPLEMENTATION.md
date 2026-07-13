@@ -6,7 +6,7 @@
 
 Scaffold through Task 8 exists in-repo: Vite/React/TS PWA skeleton with pinned deps and CI no-network gate (Task 1); `StorageService` + schema + seed/inspect (Task 2); `CaptureService` (Task 3); `LandmarkEngine` + bundled WASM/model lock (Task 4); `QualityMonitor` (Task 5); `NormalizationLayer` + landmark indices + V1 analysis harness (Task 6); `MetricEngine` + `RepDetector` (Task 7); `DebugHud` (Task 8).
 
-**Kill-gate status:** Task 6 is **not accepted**. The scalar-radial V1 candidate failed on subject S01 (B2 max relative deviation ~31.1% vs 5% bar; B3 no valid yaw samples under quality gates). Evidence is preserved under `tests/analysis/rejected/` (see ledger). Per Task 6, nothing downstream of normalization is valid until V1 passes — Tasks 7–8 code is present but **provisional** only. Tasks 9+ are not started.
+**Kill-gate status:** Task 6 remains **BLOCKED**. Remediation (2026-07-12 plan) replaced the failing scalar-radial geometry with a face-local 2D vector kernel (`ApprovedFrame` type barrier, `measureAbsolute` / vector `normalize`, direction-aware SI, quality-gate repairs, V1 harness + runner). Scalar-radial failure evidence is preserved under `tests/analysis/rejected/`. Revised geometry is implemented and unit-tested; V1 **fixture capture** for the 2-trial × 6-phase protocol has not been run yet — dry-run against legacy masters correctly yields `INVALID` cells (`tests/analysis/v1_S01_face-local-vector-v1_report.json`, candidate `face-local-vector-v1`). Runner: `scripts/run-v1.mjs` + protocol in `docs/MODEL_AND_DATA.md` §7. Tasks 7–8 remain **provisional** until Task 6 passes. Tasks 9+ are not started.
 
 Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks; Android phone from Task 17.
 
@@ -19,7 +19,7 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 | 3 — CaptureService | ACCEPTED | `src/sensing/` capture path + dev harness; commit `9233aa0` | 2026-07-12 |
 | 4 — LandmarkEngine + model bundling | ACCEPTED | `src/sensing/` landmarker, `public/wasm/`, `models.lock.json`, `scripts/copy-wasm.ts`; commit `81f6c86` | 2026-07-12 |
 | 5 — QualityMonitor | ACCEPTED | `src/sensing/` quality path; commit `46f081c` | 2026-07-12 |
-| 6 — Fixtures + NormalizationLayer + **V1 kill-gate** | **BLOCKED** | V1 FAILED (scalar radial): [`tests/analysis/rejected/README.md`](../tests/analysis/rejected/README.md), [`tests/analysis/rejected/v1_S01_report_scalar-radial_FAILED.json`](../tests/analysis/rejected/v1_S01_report_scalar-radial_FAILED.json) (B2 31.1%, B3 no valid yaw); code present (`1caad02`) but kill-gate not passed | 2026-07-12 |
+| 6 — Fixtures + NormalizationLayer + **V1 kill-gate** | **BLOCKED** | Revised face-local-vector geometry implemented (remediation B1–B7); awaiting V1 fixture capture + pass. Rejected scalar evidence: [`tests/analysis/rejected/README.md`](../tests/analysis/rejected/README.md). Runner + protocol: `scripts/run-v1.mjs`, [`docs/MODEL_AND_DATA.md`](MODEL_AND_DATA.md) §7. Dry-run candidate report (INVALID cells): [`tests/analysis/v1_S01_face-local-vector-v1_report.json`](../tests/analysis/v1_S01_face-local-vector-v1_report.json) | 2026-07-13 |
 | 7 — MetricEngine + RepDetector | PROVISIONAL | `src/metrics/`; commit `12b19a2` — implemented but depends on Task 6 acceptance | 2026-07-12 |
 | 8 — DebugHud | PROVISIONAL | `src/dev/`; commit `c3c1b57` — implemented but depends on Task 6 acceptance | 2026-07-12 |
 | 9+ — SafetyGate through release | NOT_STARTED | — | 2026-07-12 |
