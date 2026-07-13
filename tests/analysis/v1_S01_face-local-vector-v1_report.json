@@ -1,0 +1,509 @@
+{
+  "subjectId": "S01",
+  "candidateId": "face-local-vector-v1",
+  "generatedAt": "2026-07-13T15:22:31.674Z",
+  "gitSha": "2aa3b2468f0f10014c12d6e43a689f63656c1222",
+  "protocol": {
+    "doc": "docs/MODEL_AND_DATA.md §7",
+    "phases": [
+      "neutral",
+      "smile",
+      "yaw_left",
+      "yaw_right",
+      "low_light",
+      "distance_2m"
+    ],
+    "trials": 2,
+    "minOkFramePct": 0.7,
+    "yawBandDeg": [
+      7,
+      13
+    ],
+    "thresholds": {
+      "B1a": 0.01,
+      "B1b": 0.05,
+      "B2": 0.05,
+      "B3": 0.05
+    },
+    "rules": [
+      "Per-trial evaluation; PASS only if every trial passes every bar",
+      "Missing/invalid cells are the string INVALID — no fallback statistics",
+      "Yaw validity requires measured mean |yaw| ∈ [7°, 13°] from headPose",
+      "Phase valid only if ≥70% frames QUALITY_OK"
+    ]
+  },
+  "fixtures": {
+    "neutral": {
+      "1": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_neutral_1"
+      },
+      "2": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_neutral_2"
+      }
+    },
+    "smile": {
+      "1": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_smile_1"
+      },
+      "2": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_smile_2"
+      }
+    },
+    "yaw_left": {
+      "1": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_yaw_left_1"
+      },
+      "2": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_yaw_left_2"
+      }
+    },
+    "yaw_right": {
+      "1": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_yaw_right_1"
+      },
+      "2": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_yaw_right_2"
+      }
+    },
+    "low_light": {
+      "1": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_low_light_1"
+      },
+      "2": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_low_light_2"
+      }
+    },
+    "distance_2m": {
+      "1": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_distance_2m_1"
+      },
+      "2": {
+        "status": "missing",
+        "path": null,
+        "basename": "fixture_S01_distance_2m_2"
+      }
+    }
+  },
+  "legacyFixtures": [
+    {
+      "condition": "neutral",
+      "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_neutral.mp4",
+      "note": "missing trial suffix; insufficient for 2-trial protocol"
+    },
+    {
+      "condition": "EX_SMILE",
+      "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_EX_SMILE.mp4",
+      "note": "legacy smile name; protocol condition is \"smile\" with trial suffix — insufficient"
+    },
+    {
+      "condition": "low_light",
+      "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_low_light.mp4",
+      "note": "missing trial suffix; insufficient for 2-trial protocol"
+    },
+    {
+      "condition": "distance_2m",
+      "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_distance_2m.mp4",
+      "note": "missing trial suffix; insufficient for 2-trial protocol"
+    },
+    {
+      "condition": "yaw_15",
+      "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_yaw_15.mp4",
+      "note": "legacy single yaw master; protocol requires yaw_left and yaw_right with measured |yaw| ∈ [7°,13°] and trial suffix — insufficient"
+    }
+  ],
+  "trials": {
+    "1": {
+      "trial": 1,
+      "phaseValidity": {
+        "neutral": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": null,
+          "qualityCounts": "INVALID"
+        },
+        "smile": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": null,
+          "qualityCounts": "INVALID"
+        },
+        "yaw_left": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": "INVALID",
+          "qualityCounts": "INVALID"
+        },
+        "yaw_right": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": "INVALID",
+          "qualityCounts": "INVALID"
+        },
+        "low_light": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": null,
+          "qualityCounts": "INVALID"
+        },
+        "distance_2m": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": null,
+          "qualityCounts": "INVALID"
+        }
+      },
+      "B1a": {
+        "value": "INVALID",
+        "threshold": 0.01,
+        "pass": false,
+        "reason": "neutral_invalid"
+      },
+      "B1b": {
+        "value": "INVALID",
+        "threshold": 0.05,
+        "pass": false,
+        "reason": "smile_invalid"
+      },
+      "B2": {
+        "cells": {
+          "low_light": {
+            "condition": "low_light",
+            "value": "INVALID",
+            "meanDispCondition": "INVALID",
+            "meanDispSmile": "INVALID",
+            "threshold": 0.05,
+            "pass": false,
+            "reason": "smile_invalid"
+          },
+          "distance_2m": {
+            "condition": "distance_2m",
+            "value": "INVALID",
+            "meanDispCondition": "INVALID",
+            "meanDispSmile": "INVALID",
+            "threshold": 0.05,
+            "pass": false,
+            "reason": "smile_invalid"
+          }
+        },
+        "pass": false
+      },
+      "B3": {
+        "cells": {
+          "yaw_left": {
+            "phase": "yaw_left",
+            "value": "INVALID",
+            "meanSiYaw": "INVALID",
+            "meanSiSmile": "INVALID",
+            "threshold": 0.05,
+            "pass": false,
+            "reason": "smile_invalid"
+          },
+          "yaw_right": {
+            "phase": "yaw_right",
+            "value": "INVALID",
+            "meanSiYaw": "INVALID",
+            "meanSiSmile": "INVALID",
+            "threshold": 0.05,
+            "pass": false,
+            "reason": "smile_invalid"
+          }
+        },
+        "pass": false
+      },
+      "pass": false
+    },
+    "2": {
+      "trial": 2,
+      "phaseValidity": {
+        "neutral": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": null,
+          "qualityCounts": "INVALID"
+        },
+        "smile": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": null,
+          "qualityCounts": "INVALID"
+        },
+        "yaw_left": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": "INVALID",
+          "qualityCounts": "INVALID"
+        },
+        "yaw_right": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": "INVALID",
+          "qualityCounts": "INVALID"
+        },
+        "low_light": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": null,
+          "qualityCounts": "INVALID"
+        },
+        "distance_2m": {
+          "valid": false,
+          "reason": "missing_fixture",
+          "totalFrames": null,
+          "okFrames": null,
+          "rejectedFrames": null,
+          "okPct": "INVALID",
+          "meanAbsYawDeg": null,
+          "qualityCounts": "INVALID"
+        }
+      },
+      "B1a": {
+        "value": "INVALID",
+        "threshold": 0.01,
+        "pass": false,
+        "reason": "neutral_invalid"
+      },
+      "B1b": {
+        "value": "INVALID",
+        "threshold": 0.05,
+        "pass": false,
+        "reason": "smile_invalid"
+      },
+      "B2": {
+        "cells": {
+          "low_light": {
+            "condition": "low_light",
+            "value": "INVALID",
+            "meanDispCondition": "INVALID",
+            "meanDispSmile": "INVALID",
+            "threshold": 0.05,
+            "pass": false,
+            "reason": "smile_invalid"
+          },
+          "distance_2m": {
+            "condition": "distance_2m",
+            "value": "INVALID",
+            "meanDispCondition": "INVALID",
+            "meanDispSmile": "INVALID",
+            "threshold": 0.05,
+            "pass": false,
+            "reason": "smile_invalid"
+          }
+        },
+        "pass": false
+      },
+      "B3": {
+        "cells": {
+          "yaw_left": {
+            "phase": "yaw_left",
+            "value": "INVALID",
+            "meanSiYaw": "INVALID",
+            "meanSiSmile": "INVALID",
+            "threshold": 0.05,
+            "pass": false,
+            "reason": "smile_invalid"
+          },
+          "yaw_right": {
+            "phase": "yaw_right",
+            "value": "INVALID",
+            "meanSiYaw": "INVALID",
+            "meanSiSmile": "INVALID",
+            "threshold": 0.05,
+            "pass": false,
+            "reason": "smile_invalid"
+          }
+        },
+        "pass": false
+      },
+      "pass": false
+    }
+  },
+  "aggregate": {
+    "B1a": "INVALID",
+    "B1b": "INVALID",
+    "B2": {
+      "low_light": "INVALID",
+      "distance_2m": "INVALID"
+    },
+    "B3": {
+      "yaw_left": "INVALID",
+      "yaw_right": "INVALID"
+    }
+  },
+  "rejectedFrameCounts": {
+    "1": {
+      "neutral": "INVALID",
+      "smile": "INVALID",
+      "yaw_left": "INVALID",
+      "yaw_right": "INVALID",
+      "low_light": "INVALID",
+      "distance_2m": "INVALID"
+    },
+    "2": {
+      "neutral": "INVALID",
+      "smile": "INVALID",
+      "yaw_left": "INVALID",
+      "yaw_right": "INVALID",
+      "low_light": "INVALID",
+      "distance_2m": "INVALID"
+    }
+  },
+  "measuredPoseSummary": {
+    "1": {
+      "neutral": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": null,
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "smile": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": null,
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "yaw_left": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": "INVALID",
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "yaw_right": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": "INVALID",
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "low_light": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": null,
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "distance_2m": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": null,
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      }
+    },
+    "2": {
+      "neutral": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": null,
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "smile": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": null,
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "yaw_left": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": "INVALID",
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "yaw_right": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": "INVALID",
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "low_light": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": null,
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      },
+      "distance_2m": {
+        "okPct": "INVALID",
+        "meanAbsYawDeg": null,
+        "valid": false,
+        "reason": "missing_fixture",
+        "qualityCounts": "INVALID"
+      }
+    }
+  },
+  "overallPass": false,
+  "protocolLimited": false,
+  "verdict": "FAIL"
+}
