@@ -16,3 +16,12 @@ public/wasm/
 
 # Superpowers / agent worktrees (isolated branches)
 .worktrees/
+
+# Consented face-video fixtures are local-only artifacts (privacy: never push faces to
+# GitHub; ~90MB). Record masters locally per docs/MODEL_AND_DATA.md §7, regenerate replays
+# via scripts/convert-fixtures.sh. fixtures_manifest.json stays tracked.
+tests/fixtures/masters/
+tests/fixtures/replay/
+
+# Windows Explorer download metadata
+*:Zone.Identifier
