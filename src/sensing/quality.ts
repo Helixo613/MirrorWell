@@ -35,8 +35,10 @@ function approve(lf: LandmarkFrame, videoWidth: number, videoHeight: number): Ap
 // + landmark indices") fixture validation — same treatment as src/config/exercises.ts's region
 // indices. Task 5's deliverable is the gate STRUCTURE/ORDER; exact indices are swappable later
 // without changing it.
-const LEFT_EYE_OUTER_CORNER = 33;
-const RIGHT_EYE_OUTER_CORNER = 263;
+// Anatomical = subject's side: 33 = subject's RIGHT eye outer corner, 263 = subject's LEFT
+// (same convention as src/metrics/geometry.ts). IOD is symmetric so only the labels matter.
+const EYE_R_OUTER_CORNER = 33;
+const EYE_L_OUTER_CORNER = 263;
 
 // Landmark bbox expansion fraction (10% of width/height) for face-region luma — BACKEND §1.3.
 const FACE_BBOX_MARGIN = 0.1;
@@ -128,8 +130,8 @@ function faceRegionLuma64(video: HTMLVideoElement, landmarks: LandmarkFrame['lan
 }
 
 function interOcularDistancePx(landmarks: LandmarkFrame['landmarks'], videoWidth: number, videoHeight: number): number {
-  const left = landmarks[LEFT_EYE_OUTER_CORNER];
-  const right = landmarks[RIGHT_EYE_OUTER_CORNER];
+  const left = landmarks[EYE_L_OUTER_CORNER];
+  const right = landmarks[EYE_R_OUTER_CORNER];
   if (!left || !right) return 0;
   const dx = (left.x - right.x) * videoWidth;
   const dy = (left.y - right.y) * videoHeight;

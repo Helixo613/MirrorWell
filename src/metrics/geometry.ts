@@ -24,19 +24,19 @@ const EYE_R_INNER = 133;
 /** Subject's left eye inner corner — MediaPipe mesh point 362. */
 const EYE_L_INNER = 362;
 
-/** Subject's left brow (upper brow ridge) — MediaPipe mesh point 105. */
-const BROW_L = 105;
-/** Subject's right brow (upper brow ridge) — MediaPipe mesh point 334. */
-const BROW_R = 334;
+/** Subject's left brow (upper brow ridge) — MediaPipe mesh point 334 (FACEMESH_LEFT_EYEBROW). */
+const BROW_L = 334;
+/** Subject's right brow (upper brow ridge) — MediaPipe mesh point 105 (FACEMESH_RIGHT_EYEBROW). */
+const BROW_R = 105;
 
-/** Subject's left upper eyelid — MediaPipe mesh point 159. */
-const LID_UPPER_L = 159;
-/** Subject's left lower eyelid — MediaPipe mesh point 145. */
-const LID_LOWER_L = 145;
-/** Subject's right upper eyelid — MediaPipe mesh point 386. */
-const LID_UPPER_R = 386;
-/** Subject's right lower eyelid — MediaPipe mesh point 374. */
-const LID_LOWER_R = 374;
+/** Subject's left upper eyelid — MediaPipe mesh point 386 (FACEMESH_LEFT_EYE). */
+const LID_UPPER_L = 386;
+/** Subject's left lower eyelid — MediaPipe mesh point 374 (FACEMESH_LEFT_EYE). */
+const LID_LOWER_L = 374;
+/** Subject's right upper eyelid — MediaPipe mesh point 159 (FACEMESH_RIGHT_EYE). */
+const LID_UPPER_R = 159;
+/** Subject's right lower eyelid — MediaPipe mesh point 145 (FACEMESH_RIGHT_EYE). */
+const LID_LOWER_R = 145;
 
 /** Subject's left outer mouth corner — MediaPipe mesh point 291. */
 const MOUTH_L = 291;
@@ -117,12 +117,12 @@ export function measureAbsolute(af: ApprovedFrame): AbsoluteFeatures {
 
   const nose = toPx(lm[NOSE_TIP]!, W, H);
 
-  // REGION_BROW: movers brow 105/334; anchors same-side eye centers.
+  // REGION_BROW: movers brow 334 (L) / 105 (R); anchors same-side eye centers.
   const browL = feature(toPx(lm[BROW_L]!, W, H), eyeCenterL, uHat, vHat, iod);
   const browR = feature(toPx(lm[BROW_R]!, W, H), eyeCenterR, uHat, vHat, iod);
 
   // REGION_EYELID: aperture gap vector (upper − lower) in face frame (IOD units).
-  // Left: upper 159 / lower 145; right: upper 386 / lower 374.
+  // Left: upper 386 / lower 374; right: upper 159 / lower 145.
   const lidL = feature(
     toPx(lm[LID_UPPER_L]!, W, H),
     toPx(lm[LID_LOWER_L]!, W, H),

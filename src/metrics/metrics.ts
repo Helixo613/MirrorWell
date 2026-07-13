@@ -99,7 +99,7 @@ function smoothedSymmetry(window: (number | null)[]): number | null {
 function rawSymmetryAndEffort(
   left: { u: number; v: number },
   right: { u: number; v: number },
-  comfortableMax: number | undefined,
+  comfortableMax: number,
 ): { symmetryIndex: number | null; effortIndex: number } {
   const dLu = left.u;
   const dLv = left.v;
@@ -119,7 +119,7 @@ function rawSymmetryAndEffort(
     symmetryIndex = (minM / maxM) * Math.max(0, cosTheta);
   }
 
-  const effortIndex = comfortableMax === undefined ? 0 : maxM / comfortableMax;
+  const effortIndex = maxM / comfortableMax;
   return { symmetryIndex, effortIndex };
 }
 
@@ -137,6 +137,11 @@ function compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample {
   const config = exercises[exerciseId]!;
   const disp = nf.regionDisplacements[config.regionId as RegionId];
   const comfortableMax = activeBaseline.comfortableMax[exerciseId];
+  // A missing comfortableMax must never silently produce effortIndex 0 — that would disable
+  // the ease-off safety cue for the whole exercise. Uncalibrated exercise → NO_BASELINE.
+  if (comfortableMax === undefined || !Number.isFinite(comfortableMax) || comfortableMax <= 0) {
+    throw new MirrorWellError('NO_BASELINE', `comfortableMax missing or invalid for ${exerciseId}`);
+  }
   const raw = rawSymmetryAndEffort(disp.left, disp.right, comfortableMax);
 
   lastRaw = { symmetryIndex: raw.symmetryIndex, effortIndex: raw.effortIndex };

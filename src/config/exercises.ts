@@ -7,9 +7,9 @@
  * (Task B2). This file keeps exercise→region mapping and documents movers for each EX_*.
  *
  * Geometry kernel (measureAbsolute) region contracts:
- *   REGION_BROW:         movers left brow 105 / right brow 334;
+ *   REGION_BROW:         movers left brow 334 / right brow 105;
  *                        anchors same-side eye centers mid(263,362) / mid(33,133)
- *   REGION_EYELID:       gap upper−lower: L 159/145, R 386/374
+ *   REGION_EYELID:       gap upper−lower: L 386/374, R 159/145
  *   REGION_MOUTH_CORNER: movers L 291 / R 61; anchor nose tip 1 both
  *   REGION_LIP:          movers L 308 / R 78 (inner lip corners); anchor nose tip 1 both
  *
@@ -38,9 +38,9 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
   EX_BROW_RAISE: Object.freeze({
     exerciseId: 'EX_BROW_RAISE',
     regionId: 'REGION_BROW',
-    // Geometry: mover 105/334, anchor = same-side eye center (mid outer+inner). Scalar
-    // normalize still uses upper-lid 159/386 as a same-side vertical reference until B3.
-    landmarkIndices: Object.freeze({ left: ['105', '159'], right: ['334', '386'] }),
+    // Geometry: mover 334 (L) / 105 (R), anchor = same-side eye center (mid outer+inner).
+    // Second slot = same-side upper lid as a vertical reference (386 L / 159 R).
+    landmarkIndices: Object.freeze({ left: ['334', '386'], right: ['105', '159'] }),
     displayName: 'Gentle brow raise',
     instruction: 'Lift your eyebrows slowly — about half of what feels possible. Gentle is the goal.',
     demoAssetPath: '/demo-assets/EX_BROW_RAISE.webm',
@@ -51,8 +51,8 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
   EX_EYE_CLOSURE: Object.freeze({
     exerciseId: 'EX_EYE_CLOSURE',
     regionId: 'REGION_EYELID',
-    // Geometry: gap vector upper−lower (159−145 L, 386−374 R). Scalar pairs match.
-    landmarkIndices: Object.freeze({ left: ['159', '145'], right: ['386', '374'] }),
+    // Geometry: gap vector upper−lower (386−374 L, 159−145 R). Scalar pairs match.
+    landmarkIndices: Object.freeze({ left: ['386', '374'], right: ['159', '145'] }),
     displayName: 'Gentle eye closure',
     instruction: 'Close your eyes slowly and comfortably — about half of what feels possible.',
     demoAssetPath: '/demo-assets/EX_EYE_CLOSURE.webm',

@@ -18,12 +18,12 @@ const MESH = {
   eyeL: 263, // subject's left eye outer corner
   eyeRInner: 133, // subject's right eye inner corner
   eyeLInner: 362, // subject's left eye inner corner
-  browL: 105, // subject's left brow
-  browR: 334, // subject's right brow
-  lidUpperL: 159,
-  lidLowerL: 145,
-  lidUpperR: 386,
-  lidLowerR: 374,
+  browL: 334, // subject's left brow (FACEMESH_LEFT_EYEBROW)
+  browR: 105, // subject's right brow (FACEMESH_RIGHT_EYEBROW)
+  lidUpperL: 386, // subject's left eye (FACEMESH_LEFT_EYE)
+  lidLowerL: 374,
+  lidUpperR: 159, // subject's right eye (FACEMESH_RIGHT_EYE)
+  lidLowerR: 145,
   mouthL: 291, // subject's left outer mouth corner
   mouthR: 61, // subject's right outer mouth corner
   lipL: 308, // subject's left inner lip corner
@@ -261,5 +261,34 @@ describe('geometry kernel — measureAbsolute / aggregateNeutral', () => {
     expect(med.REGION_EYELID.left.u).toBeCloseTo(base.REGION_EYELID.left.u, 10);
     expect(med.REGION_EYELID.left.v).toBeCloseTo(base.REGION_EYELID.left.v, 10);
     expect(med.REGION_LIP.right.u).toBeCloseTo(base.REGION_LIP.right.u, 10);
+  });
+
+  it('(6) topology: canonical mesh indices map to the correct anatomical side', async () => {
+    const { measureAbsolute } = await import('../../src/metrics/geometry.ts');
+    const W = 640;
+    const H = 480;
+    const center = { x: 320, y: 240 };
+    const rest = restFacePixels(center.x, center.y);
+    const fRest = measureAbsolute(asApproved(makeFrame(pixelsToNormalized(rest, W, H)), W, H));
+
+    // Perturb exactly one raw mesh index; assert only the expected region/side responds.
+    // Pins the canonical topology: 334=left brow, 105=right brow (FACEMESH_*_EYEBROW);
+    // 386/374=left eye lids, 159/145=right eye lids (FACEMESH_*_EYE).
+    const cases: Array<{ index: number; region: RegionId; side: 'left' | 'right' }> = [
+      { index: 334, region: 'REGION_BROW', side: 'left' },
+      { index: 105, region: 'REGION_BROW', side: 'right' },
+      { index: 386, region: 'REGION_EYELID', side: 'left' },
+      { index: 159, region: 'REGION_EYELID', side: 'right' },
+    ];
+
+    for (const { index, region, side } of cases) {
+      const moved = { ...rest, [index]: { x: rest[index]!.x, y: rest[index]!.y - 15 } };
+      const fMoved = measureAbsolute(asApproved(makeFrame(pixelsToNormalized(moved, W, H)), W, H));
+
+      const otherSide = side === 'left' ? 'right' : 'left';
+      expect(Math.abs(fMoved[region][side].v - fRest[region][side].v)).toBeGreaterThan(0.01);
+      expect(fMoved[region][otherSide].u).toBeCloseTo(fRest[region][otherSide].u, 10);
+      expect(fMoved[region][otherSide].v).toBeCloseTo(fRest[region][otherSide].v, 10);
+    }
   });
 });

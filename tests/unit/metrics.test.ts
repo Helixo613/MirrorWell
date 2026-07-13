@@ -137,13 +137,13 @@ describe('MetricEngine — direction-aware symmetryIndex (P0-6)', () => {
     expect(result.effortIndex).toBeCloseTo(0.9, 6);
   });
 
-  it('comfortableMax missing for the exerciseId defensively yields effortIndex 0, not NaN', async () => {
+  it('comfortableMax missing for the exerciseId throws NO_BASELINE (never a silent 0 that disables ease-off)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 })); // no EX_PUCKER key
     MetricEngine.reset();
-    const result = MetricEngine.compute(sameDir(0.05, 0, 'REGION_LIP'), 'EX_PUCKER');
-    expect(result.effortIndex).toBe(0);
-    expect(Number.isNaN(result.effortIndex)).toBe(false);
+    expect(() => MetricEngine.compute(sameDir(0.05, 0, 'REGION_LIP'), 'EX_PUCKER')).toThrowError(
+      expect.objectContaining({ code: 'NO_BASELINE' }),
+    );
   });
 });
 
