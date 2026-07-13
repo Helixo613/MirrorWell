@@ -13,9 +13,12 @@ export const thresholds = Object.freeze({
   }),
 
   // QualityMonitor gate boundaries. Owning section: docs/API.md §15 / docs/BACKEND.md §1.3.
+  // interOcularMinFrac replaces retired interOcularMinPx — distance is a fraction of video
+  // width so the same face scale passes at 640×480 and 1280×720.
+  // jitterMaxPct is in RMS second-difference / IOD units (motion-compensated).
   qualityGates: Object.freeze({
     lumaMin: 60,
-    interOcularMinPx: 60,
+    interOcularMinFrac: 0.09,
     poseMaxDeg: 15,
     jitterMaxPct: 0.005,
   }),

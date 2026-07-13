@@ -16,10 +16,11 @@ describe('thresholds', () => {
     );
   });
 
-  it('qualityGates exposes all four gate tunables', () => {
+  it('qualityGates exposes all four gate tunables (interOcularMinFrac, not MinPx)', () => {
     expect(Object.keys(thresholds.qualityGates).sort()).toEqual(
-      ['interOcularMinPx', 'jitterMaxPct', 'lumaMin', 'poseMaxDeg'].sort(),
+      ['interOcularMinFrac', 'jitterMaxPct', 'lumaMin', 'poseMaxDeg'].sort(),
     );
+    expect(thresholds.qualityGates.interOcularMinFrac).toBe(0.09);
   });
 
   it('metrics exposes all six metric tunables (incl. gapResetMs)', () => {

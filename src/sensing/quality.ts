@@ -38,31 +38,93 @@ function approve(lf: LandmarkFrame, videoWidth: number, videoHeight: number): Ap
 const LEFT_EYE_OUTER_CORNER = 33;
 const RIGHT_EYE_OUTER_CORNER = 263;
 
-let previousLandmarks: LandmarkFrame['landmarks'] | null = null;
+// Landmark bbox expansion fraction (10% of width/height) for face-region luma — BACKEND §1.3.
+const FACE_BBOX_MARGIN = 0.1;
+const LUMA_DOWNSAMPLE = 64;
+
+// Jitter history: last two landmark frames in pixel-comparable normalized form for the
+// second-difference estimator. Assumption (BACKEND §1.3): frame intervals are approximately
+// uniform — second difference is computed per sample without Δt scaling.
+let prevLandmarks: LandmarkFrame['landmarks'] | null = null;
+let prevPrevLandmarks: LandmarkFrame['landmarks'] | null = null;
 let jitterHistory: number[] = [];
 // Reuses thresholds.metrics.smoothingWindow rather than introducing a new tunable outside the
 // documented qualityGates shape (docs/API.md §15 fixes qualityGates to exactly four fields).
 const JITTER_WINDOW = thresholds.metrics.smoothingWindow;
 
 function resetJitterState(): void {
-  previousLandmarks = null;
+  prevLandmarks = null;
+  prevPrevLandmarks = null;
   jitterHistory = [];
 }
 
-function meanLuma64(video: HTMLVideoElement): number {
+/**
+ * Mean luma over the face bounding box only (landmark AABB + 10% margin), sampled from a
+ * 64×64 downsample of the full video. Avoids bright backgrounds masking a dark face (and
+ * vice versa). Empty mapped region → fail open (255). Face must already be present (gate
+ * order: FACE_LOST before LOW_LIGHT) — a face too dark to detect yields FACE_LOST, not
+ * LOW_LIGHT (intended, BACKEND §1.3).
+ */
+function faceRegionLuma64(video: HTMLVideoElement, landmarks: LandmarkFrame['landmarks']): number {
   const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
+  canvas.width = LUMA_DOWNSAMPLE;
+  canvas.height = LUMA_DOWNSAMPLE;
   const ctx = canvas.getContext('2d');
   if (!ctx) return 255; // no canvas context: fail open on this gate, other gates still apply
-  ctx.drawImage(video, 0, 0, 64, 64);
-  const { data } = ctx.getImageData(0, 0, 64, 64);
-  let sum = 0;
-  const pixelCount = data.length / 4;
-  for (let i = 0; i < data.length; i += 4) {
-    sum += 0.299 * data[i]! + 0.587 * data[i + 1]! + 0.114 * data[i + 2]!;
+  ctx.drawImage(video, 0, 0, LUMA_DOWNSAMPLE, LUMA_DOWNSAMPLE);
+  const { data } = ctx.getImageData(0, 0, LUMA_DOWNSAMPLE, LUMA_DOWNSAMPLE);
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of landmarks) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
   }
-  return sum / pixelCount;
+  if (!Number.isFinite(minX)) return 255;
+
+  const bw = maxX - minX;
+  const bh = maxY - minY;
+  const padX = bw * FACE_BBOX_MARGIN;
+  const padY = bh * FACE_BBOX_MARGIN;
+  minX = Math.max(0, minX - padX);
+  maxX = Math.min(1, maxX + padX);
+  minY = Math.max(0, minY - padY);
+  maxY = Math.min(1, maxY + padY);
+
+  let x0 = Math.floor(minX * LUMA_DOWNSAMPLE);
+  let x1 = Math.ceil(maxX * LUMA_DOWNSAMPLE);
+  let y0 = Math.floor(minY * LUMA_DOWNSAMPLE);
+  let y1 = Math.ceil(maxY * LUMA_DOWNSAMPLE);
+  // Degenerate (zero-area) bbox → ensure at least one pixel so a collinear landmark set still
+  // samples something rather than silently fail-open past LOW_LIGHT.
+  if (x1 <= x0) {
+    x0 = Math.max(0, Math.min(LUMA_DOWNSAMPLE - 1, x0));
+    x1 = x0 + 1;
+  }
+  if (y1 <= y0) {
+    y0 = Math.max(0, Math.min(LUMA_DOWNSAMPLE - 1, y0));
+    y1 = y0 + 1;
+  }
+  x0 = Math.max(0, x0);
+  y0 = Math.max(0, y0);
+  x1 = Math.min(LUMA_DOWNSAMPLE, x1);
+  y1 = Math.min(LUMA_DOWNSAMPLE, y1);
+  if (x0 >= x1 || y0 >= y1) return 255;
+
+  let sum = 0;
+  let count = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const i = (y * LUMA_DOWNSAMPLE + x) * 4;
+      sum += 0.299 * data[i]! + 0.587 * data[i + 1]! + 0.114 * data[i + 2]!;
+      count++;
+    }
+  }
+  return count === 0 ? 255 : sum / count;
 }
 
 function interOcularDistancePx(landmarks: LandmarkFrame['landmarks'], videoWidth: number, videoHeight: number): number {
@@ -90,23 +152,39 @@ function extractEulerAnglesDeg(headPose: number[]): { yaw: number; pitch: number
   return { yaw: toDeg(yaw), pitch: toDeg(pitch), roll: toDeg(roll) };
 }
 
-function rollingJitterPct(landmarks: LandmarkFrame['landmarks'], interOcularPx: number, videoWidth: number, videoHeight: number): number {
-  if (!previousLandmarks || previousLandmarks.length !== landmarks.length || interOcularPx === 0) {
-    previousLandmarks = landmarks;
-    jitterHistory = [];
+/**
+ * RMS second difference of landmarks / IOD (motion-compensated jitter).
+ * For each landmark: |p_t − 2 p_{t−1} + p_{t−2}| in pixels, then RMS over landmarks, / IOD.
+ * Constant-velocity intentional motion → second difference ≈ 0 → passes.
+ * Oscillating tracking noise → high second difference → LOW_CONFIDENCE.
+ * Needs 3 frames; first two samples return 0. Rolling mean over smoothingWindow for stability.
+ * Assumes approximately uniform frame intervals (no Δt scaling) — BACKEND §1.3.
+ */
+function rollingJitterSecondDiff(
+  landmarks: LandmarkFrame['landmarks'],
+  interOcularPx: number,
+  videoWidth: number,
+  videoHeight: number,
+): number {
+  if (!prevLandmarks || !prevPrevLandmarks || prevLandmarks.length !== landmarks.length || interOcularPx === 0) {
+    prevPrevLandmarks = prevLandmarks;
+    prevLandmarks = landmarks;
+    if (!prevPrevLandmarks) jitterHistory = [];
     return 0;
   }
 
-  let sumSqPx = 0;
+  let sumSq = 0;
   for (let i = 0; i < landmarks.length; i++) {
-    const dx = (landmarks[i]!.x - previousLandmarks[i]!.x) * videoWidth;
-    const dy = (landmarks[i]!.y - previousLandmarks[i]!.y) * videoHeight;
-    sumSqPx += dx * dx + dy * dy;
+    const ax = (landmarks[i]!.x - 2 * prevLandmarks[i]!.x + prevPrevLandmarks[i]!.x) * videoWidth;
+    const ay = (landmarks[i]!.y - 2 * prevLandmarks[i]!.y + prevPrevLandmarks[i]!.y) * videoHeight;
+    sumSq += ax * ax + ay * ay;
   }
-  const rmsDisplacementPx = Math.sqrt(sumSqPx / landmarks.length);
-  previousLandmarks = landmarks;
+  const rmsPx = Math.sqrt(sumSq / landmarks.length);
+  const displacementPct = rmsPx / interOcularPx;
 
-  const displacementPct = rmsDisplacementPx / interOcularPx;
+  prevPrevLandmarks = prevLandmarks;
+  prevLandmarks = landmarks;
+
   jitterHistory.push(displacementPct);
   if (jitterHistory.length > JITTER_WINDOW) jitterHistory.shift();
   return jitterHistory.reduce((a, b) => a + b, 0) / jitterHistory.length;
@@ -114,12 +192,14 @@ function rollingJitterPct(landmarks: LandmarkFrame['landmarks'], interOcularPx: 
 
 function evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityResult {
   // Gate order (first failure wins) — docs/BACKEND.md §1.3.
+  // FACE_LOST before LOW_LIGHT: a face too dark to detect cannot yield face-region luma →
+  // FACE_LOST is honest (message still prompts lighting/position adjustment).
   if (!lf || !lf.facePresent) {
     resetJitterState();
     return { state: 'FACE_LOST' };
   }
 
-  const luma = meanLuma64(video);
+  const luma = faceRegionLuma64(video, lf.landmarks);
   if (luma < thresholds.qualityGates.lumaMin) {
     resetJitterState();
     return { state: 'LOW_LIGHT' };
@@ -128,7 +208,7 @@ function evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityRes
   const videoWidth = video.videoWidth || 640;
   const videoHeight = video.videoHeight || 480;
   const interOcular = interOcularDistancePx(lf.landmarks, videoWidth, videoHeight);
-  if (interOcular < thresholds.qualityGates.interOcularMinPx) {
+  if (interOcular < thresholds.qualityGates.interOcularMinFrac * videoWidth) {
     resetJitterState();
     return { state: 'TOO_FAR' };
   }
@@ -140,7 +220,7 @@ function evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityRes
     return { state: 'POSE_OUT_OF_RANGE' };
   }
 
-  const jitter = rollingJitterPct(lf.landmarks, interOcular, videoWidth, videoHeight);
+  const jitter = rollingJitterSecondDiff(lf.landmarks, interOcular, videoWidth, videoHeight);
   if (jitter > thresholds.qualityGates.jitterMaxPct) {
     return { state: 'LOW_CONFIDENCE' };
   }
