@@ -1,15 +1,34 @@
-// src/sensing/quality.ts — emits exactly one QualityState per frame; the fail-safe core
+// src/sensing/quality.ts — emits exactly one QualityResult per frame; the fail-safe core
 // (docs/BACKEND.md §1.3). Contracts: docs/API.md §6.
 //
-// STRUCTURAL RULE: evaluate() returns only an enum classification — never landmarks, never a
-// raw score, no pass-through of frame data. That is what makes "QualityMonitor is the only
-// caller of NormalizationLayer.normalize" enforceable once Task 6 adds NormalizationLayer:
-// there is no side channel here a future caller could use to reach normalize() without first
-// checking this return value.
+// STRUCTURAL RULE: ApprovedFrame is constructible ONLY inside this module (private brand
+// symbol). Metric code (normalize / geometry) accepts ApprovedFrame only — a raw
+// LandmarkFrame is a compile error. Non-OK results are state-only objects with no `frame`
+// key, so callers cannot reach normalize without a QUALITY_OK branch.
 import type { LandmarkFrame } from './landmarks.ts';
 import { thresholds } from '../config/thresholds.ts';
 
 export type QualityState = 'QUALITY_OK' | 'LOW_LIGHT' | 'FACE_LOST' | 'TOO_FAR' | 'POSE_OUT_OF_RANGE' | 'LOW_CONFIDENCE';
+
+// Brand is module-private — not exported. Outside this file, ApprovedFrame is only obtainable
+// via evaluate() returning QUALITY_OK. Runtime Symbol (not `declare const`) so approve() can
+// set the key; unique-symbol typing still makes the brand unforgeable at compile time.
+const approvedBrand: unique symbol = Symbol('ApprovedFrame') as unique symbol;
+
+export type ApprovedFrame = {
+  readonly [approvedBrand]: true;
+  readonly lf: LandmarkFrame;
+  readonly videoWidth: number;
+  readonly videoHeight: number;
+};
+
+export type QualityResult =
+  | { state: 'QUALITY_OK'; frame: ApprovedFrame }
+  | { state: Exclude<QualityState, 'QUALITY_OK'> };
+
+function approve(lf: LandmarkFrame, videoWidth: number, videoHeight: number): ApprovedFrame {
+  return { [approvedBrand]: true, lf, videoWidth, videoHeight };
+}
 
 // Standard MediaPipe canonical face-mesh eye-outer-corner indices (468-point topology shared
 // by FaceMesh and FaceLandmarker). PLACEHOLDER pending docs/IMPLEMENTATION.md Task 6 ("Fixtures
@@ -93,17 +112,17 @@ function rollingJitterPct(landmarks: LandmarkFrame['landmarks'], interOcularPx: 
   return jitterHistory.reduce((a, b) => a + b, 0) / jitterHistory.length;
 }
 
-function evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityState {
+function evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityResult {
   // Gate order (first failure wins) — docs/BACKEND.md §1.3.
   if (!lf || !lf.facePresent) {
     resetJitterState();
-    return 'FACE_LOST';
+    return { state: 'FACE_LOST' };
   }
 
   const luma = meanLuma64(video);
   if (luma < thresholds.qualityGates.lumaMin) {
     resetJitterState();
-    return 'LOW_LIGHT';
+    return { state: 'LOW_LIGHT' };
   }
 
   const videoWidth = video.videoWidth || 640;
@@ -111,22 +130,22 @@ function evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualitySta
   const interOcular = interOcularDistancePx(lf.landmarks, videoWidth, videoHeight);
   if (interOcular < thresholds.qualityGates.interOcularMinPx) {
     resetJitterState();
-    return 'TOO_FAR';
+    return { state: 'TOO_FAR' };
   }
 
   const { yaw, pitch, roll } = extractEulerAnglesDeg(lf.headPose);
   const poseMax = thresholds.qualityGates.poseMaxDeg;
   if (Math.abs(yaw) > poseMax || Math.abs(pitch) > poseMax || Math.abs(roll) > poseMax) {
     resetJitterState();
-    return 'POSE_OUT_OF_RANGE';
+    return { state: 'POSE_OUT_OF_RANGE' };
   }
 
   const jitter = rollingJitterPct(lf.landmarks, interOcular, videoWidth, videoHeight);
   if (jitter > thresholds.qualityGates.jitterMaxPct) {
-    return 'LOW_CONFIDENCE';
+    return { state: 'LOW_CONFIDENCE' };
   }
 
-  return 'QUALITY_OK';
+  return { state: 'QUALITY_OK', frame: approve(lf, videoWidth, videoHeight) };
 }
 
 export const QualityMonitor = { evaluate };

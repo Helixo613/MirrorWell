@@ -12,6 +12,7 @@
 // (B1-B3), which requires real fixture recordings that do not exist in this environment yet.
 // Do not treat this module as V1-validated.
 import type { LandmarkFrame } from '../sensing/landmarks.ts';
+import type { ApprovedFrame } from '../sensing/quality.ts';
 import type { CalibrationBaseline, RegionId } from '../data/schema.ts';
 import { MirrorWellError } from '../data/errors.ts';
 import { exercises } from '../config/exercises.ts';
@@ -88,11 +89,12 @@ function regionSideDistance(
   return distance3d(aRot, bRot) / interOcular;
 }
 
-function normalize(lf: LandmarkFrame): NormalizedFrame {
+function normalize(af: ApprovedFrame): NormalizedFrame {
   if (!activeBaseline) {
     throw new MirrorWellError('NO_BASELINE', 'normalize called without setBaseline');
   }
 
+  const lf = af.lf;
   const interOcular = interOcularNormalized(lf.landmarks);
   const leftEye = lf.landmarks[LEFT_EYE_OUTER_CORNER];
   const rightEye = lf.landmarks[RIGHT_EYE_OUTER_CORNER];
