@@ -23,9 +23,13 @@ export interface CalibrationBaseline {
   baselineId: string;             // PK, uuid v4
   profileId: string;              // FK -> user_profile.profileId (enforced by StorageService)
   capturedAt: string;             // UTC ISO 8601
-  neutralStats: Record<RegionId, { left: number; right: number }>; // median normalized rest distances
-  comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max displacement, keys = assignedExercises
+  // Face-local vector medians in IOD units (ARCHITECTURE §7 / §13). Components are signed
+  // projections — legitimately negative; do NOT require > 0.
+  neutralStats: Record<RegionId, { left: { u: number; v: number }; right: { u: number; v: number } }>;
+  comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max peak max(mL,mR), keys = assignedExercises
   qualityScore: number;           // [0..1] = fraction of QUALITY_OK capture frames; >= 0.7 enforced
+  noiseFloorSymmetry: number;     // std of smoothed SI over held comfortable-max captures (B1b)
+  noiseFloorDisplacement: number; // std of pre-floor max(mL,mR) over neutral OK frames (B1a)
   isActive: 0 | 1;                // exactly one row with 1 (StorageService invariant)
 }
 
@@ -67,7 +71,7 @@ export interface AppSettings {
   audioCuesEnabled: boolean;      // default true
   reducedFacePreview: boolean;    // default false ("show me less of my face")
   trendGranularity: 'weekly' | 'monthly'; // default 'monthly'
-  noiseFloorSymmetry: number;     // default 0.05 until the noise-floor self-test measures it
+  // noiseFloorSymmetry lives on calibration_baseline (baseline-paired; DG-4), not here
   showAffectedSideMarker: boolean;// default true; no effect when affectedSide === 'unknown'
   caregiverViewEnabled: boolean;  // default false; the patient's consent act for CaregiverScreen
 }

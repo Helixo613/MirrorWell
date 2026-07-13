@@ -27,13 +27,16 @@ function makeBaseline(overrides: Partial<CalibrationBaseline> = {}): Calibration
     profileId: PROFILE_ID,
     capturedAt: '2026-07-01T09:25:00.000Z',
     neutralStats: {
-      REGION_BROW: { left: 0.418, right: 0.421 },
-      REGION_EYELID: { left: 0.112, right: 0.108 },
-      REGION_MOUTH_CORNER: { left: 0.507, right: 0.503 },
-      REGION_LIP: { left: 0.231, right: 0.229 },
+      REGION_BROW: { left: { u: 0.0, v: 0.418 }, right: { u: 0.0, v: 0.421 } },
+      REGION_EYELID: { left: { u: 0.0, v: 0.112 }, right: { u: 0.0, v: 0.108 } },
+      // Signed face-local projections are legitimately negative (DATABASE.md §3).
+      REGION_MOUTH_CORNER: { left: { u: 0.507, v: 0.05 }, right: { u: -0.503, v: 0.05 } },
+      REGION_LIP: { left: { u: 0.231, v: 0.08 }, right: { u: -0.229, v: 0.08 } },
     },
     comfortableMax: { EX_SMILE: 0.092, EX_BROW_RAISE: 0.064 },
     qualityScore: 0.91,
+    noiseFloorSymmetry: 0.041,
+    noiseFloorDisplacement: 0.008,
     isActive: 1,
     ...overrides,
   };
@@ -99,7 +102,7 @@ describe('StorageService — round-trip', () => {
     expect(sessions[0].results[0].reps[0].repId).toBe('a1a1a1a1-0000-4000-8000-000000000003');
   });
 
-  it('round-trips app_settings (schema-level, no service in Task 2 scope)', async () => {
+  it('round-trips app_settings (no noiseFloorSymmetry — lives on calibration_baseline)', async () => {
     const row = {
       settingsId: 'singleton' as const,
       highContrast: false,
@@ -108,12 +111,13 @@ describe('StorageService — round-trip', () => {
       audioCuesEnabled: true,
       reducedFacePreview: false,
       trendGranularity: 'monthly' as const,
-      noiseFloorSymmetry: 0.05,
       showAffectedSideMarker: true,
       caregiverViewEnabled: false,
     };
     await db.app_settings.put(row);
-    expect(await db.app_settings.get('singleton')).toEqual(row);
+    const got = await db.app_settings.get('singleton');
+    expect(got).toEqual(row);
+    expect(got).not.toHaveProperty('noiseFloorSymmetry');
   });
 });
 
@@ -143,6 +147,46 @@ describe('StorageService.saveBaseline', () => {
     await StorageService.saveProfile(makeProfile({ assignedExercises: ['EX_SMILE'] }));
     await expect(
       StorageService.saveBaseline(makeBaseline({ comfortableMax: { EX_PUCKER: 0.05 } })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('rejects non-finite vector components in neutralStats', async () => {
+    await StorageService.saveProfile(makeProfile());
+    await expect(
+      StorageService.saveBaseline(
+        makeBaseline({
+          neutralStats: {
+            REGION_BROW: { left: { u: Number.NaN, v: 0.4 }, right: { u: 0, v: 0.4 } },
+            REGION_EYELID: { left: { u: 0, v: 0.1 }, right: { u: 0, v: 0.1 } },
+            REGION_MOUTH_CORNER: { left: { u: 0.5, v: 0 }, right: { u: -0.5, v: 0 } },
+            REGION_LIP: { left: { u: 0.2, v: 0 }, right: { u: -0.2, v: 0 } },
+          },
+        }),
+      ),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('accepts negative signed vector components in neutralStats', async () => {
+    await StorageService.saveProfile(makeProfile());
+    const baseline = makeBaseline({
+      neutralStats: {
+        REGION_BROW: { left: { u: -0.02, v: 0.4 }, right: { u: 0.02, v: 0.41 } },
+        REGION_EYELID: { left: { u: 0, v: -0.05 }, right: { u: 0, v: -0.04 } },
+        REGION_MOUTH_CORNER: { left: { u: 0.5, v: -0.3 }, right: { u: -0.5, v: -0.3 } },
+        REGION_LIP: { left: { u: 0.2, v: -0.28 }, right: { u: -0.2, v: -0.28 } },
+      },
+    });
+    await StorageService.saveBaseline(baseline);
+    expect(await StorageService.getActiveBaseline()).toEqual(baseline);
+  });
+
+  it('rejects missing or negative baseline noise floors', async () => {
+    await StorageService.saveProfile(makeProfile());
+    await expect(
+      StorageService.saveBaseline(makeBaseline({ noiseFloorSymmetry: -0.01 })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    await expect(
+      StorageService.saveBaseline(makeBaseline({ noiseFloorDisplacement: Number.NaN })),
     ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
   });
 });

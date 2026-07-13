@@ -88,12 +88,36 @@ function assertProfileShape(p: UserProfile): void {
   }
 }
 
+function isFiniteVec(v: unknown): v is { u: number; v: number } {
+  if (!v || typeof v !== 'object') return false;
+  const o = v as { u?: unknown; v?: unknown };
+  return Number.isFinite(o.u) && Number.isFinite(o.v);
+}
+
 function assertNeutralStats(stats: CalibrationBaseline['neutralStats']): void {
   for (const region of REGION_IDS) {
-    const v = stats[region];
-    if (!v || !Number.isFinite(v.left) || !Number.isFinite(v.right) || v.left <= 0 || v.right <= 0) {
-      throw new MirrorWellError('VALIDATION_FAILED', `neutralStats.${region} missing or non-positive`);
+    const side = stats[region];
+    if (!side || !isFiniteVec(side.left) || !isFiniteVec(side.right)) {
+      throw new MirrorWellError(
+        'VALIDATION_FAILED',
+        `neutralStats.${region} missing or non-finite vector components`,
+      );
     }
+  }
+}
+
+function assertBaselineNoise(b: CalibrationBaseline): void {
+  if (!Number.isFinite(b.noiseFloorSymmetry) || b.noiseFloorSymmetry < 0) {
+    throw new MirrorWellError(
+      'VALIDATION_FAILED',
+      `noiseFloorSymmetry must be finite and >= 0, got ${b.noiseFloorSymmetry}`,
+    );
+  }
+  if (!Number.isFinite(b.noiseFloorDisplacement) || b.noiseFloorDisplacement < 0) {
+    throw new MirrorWellError(
+      'VALIDATION_FAILED',
+      `noiseFloorDisplacement must be finite and >= 0, got ${b.noiseFloorDisplacement}`,
+    );
   }
 }
 
@@ -183,6 +207,7 @@ export const StorageService = {
         );
       }
       assertNeutralStats(b.neutralStats);
+      assertBaselineNoise(b);
 
       await db.transaction('rw', db.calibration_baseline, db.user_profile, async () => {
         const profile = await db.user_profile.get(b.profileId);

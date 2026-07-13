@@ -58,10 +58,10 @@ export async function seedDev(): Promise<void> {
   await StorageService.saveProfile(profile);
 
   const neutralStats: CalibrationBaseline['neutralStats'] = {
-    REGION_BROW: { left: 0.42, right: 0.421 },
-    REGION_EYELID: { left: 0.112, right: 0.108 },
-    REGION_MOUTH_CORNER: { left: 0.507, right: 0.503 },
-    REGION_LIP: { left: 0.231, right: 0.229 },
+    REGION_BROW: { left: { u: 0.0, v: 0.418 }, right: { u: 0.0, v: 0.421 } },
+    REGION_EYELID: { left: { u: 0.0, v: 0.112 }, right: { u: 0.0, v: 0.108 } },
+    REGION_MOUTH_CORNER: { left: { u: 0.507, v: 0.05 }, right: { u: -0.503, v: 0.05 } },
+    REGION_LIP: { left: { u: 0.231, v: 0.08 }, right: { u: -0.229, v: 0.08 } },
   };
   const comfortableMax: CalibrationBaseline['comfortableMax'] = Object.fromEntries(
     ALL_EXERCISES.map((ex) => [ex, 0.05 + rng() * 0.05]),
@@ -77,6 +77,8 @@ export async function seedDev(): Promise<void> {
     neutralStats,
     comfortableMax,
     qualityScore: 0.82,
+    noiseFloorSymmetry: 0.04,
+    noiseFloorDisplacement: 0.008,
     isActive: 1, // saveBaseline flips this to 0 once the active baseline below is saved
   });
 
@@ -88,6 +90,8 @@ export async function seedDev(): Promise<void> {
     neutralStats,
     comfortableMax,
     qualityScore: 0.91,
+    noiseFloorSymmetry: 0.041,
+    noiseFloorDisplacement: 0.007,
     isActive: 1,
   });
 
@@ -162,7 +166,6 @@ export async function seedDev(): Promise<void> {
     audioCuesEnabled: true,
     reducedFacePreview: false,
     trendGranularity: 'monthly',
-    noiseFloorSymmetry: 0.04,
     showAffectedSideMarker: true,
     caregiverViewEnabled: true,
   });
