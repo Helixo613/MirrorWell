@@ -119,7 +119,7 @@ Exactly **one** model, quarantined behind one interface. Everything downstream i
 | Model | MediaPipe FaceLandmarker (`face_landmarker.task`, ~3 MB, bundled at `public/models/`) + the tasks-vision **WASM runtime bundled at `public/wasm/`** (copied from the npm package at postinstall; `FilesetResolver` points at it, never a CDN). Both hash-verified against `models.lock.json`. |
 | Inference | **On-device only** (WASM, GPU delegate — backend not asserted; WebGPU unverified for 0.10.35). Remote inference is forbidden — it would violate the no-network rule and stream faces off-device. |
 | Input | The playing `HTMLVideoElement` (camera stream ≥ 640×480) passed to `detectForVideo` with a timestamp — the model handles conversion internally; we never preprocess |
-| Output | `LandmarkFrame { landmarks: Point3D[478] (x,y,z floats, normalized image coords), headPose: Matrix4 (facial transformation matrix, row-major float[16]), facePresent: boolean (faceLandmarks non-empty — the result exposes no per-frame confidence; sensitivity is set via the minFaceDetectionConfidence/minFacePresenceConfidence/minTrackingConfidence options, defaults 0.5), timestampMs: number }` |
+| Output | `LandmarkFrame { landmarks: Point3D[478] (x,y,z floats, normalized image coords), headPose: Matrix4 (facial transformation matrix, row-major float[16]), facePresent: boolean (faceLandmarks non-empty — the result exposes no per-frame confidence; sensitivity is set via the minFaceDetectionConfidence/minFacePresenceConfidence/minTrackingConfidence options, defaults 0.5), blendshapes: Record<string,number> (faceBlendshapes[0] categoryName → score; {} when absent), timestampMs: number }` |
 | Failure | `MODEL_LOAD_FAILED` at init (blocking screen, retry); `INFERENCE_FAILED` per frame (counts as `FACE_LOST` for gating) |
 | Downstream | `NormalizationLayer` consumes **raw landmark coordinates**, not blendshapes — blendshapes are more prior-laden on atypical faces (MODEL_AND_DATA §2) |
 | Telemetry release blocker | MediaPipe repo privacy notice mentions Tasks API utilization metrics; runtime network inspection of the pinned package must prove zero telemetry before release. |
@@ -267,6 +267,7 @@ type LandmarkFrame = {
   landmarks: { x: number; y: number; z: number }[]; // length 478
   headPose: number[]; // 16 floats, row-major 4×4 facial transformation matrix
   facePresent: boolean; // faceLandmarks non-empty (no per-frame confidence field exists)
+  blendshapes: Record<string, number>; // faceBlendshapes[0] categoryName → score; {} when absent
   timestampMs: number;
 };
 

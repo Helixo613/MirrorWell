@@ -44,7 +44,7 @@ export interface CalibrationBaseline {
   // Face-local vector medians in IOD units (ARCHITECTURE §7 / §13). Components are signed
   // projections — legitimately negative; do NOT require > 0.
   neutralStats: Record<RegionId, { left: { u: number; v: number }; right: { u: number; v: number } }>;
-  comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max peak max(mL,mR), keys = assignedExercises
+  comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max peak blendshape activation max(L,R), 0..1 score units (was IOD-units displacement — blendshape-si-v1, pre-release reset per DG-5), keys = assignedExercises
   qualityScore: number;           // [0..1] = fraction of QUALITY_OK capture frames; >= 0.7 enforced
   noiseFloorSymmetry: number;     // std of smoothed SI over held comfortable-max captures (B1b)
   noiseFloorDisplacement: number; // std of pre-floor max(mL,mR) over neutral OK frames (B1a)

@@ -192,7 +192,7 @@ Clears all six tables in one transaction. **Errors:** `DB_UNAVAILABLE`
 | `isRunning()` | — | `boolean` | — |
 
 > **Rule:** latest-frame-wins; never queue.
-> **Rule (camera lifecycle):** in production, the stream may be open only while `CalibrationScreen` or `SessionScreen` is mounted. Narrow exception: **dev-only harnesses under `src/dev/`** (excluded from the prod bundle) may open the camera for validation and live tooling; no production screen or service may rely on that path.
+> **Rule (camera lifecycle):** in production, the stream may be open only while `CalibrationScreen` or `SessionScreen` is mounted. Narrow exception: **dev-only harnesses under `src/dev/`** (excluded from the prod bundle) may open the camera for validation and live tooling, and may record its stream via `MediaRecorder` solely for consented fixture-master capture (download-only; SAFETY §6 exception); no production screen or service may rely on either path.
 
 ---
 
@@ -484,6 +484,7 @@ JSON validates against `tests/schemas/export.schema.json`. **Full example:**
     "exerciseId": "EX_SMILE",
     "regionId": "REGION_MOUTH_CORNER",
     "landmarkIndices": { "left": ["<mesh point ids, fixed in IMPLEMENTATION Task 6>"], "right": ["…"] },
+    "blendshapePair": { "left": "mouthSmileLeft", "right": "mouthSmileRight" },  // absent for EX_PUCKER (open decision — no per-side pucker blendshape; MetricEngine throws VALIDATION_FAILED)
     "displayName": "Gentle smile",
     "instruction": "Let a small, slow smile come — about half of what feels possible. Gentle is the goal.",
     "demoAssetPath": "/demo-assets/EX_SMILE.webm",
@@ -495,7 +496,7 @@ All four `EX_*` entries follow this shape; `EX_EYE_CLOSURE.repsPerSet = 5` (eye-
 
 ### `src/config/thresholds.ts`
 
-Every tunable, exported as a single frozen object, each with a comment naming its owning doc section: `landmarker {minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5}` (FaceLandmarker option thresholds — the only confidence controls that exist), `qualityGates {lumaMin: 60, interOcularMinFrac: 0.09, poseMaxDeg: 15, jitterMaxPct: 0.005}` (`interOcularMinFrac` replaces the retired `interOcularMinPx` — distance gate is a fraction of video width so the same face scale passes at 640×480 and 1280×720; `lumaMin` is face-region mean luma on the 64×64 downsample; `jitterMaxPct` is RMS second-difference / IOD), `metrics {movementFloorPct: 0.008, effortTargetZone: [0.30, 0.50], easeOffThreshold: 0.60, easeOffSustainMs: 300, smoothingWindow: 5, gapResetMs: 250}`, `reps {startThreshold: 0.15, endThreshold: 0.10, minDurationMs: 800, minQualityFramePct: 0.60}`, `calibration {minQualityScore: 0.7, neutralCaptures: 3, captureSeconds: 3, driftMaxPct: 0.08, staleDays: 14}`, `session {qualityProblemOfferStopMs: 30000}`.
+Every tunable, exported as a single frozen object, each with a comment naming its owning doc section: `landmarker {minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5}` (FaceLandmarker option thresholds — the only confidence controls that exist), `qualityGates {lumaMin: 60, interOcularMinFrac: 0.09, poseMaxDeg: 15, jitterMaxPct: 0.005}` (`interOcularMinFrac` replaces the retired `interOcularMinPx` — distance gate is a fraction of video width so the same face scale passes at 640×480 and 1280×720; `lumaMin` is face-region mean luma on the 64×64 downsample; `jitterMaxPct` is RMS second-difference / IOD), `metrics {movementFloorPct: 0.008, effortTargetZone: [0.30, 0.50], easeOffThreshold: 0.60, easeOffSustainMs: 300, smoothingWindow: 5, gapResetMs: 250}`, `blendshapes {activationFloor: 0.05}` (SI undefined below this max per-side blendshape score — candidate blendshape-si-v1, probe-derived initial value), `reps {startThreshold: 0.15, endThreshold: 0.10, minDurationMs: 800, minQualityFramePct: 0.60}`, `calibration {minQualityScore: 0.7, neutralCaptures: 3, captureSeconds: 3, driftMaxPct: 0.08, staleDays: 14}`, `session {qualityProblemOfferStopMs: 30000}`.
 
 > **Rule:** a numeric literal used by any service that does not come from this file is a review-blocking defect.
 
