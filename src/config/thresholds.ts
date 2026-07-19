@@ -23,6 +23,12 @@ export const thresholds = Object.freeze({
     jitterMaxPct: 0.005,
   }),
 
+  // Blendshape SI tunables (candidate blendshape-si-v1) — docs/API.md §15 / MODEL_AND_DATA §7.
+  // SI is undefined (null) when max per-side blendshape score < activationFloor.
+  blendshapes: Object.freeze({
+    activationFloor: 0.05,
+  }),
+
   // MetricEngine tunables (movement floor, effort zone, ease-off, gap). Owning section:
   // docs/API.md §15 / docs/BACKEND.md (MetricEngine).
   metrics: Object.freeze({

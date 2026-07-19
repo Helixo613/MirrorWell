@@ -26,6 +26,9 @@ export interface ExerciseConfig {
   exerciseId: string;
   regionId: string;
   landmarkIndices: { left: string[]; right: string[] };
+  /** Per-side blendshape categories for SI/effort (blendshape-si-v1). Absent = no
+   * validated pair (EX_PUCKER open decision) — MetricEngine throws VALIDATION_FAILED. */
+  blendshapePair?: { left: string; right: string };
   displayName: string;
   instruction: string;
   demoAssetPath: string;
@@ -41,6 +44,7 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
     // Geometry: mover 334 (L) / 105 (R), anchor = same-side eye center (mid outer+inner).
     // Second slot = same-side upper lid as a vertical reference (386 L / 159 R).
     landmarkIndices: Object.freeze({ left: ['334', '386'], right: ['105', '159'] }),
+    blendshapePair: Object.freeze({ left: 'browOuterUpLeft', right: 'browOuterUpRight' }),
     displayName: 'Gentle brow raise',
     instruction: 'Lift your eyebrows slowly — about half of what feels possible. Gentle is the goal.',
     demoAssetPath: '/demo-assets/EX_BROW_RAISE.webm',
@@ -53,6 +57,7 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
     regionId: 'REGION_EYELID',
     // Geometry: gap vector upper−lower (386−374 L, 159−145 R). Scalar pairs match.
     landmarkIndices: Object.freeze({ left: ['386', '374'], right: ['159', '145'] }),
+    blendshapePair: Object.freeze({ left: 'eyeBlinkLeft', right: 'eyeBlinkRight' }),
     displayName: 'Gentle eye closure',
     instruction: 'Close your eyes slowly and comfortably — about half of what feels possible.',
     demoAssetPath: '/demo-assets/EX_EYE_CLOSURE.webm',
@@ -65,6 +70,7 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
     regionId: 'REGION_MOUTH_CORNER',
     // Geometry: outer corners 291 (L) / 61 (R); anchors same-side eye centers (v2).
     landmarkIndices: Object.freeze({ left: ['291', '1'], right: ['61', '1'] }),
+    blendshapePair: Object.freeze({ left: 'mouthSmileLeft', right: 'mouthSmileRight' }),
     displayName: 'Gentle smile',
     instruction: 'Let a small, slow smile come — about half of what feels possible. Gentle is the goal.',
     demoAssetPath: '/demo-assets/EX_SMILE.webm',

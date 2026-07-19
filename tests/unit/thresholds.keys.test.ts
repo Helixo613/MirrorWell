@@ -6,7 +6,7 @@ import { thresholds } from '../../src/config/thresholds';
 describe('thresholds', () => {
   it('exports the full key list from API.md §15', () => {
     expect(Object.keys(thresholds).sort()).toEqual(
-      ['calibration', 'landmarker', 'metrics', 'qualityGates', 'reps', 'session', 'v1Protocol'].sort(),
+      ['blendshapes', 'calibration', 'landmarker', 'metrics', 'qualityGates', 'reps', 'session', 'v1Protocol'].sort(),
     );
   });
 
@@ -21,6 +21,11 @@ describe('thresholds', () => {
       ['interOcularMinFrac', 'jitterMaxPct', 'lumaMin', 'poseMaxDeg'].sort(),
     );
     expect(thresholds.qualityGates.interOcularMinFrac).toBe(0.09);
+  });
+
+  it('blendshapes exposes activationFloor 0.05 (blendshape-si-v1)', () => {
+    expect(Object.keys(thresholds.blendshapes)).toEqual(['activationFloor']);
+    expect(thresholds.blendshapes.activationFloor).toBe(0.05);
   });
 
   it('metrics exposes all six metric tunables (incl. gapResetMs)', () => {
