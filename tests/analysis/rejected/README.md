@@ -20,3 +20,22 @@ This directory preserves failing V1 harness evidence so rejected metric candidat
 
 - **B2 (distance invariance):** relative deviation far above the 5% bar (31.1%).
 - **B3 (yaw invariance):** no valid yaw samples under quality gates, so the bar could not be evaluated as a pass.
+
+## face-local-vector-v1 (FAILED)
+
+| Field | Value |
+| --- | --- |
+| **Candidate** | `face-local-vector-v1` (face-local 2D vector kernel, nose-tip anchors for mouth/lip) |
+| **Source report** | `v1_S01_report_face-local-vector-v1_FAILED.json` (copy of `tests/analysis/v1_S01_face-local-vector-v1_report.json`) |
+| **Subject** | S01 (12-cell protocol grid, 2 trials × 6 phases, webcam masters 2026-07-19) |
+| **Overall result** | `verdict: FAIL` (`overallPass: false`, `protocolLimited: false`) |
+| **B1a / B1b** | PASS (0.0021/0.0015 vs 0.01; 0.0054/0.0020 vs 0.05) |
+| **B2** | FAIL but confounded: cross-trial frontal-smile mean displacement differs ~36% (0.120 vs 0.173) — human reproduction, not attributable to the candidate |
+| **B3 (decisive)** | **FAIL: aggregate yaw_left 0.878, yaw_right 0.757 vs bar 0.05** — SI collapses to ~0 at measured 9–13° yaw, both trials, both directions |
+| **Evidence preserved at** | 2026-07-19 |
+| **Git SHA at freeze** | `f14f0027643c9d4e1a9ad52ea11716de924806c5` |
+
+### Why rejected
+
+- **B3 (yaw invariance):** the shared nose-tip anchor sits ~0.03 m off the face plane; under yaw its projection shifts by ≈ depth·sin(yaw) ≈ 0.08 IOD at 10° — same order as the smile signal — entering both sides' feature vectors with the same u sign. After the mirror step the sides point opposite → cos θ ≤ 0 → SI clamps to 0 on 100% of yaw-phase frames (live harness JSON and fixture report agree).
+- Successor hypothesis (stop-rule slot 3/3): `face-local-vector-v2` — re-anchor REGION_MOUTH_CORNER/REGION_LIP to same-side eye centers (planar, expression-static). Plan: `docs/superpowers/plans/2026-07-19-candidate3-geometry-v2.md`.

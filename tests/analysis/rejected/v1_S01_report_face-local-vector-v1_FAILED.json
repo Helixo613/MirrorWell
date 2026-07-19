@@ -1,0 +1,563 @@
+{
+  "subjectId": "S01",
+  "candidateId": "face-local-vector-v1",
+  "generatedAt": "2026-07-19T17:40:22.124Z",
+  "gitSha": "f14f0027643c9d4e1a9ad52ea11716de924806c5",
+  "protocol": {
+    "doc": "docs/MODEL_AND_DATA.md §7",
+    "phases": [
+      "neutral",
+      "smile",
+      "yaw_left",
+      "yaw_right",
+      "low_light",
+      "distance_2m"
+    ],
+    "trials": 2,
+    "minOkFramePct": 0.7,
+    "yawBandDeg": [
+      7,
+      13
+    ],
+    "thresholds": {
+      "B1a": 0.01,
+      "B1b": 0.05,
+      "B2": 0.05,
+      "B3": 0.05
+    },
+    "rules": [
+      "Per-trial evaluation; PASS only if every trial passes every bar",
+      "Missing/invalid cells are the string INVALID — no fallback statistics",
+      "Yaw validity requires measured mean |yaw| ∈ [7°, 13°] from headPose",
+      "Phase valid only if ≥70% frames QUALITY_OK"
+    ]
+  },
+  "fixtures": {
+    "neutral": {
+      "1": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_neutral_1.webm",
+        "basename": "fixture_S01_neutral_1"
+      },
+      "2": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_neutral_2.webm",
+        "basename": "fixture_S01_neutral_2"
+      }
+    },
+    "smile": {
+      "1": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_smile_1.webm",
+        "basename": "fixture_S01_smile_1"
+      },
+      "2": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_smile_2.webm",
+        "basename": "fixture_S01_smile_2"
+      }
+    },
+    "yaw_left": {
+      "1": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_yaw_left_1.webm",
+        "basename": "fixture_S01_yaw_left_1"
+      },
+      "2": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_yaw_left_2.webm",
+        "basename": "fixture_S01_yaw_left_2"
+      }
+    },
+    "yaw_right": {
+      "1": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_yaw_right_1.webm",
+        "basename": "fixture_S01_yaw_right_1"
+      },
+      "2": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_yaw_right_2.webm",
+        "basename": "fixture_S01_yaw_right_2"
+      }
+    },
+    "low_light": {
+      "1": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_low_light_1.webm",
+        "basename": "fixture_S01_low_light_1"
+      },
+      "2": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_low_light_2.webm",
+        "basename": "fixture_S01_low_light_2"
+      }
+    },
+    "distance_2m": {
+      "1": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_distance_2m_1.webm",
+        "basename": "fixture_S01_distance_2m_1"
+      },
+      "2": {
+        "status": "found",
+        "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_distance_2m_2.webm",
+        "basename": "fixture_S01_distance_2m_2"
+      }
+    }
+  },
+  "legacyFixtures": [
+    {
+      "condition": "yaw_15",
+      "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_yaw_15.mp4",
+      "note": "legacy single yaw master; protocol requires yaw_left and yaw_right with measured |yaw| ∈ [7°,13°] and trial suffix — insufficient"
+    }
+  ],
+  "trials": {
+    "1": {
+      "trial": 1,
+      "phaseValidity": {
+        "neutral": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 100,
+          "okFrames": 99,
+          "rejectedFrames": 1,
+          "okPct": 0.99,
+          "meanAbsYawDeg": 0.22654116282776574,
+          "qualityCounts": {
+            "QUALITY_OK": 99,
+            "LOW_CONFIDENCE": 1
+          }
+        },
+        "smile": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 80,
+          "rejectedFrames": 0,
+          "okPct": 1,
+          "meanAbsYawDeg": 1.6309589665433841,
+          "qualityCounts": {
+            "QUALITY_OK": 80
+          }
+        },
+        "yaw_left": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 79,
+          "rejectedFrames": 1,
+          "okPct": 0.9875,
+          "meanAbsYawDeg": 10.191765502273142,
+          "qualityCounts": {
+            "QUALITY_OK": 79,
+            "LOW_CONFIDENCE": 1
+          }
+        },
+        "yaw_right": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 78,
+          "rejectedFrames": 2,
+          "okPct": 0.975,
+          "meanAbsYawDeg": 9.295578386555011,
+          "qualityCounts": {
+            "QUALITY_OK": 78,
+            "LOW_CONFIDENCE": 2
+          }
+        },
+        "low_light": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 77,
+          "rejectedFrames": 3,
+          "okPct": 0.9625,
+          "meanAbsYawDeg": 1.9848783441296258,
+          "qualityCounts": {
+            "QUALITY_OK": 77,
+            "LOW_CONFIDENCE": 3
+          }
+        },
+        "distance_2m": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 79,
+          "rejectedFrames": 1,
+          "okPct": 0.9875,
+          "meanAbsYawDeg": 0.9892599527526506,
+          "qualityCounts": {
+            "FACE_LOST": 1,
+            "QUALITY_OK": 79
+          }
+        }
+      },
+      "B1a": {
+        "value": 0.0020713373994061383,
+        "threshold": 0.01,
+        "pass": true,
+        "reason": null,
+        "n": 99
+      },
+      "B1b": {
+        "value": 0.005406592603494397,
+        "threshold": 0.05,
+        "pass": true,
+        "reason": null,
+        "n": 80
+      },
+      "B2": {
+        "cells": {
+          "low_light": {
+            "condition": "low_light",
+            "value": 0.2001167670936263,
+            "meanDispCondition": 0.09611159334533854,
+            "meanDispSmile": 0.12015702966558921,
+            "threshold": 0.05,
+            "pass": false,
+            "reason": null
+          },
+          "distance_2m": {
+            "condition": "distance_2m",
+            "value": 0.6563631838740243,
+            "meanDispCondition": 0.041290379109437496,
+            "meanDispSmile": 0.12015702966558921,
+            "threshold": 0.05,
+            "pass": false,
+            "reason": null
+          }
+        },
+        "pass": false
+      },
+      "B3": {
+        "cells": {
+          "yaw_left": {
+            "phase": "yaw_left",
+            "value": 0.8810077442704548,
+            "meanSiYaw": 0,
+            "meanSiSmile": 0.8810077442704548,
+            "threshold": 0.05,
+            "pass": false,
+            "reason": null
+          },
+          "yaw_right": {
+            "phase": "yaw_right",
+            "value": 0.8810077442704548,
+            "meanSiYaw": 0,
+            "meanSiSmile": 0.8810077442704548,
+            "threshold": 0.05,
+            "pass": false,
+            "reason": null
+          }
+        },
+        "pass": false
+      },
+      "pass": false
+    },
+    "2": {
+      "trial": 2,
+      "phaseValidity": {
+        "neutral": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 100,
+          "okFrames": 98,
+          "rejectedFrames": 2,
+          "okPct": 0.98,
+          "meanAbsYawDeg": 0.7246750774272521,
+          "qualityCounts": {
+            "FACE_LOST": 1,
+            "QUALITY_OK": 98,
+            "LOW_CONFIDENCE": 1
+          }
+        },
+        "smile": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 80,
+          "rejectedFrames": 0,
+          "okPct": 1,
+          "meanAbsYawDeg": 0.1935723925484214,
+          "qualityCounts": {
+            "QUALITY_OK": 80
+          }
+        },
+        "yaw_left": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 77,
+          "rejectedFrames": 3,
+          "okPct": 0.9625,
+          "meanAbsYawDeg": 12.583486276060244,
+          "qualityCounts": {
+            "QUALITY_OK": 77,
+            "LOW_CONFIDENCE": 3
+          }
+        },
+        "yaw_right": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 78,
+          "rejectedFrames": 2,
+          "okPct": 0.975,
+          "meanAbsYawDeg": 11.72190916215884,
+          "qualityCounts": {
+            "QUALITY_OK": 78,
+            "LOW_CONFIDENCE": 2
+          }
+        },
+        "low_light": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 78,
+          "rejectedFrames": 2,
+          "okPct": 0.975,
+          "meanAbsYawDeg": 2.1970989055952765,
+          "qualityCounts": {
+            "QUALITY_OK": 78,
+            "LOW_CONFIDENCE": 2
+          }
+        },
+        "distance_2m": {
+          "valid": true,
+          "reason": null,
+          "totalFrames": 80,
+          "okFrames": 79,
+          "rejectedFrames": 1,
+          "okPct": 0.9875,
+          "meanAbsYawDeg": 3.2441717210636973,
+          "qualityCounts": {
+            "FACE_LOST": 1,
+            "QUALITY_OK": 79
+          }
+        }
+      },
+      "B1a": {
+        "value": 0.001465434978228096,
+        "threshold": 0.01,
+        "pass": true,
+        "reason": null,
+        "n": 98
+      },
+      "B1b": {
+        "value": 0.002046230937174707,
+        "threshold": 0.05,
+        "pass": true,
+        "reason": null,
+        "n": 80
+      },
+      "B2": {
+        "cells": {
+          "low_light": {
+            "condition": "low_light",
+            "value": 0.17718019553886233,
+            "meanDispCondition": 0.14218640317806155,
+            "meanDispSmile": 0.17280381732082764,
+            "threshold": 0.05,
+            "pass": false,
+            "reason": null
+          },
+          "distance_2m": {
+            "condition": "distance_2m",
+            "value": 0.32185758015417754,
+            "meanDispCondition": 0.1171855988365415,
+            "meanDispSmile": 0.17280381732082764,
+            "threshold": 0.05,
+            "pass": false,
+            "reason": null
+          }
+        },
+        "pass": false
+      },
+      "B3": {
+        "cells": {
+          "yaw_left": {
+            "phase": "yaw_left",
+            "value": 0.8756186392214905,
+            "meanSiYaw": 0.061473860389850574,
+            "meanSiSmile": 0.9370924996113411,
+            "threshold": 0.05,
+            "pass": false,
+            "reason": null
+          },
+          "yaw_right": {
+            "phase": "yaw_right",
+            "value": 0.6339109152909655,
+            "meanSiYaw": 0.30318158432037556,
+            "meanSiSmile": 0.9370924996113411,
+            "threshold": 0.05,
+            "pass": false,
+            "reason": null
+          }
+        },
+        "pass": false
+      },
+      "pass": false
+    }
+  },
+  "aggregate": {
+    "B1a": 0.0017683861888171172,
+    "B1b": 0.003726411770334552,
+    "B2": {
+      "low_light": 0.18864848131624432,
+      "distance_2m": 0.4891103820141009
+    },
+    "B3": {
+      "yaw_left": 0.8783131917459727,
+      "yaw_right": 0.7574593297807102
+    }
+  },
+  "rejectedFrameCounts": {
+    "1": {
+      "neutral": 1,
+      "smile": 0,
+      "yaw_left": 1,
+      "yaw_right": 2,
+      "low_light": 3,
+      "distance_2m": 1
+    },
+    "2": {
+      "neutral": 2,
+      "smile": 0,
+      "yaw_left": 3,
+      "yaw_right": 2,
+      "low_light": 2,
+      "distance_2m": 1
+    }
+  },
+  "measuredPoseSummary": {
+    "1": {
+      "neutral": {
+        "okPct": 0.99,
+        "meanAbsYawDeg": 0.22654116282776574,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "QUALITY_OK": 99,
+          "LOW_CONFIDENCE": 1
+        }
+      },
+      "smile": {
+        "okPct": 1,
+        "meanAbsYawDeg": 1.6309589665433841,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "QUALITY_OK": 80
+        }
+      },
+      "yaw_left": {
+        "okPct": 0.9875,
+        "meanAbsYawDeg": 10.191765502273142,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "QUALITY_OK": 79,
+          "LOW_CONFIDENCE": 1
+        }
+      },
+      "yaw_right": {
+        "okPct": 0.975,
+        "meanAbsYawDeg": 9.295578386555011,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "QUALITY_OK": 78,
+          "LOW_CONFIDENCE": 2
+        }
+      },
+      "low_light": {
+        "okPct": 0.9625,
+        "meanAbsYawDeg": 1.9848783441296258,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "QUALITY_OK": 77,
+          "LOW_CONFIDENCE": 3
+        }
+      },
+      "distance_2m": {
+        "okPct": 0.9875,
+        "meanAbsYawDeg": 0.9892599527526506,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "FACE_LOST": 1,
+          "QUALITY_OK": 79
+        }
+      }
+    },
+    "2": {
+      "neutral": {
+        "okPct": 0.98,
+        "meanAbsYawDeg": 0.7246750774272521,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "FACE_LOST": 1,
+          "QUALITY_OK": 98,
+          "LOW_CONFIDENCE": 1
+        }
+      },
+      "smile": {
+        "okPct": 1,
+        "meanAbsYawDeg": 0.1935723925484214,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "QUALITY_OK": 80
+        }
+      },
+      "yaw_left": {
+        "okPct": 0.9625,
+        "meanAbsYawDeg": 12.583486276060244,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "QUALITY_OK": 77,
+          "LOW_CONFIDENCE": 3
+        }
+      },
+      "yaw_right": {
+        "okPct": 0.975,
+        "meanAbsYawDeg": 11.72190916215884,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "QUALITY_OK": 78,
+          "LOW_CONFIDENCE": 2
+        }
+      },
+      "low_light": {
+        "okPct": 0.975,
+        "meanAbsYawDeg": 2.1970989055952765,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "QUALITY_OK": 78,
+          "LOW_CONFIDENCE": 2
+        }
+      },
+      "distance_2m": {
+        "okPct": 0.9875,
+        "meanAbsYawDeg": 3.2441717210636973,
+        "valid": true,
+        "reason": null,
+        "qualityCounts": {
+          "FACE_LOST": 1,
+          "QUALITY_OK": 79
+        }
+      }
+    }
+  },
+  "overallPass": false,
+  "protocolLimited": false,
+  "verdict": "FAIL"
+}
