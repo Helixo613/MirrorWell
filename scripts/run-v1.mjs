@@ -169,6 +169,48 @@ function neutralMouthStats(rows) {
   };
 }
 
+// Blendshape candidate (blendshape-si-v1): SI/act from per-side smile scores — absolute,
+// no neutral baseline needed. Mirrors src/metrics/metrics.ts rawSymmetryAndEffort +
+// thresholds.blendshapes.activationFloor.
+const ACTIVATION_FLOOR = 0.05;
+const BS_PAIR = { left: 'mouthSmileLeft', right: 'mouthSmileRight' };
+
+function deriveBlendshapeTrialFrames(rowsByPhase) {
+  const out = {};
+  for (const [phase, rows] of Object.entries(rowsByPhase)) {
+    if (!rows) {
+      out[phase] = null;
+      continue;
+    }
+    let window = [];
+    let lastOkMs = null;
+    out[phase] = rows.map((r) => {
+      let maxDisp = null;
+      let symmetryIndex = null;
+      if (r.qualityState === 'QUALITY_OK' && r.blendshapes) {
+        const L = r.blendshapes[BS_PAIR.left] ?? 0;
+        const R = r.blendshapes[BS_PAIR.right] ?? 0;
+        const act = Math.max(L, R);
+        maxDisp = act;
+        const raw = act < ACTIVATION_FLOOR ? null : Math.min(L, R) / act;
+        if (lastOkMs !== null && r.timestampMs - lastOkMs > GAP_RESET_MS) window = [];
+        lastOkMs = r.timestampMs;
+        window.push(raw);
+        if (window.length > SMOOTHING_WINDOW) window.shift();
+        const present = window.filter((v) => v !== null);
+        symmetryIndex = present.length === 0 ? null : median(present);
+      }
+      return {
+        qualityState: r.qualityState,
+        maxDisp,
+        symmetryIndex,
+        yawDeg: typeof r.yawDeg === 'number' ? r.yawDeg : null,
+      };
+    });
+  }
+  return out;
+}
+
 function deriveTrialFrames(rowsByPhase) {
   const neutral = neutralMouthStats(rowsByPhase.neutral);
   const out = {};
@@ -247,7 +289,7 @@ function samplesFromDiscovery(discovery, { sampled = null } = {}) {
   return samplesByTrialPhase;
 }
 
-async function sampleAll(discovery, subjectId) {
+async function sampleAll(discovery, subjectId, candidate) {
   const { chromium } = await import('@playwright/test');
   const { server, baseURL } = await startServer();
   const browser = await chromium.launch({ headless: true });
@@ -283,8 +325,12 @@ async function sampleAll(discovery, subjectId) {
         const ok = sampled[t][phase].filter((f) => f.qualityState === 'QUALITY_OK').length;
         console.log(`  → ${sampled[t][phase].length} frames, ${ok} QUALITY_OK`);
       }
-      // Per-trial derivation: displacement/SI against this trial's neutral baseline.
-      sampled[t] = deriveTrialFrames(sampled[t]);
+      // Per-trial derivation. Geometry candidates: displacement/SI vs this trial's
+      // neutral baseline. Blendshape candidate: absolute per-side scores.
+      sampled[t] =
+        candidate === 'blendshape-si-v1'
+          ? deriveBlendshapeTrialFrames(sampled[t])
+          : deriveTrialFrames(sampled[t]);
     }
     return sampled;
   } finally {
@@ -359,7 +405,7 @@ Exit: 0 PASS, 2 FAIL/PROTOCOL_LIMITED, 1 infrastructure error`);
 
   if (wantSample && discovery.allPresent) {
     console.log('Complete fixture grid found — sampling via Playwright…');
-    sampled = await sampleAll(discovery, args.subject);
+    sampled = await sampleAll(discovery, args.subject, args.candidate);
   } else if (wantSample && !discovery.allPresent) {
     console.warn(
       'WARNING: --sample requested but fixture grid incomplete; falling back to dry-run INVALID cells.',
