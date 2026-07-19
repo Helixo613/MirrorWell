@@ -1,0 +1,68 @@
+{
+  "kind": "blendshape-probe",
+  "subject": "S01",
+  "generatedAt": "2026-07-19T18:11:01.553Z",
+  "activationFloor": 0.05,
+  "trials": {
+    "1": {
+      "B1a_neutralActStd": 0.00002476299197902375,
+      "B1b_smileSiStd": 0.0006922691601021651,
+      "smileSiMean": 0.9991983458396391,
+      "smileActMean": 0.7970911130309105,
+      "B2": {
+        "low_light": 0.04761745705516187,
+        "distance_2m": 0.3487645738071613
+      },
+      "B3": {
+        "yaw_left": {
+          "yawSiMean": 0.9892084976066597,
+          "delta": 0.009989848232979326
+        },
+        "yaw_right": {
+          "yawSiMean": 0.9482238823474336,
+          "delta": 0.05097446349220547
+        }
+      },
+      "yawValidity": {
+        "yaw_left": {
+          "meanAbsYaw": 10.191765502273142,
+          "inBand": true
+        },
+        "yaw_right": {
+          "meanAbsYaw": 9.295578386555011,
+          "inBand": true
+        }
+      }
+    },
+    "2": {
+      "B1a_neutralActStd": 0.000004039959118867289,
+      "B1b_smileSiStd": 0.0012878717898334848,
+      "smileSiMean": 0.9853161963744371,
+      "smileActMean": 0.9069435812532902,
+      "B2": {
+        "low_light": 0.029760115270869355,
+        "distance_2m": 0.03593762784444705
+      },
+      "B3": {
+        "yaw_left": {
+          "yawSiMean": 0.9797781818772946,
+          "delta": 0.005538014497142529
+        },
+        "yaw_right": {
+          "yawSiMean": 0.9925468973370218,
+          "delta": 0.007230700962584713
+        }
+      },
+      "yawValidity": {
+        "yaw_left": {
+          "meanAbsYaw": 12.583486276060244,
+          "inBand": true
+        },
+        "yaw_right": {
+          "meanAbsYaw": 11.72190916215884,
+          "inBand": true
+        }
+      }
+    }
+  }
+}

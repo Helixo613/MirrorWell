@@ -227,6 +227,7 @@
             runningMode: 'VIDEO',
             numFaces: 1,
             outputFacialTransformationMatrixes: true,
+            outputFaceBlendshapes: true,
             minFaceDetectionConfidence: 0.5,
             minFacePresenceConfidence: 0.5,
             minTrackingConfidence: 0.5,
@@ -237,6 +238,7 @@
             runningMode: 'VIDEO',
             numFaces: 1,
             outputFacialTransformationMatrixes: true,
+            outputFaceBlendshapes: true,
             minFaceDetectionConfidence: 0.5,
             minFacePresenceConfidence: 0.5,
             minTrackingConfidence: 0.5,
@@ -294,6 +296,10 @@
 
           const faceLandmarks = result.faceLandmarks[0] ?? [];
           const matrix = result.facialTransformationMatrixes[0]?.data ?? [];
+          const blendshapes = {};
+          for (const c of result.faceBlendshapes?.[0]?.categories ?? []) {
+            blendshapes[c.categoryName] = c.score;
+          }
           const lf = {
             landmarks: faceLandmarks.map((p) => ({ x: p.x, y: p.y, z: p.z })),
             headPose: Array.from(matrix),
@@ -312,6 +318,7 @@
             pitchDeg: pose.pitch,
             rollDeg: pose.roll,
             features: q === 'QUALITY_OK' ? measureAbsolutePx(lf.landmarks, W, H) : null,
+            blendshapes: q === 'QUALITY_OK' ? blendshapes : null,
           });
           t += sampleEveryMs;
         }
