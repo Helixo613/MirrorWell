@@ -48,9 +48,6 @@ const LIP_L = 308;
 /** Subject's right inner lip corner — MediaPipe mesh point 78. */
 const LIP_R = 78;
 
-/** Nose tip — MediaPipe mesh point 1. */
-const NOSE_TIP = 1;
-
 const REGION_IDS: readonly RegionId[] = [
   'REGION_BROW',
   'REGION_EYELID',
@@ -115,8 +112,6 @@ export function measureAbsolute(af: ApprovedFrame): AbsoluteFeatures {
   const eyeCenterL = midpoint(eyeL, toPx(lm[EYE_L_INNER]!, W, H));
   const eyeCenterR = midpoint(eyeR, toPx(lm[EYE_R_INNER]!, W, H));
 
-  const nose = toPx(lm[NOSE_TIP]!, W, H);
-
   // REGION_BROW: movers brow 334 (L) / 105 (R); anchors same-side eye centers.
   const browL = feature(toPx(lm[BROW_L]!, W, H), eyeCenterL, uHat, vHat, iod);
   const browR = feature(toPx(lm[BROW_R]!, W, H), eyeCenterR, uHat, vHat, iod);
@@ -138,13 +133,17 @@ export function measureAbsolute(af: ApprovedFrame): AbsoluteFeatures {
     iod,
   );
 
-  // REGION_MOUTH_CORNER: movers 291 (L) / 61 (R); anchor nose tip 1 for both.
-  const mouthL = feature(toPx(lm[MOUTH_L]!, W, H), nose, uHat, vHat, iod);
-  const mouthR = feature(toPx(lm[MOUTH_R]!, W, H), nose, uHat, vHat, iod);
+  // REGION_MOUTH_CORNER: movers 291 (L) / 61 (R); anchors same-side eye centers
+  // (candidate face-local-vector-v2). The nose tip sits off the face plane, so under
+  // yaw its projection shifts by ~depth·sin(yaw) — a common-mode u error that collapsed
+  // SI to 0 at 10° yaw (V1 B3 rejection of face-local-vector-v1). Eye centers are
+  // planar and expression-static, so the depth term vanishes to first order.
+  const mouthL = feature(toPx(lm[MOUTH_L]!, W, H), eyeCenterL, uHat, vHat, iod);
+  const mouthR = feature(toPx(lm[MOUTH_R]!, W, H), eyeCenterR, uHat, vHat, iod);
 
-  // REGION_LIP: inner lip corners 308 (L) / 78 (R); anchor nose tip 1 (pucker).
-  const lipL = feature(toPx(lm[LIP_L]!, W, H), nose, uHat, vHat, iod);
-  const lipR = feature(toPx(lm[LIP_R]!, W, H), nose, uHat, vHat, iod);
+  // REGION_LIP: inner lip corners 308 (L) / 78 (R); anchors same-side eye centers (v2).
+  const lipL = feature(toPx(lm[LIP_L]!, W, H), eyeCenterL, uHat, vHat, iod);
+  const lipR = feature(toPx(lm[LIP_R]!, W, H), eyeCenterR, uHat, vHat, iod);
 
   return {
     REGION_BROW: { left: browL, right: browR },

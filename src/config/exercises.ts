@@ -10,8 +10,8 @@
  *   REGION_BROW:         movers left brow 334 / right brow 105;
  *                        anchors same-side eye centers mid(263,362) / mid(33,133)
  *   REGION_EYELID:       gap upper−lower: L 386/374, R 159/145
- *   REGION_MOUTH_CORNER: movers L 291 / R 61; anchor nose tip 1 both
- *   REGION_LIP:          movers L 308 / R 78 (inner lip corners); anchor nose tip 1 both
+ *   REGION_MOUTH_CORNER: movers L 291 / R 61; anchors same-side eye centers (v2)
+ *   REGION_LIP:          movers L 308 / R 78 (inner lip corners); anchors same-side eye centers (v2)
  *
  * landmarkIndices below remain [mover, scalar-ref] pairs so pre-B3 scalar normalize.ts still
  * works. Geometry does NOT read these arrays — it owns its own mesh map. After B3 rewrite,
@@ -63,7 +63,7 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
   EX_SMILE: Object.freeze({
     exerciseId: 'EX_SMILE',
     regionId: 'REGION_MOUTH_CORNER',
-    // Geometry + scalar: outer corners 291 (L) / 61 (R); anchor nose tip 1.
+    // Geometry: outer corners 291 (L) / 61 (R); anchors same-side eye centers (v2).
     landmarkIndices: Object.freeze({ left: ['291', '1'], right: ['61', '1'] }),
     displayName: 'Gentle smile',
     instruction: 'Let a small, slow smile come — about half of what feels possible. Gentle is the goal.',
@@ -75,7 +75,7 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
   EX_PUCKER: Object.freeze({
     exerciseId: 'EX_PUCKER',
     regionId: 'REGION_LIP',
-    // Geometry: inner lip corners 308 (L) / 78 (R); anchor nose tip 1 (was upper-lip center 13).
+    // Geometry: inner lip corners 308 (L) / 78 (R); anchors same-side eye centers (v2).
     landmarkIndices: Object.freeze({ left: ['308', '1'], right: ['78', '1'] }),
     displayName: 'Gentle lip pucker',
     instruction: 'Purse your lips slowly and gently — about half of what feels possible.',

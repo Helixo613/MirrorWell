@@ -291,4 +291,54 @@ describe('geometry kernel — measureAbsolute / aggregateNeutral', () => {
       expect(fMoved[region][otherSide].v).toBeCloseTo(fRest[region][otherSide].v, 10);
     }
   });
+  it('(7) nose-tip shift (yaw depth-projection proxy) leaves mouth/lip features unchanged', async () => {
+    // Candidate face-local-vector-v1 failed V1 B3 because the nose-tip anchor projects
+    // laterally under yaw (depth * sin yaw), corrupting both mouth corners common-mode.
+    // v2 anchors mouth/lip to same-side eye centers; a nose-only shift must be invisible.
+    const { measureAbsolute } = await import('../../src/metrics/geometry.ts');
+    const W = 640;
+    const H = 480;
+    const rest = restFacePixels(320, 240);
+    const noseShifted = {
+      ...rest,
+      [MESH.noseTip]: { x: rest[MESH.noseTip]!.x + 32, y: rest[MESH.noseTip]!.y }, // +0.2 IOD
+    };
+    const a = measureAbsolute(asApproved(makeFrame(pixelsToNormalized(rest, W, H)), W, H));
+    const b = measureAbsolute(asApproved(makeFrame(pixelsToNormalized(noseShifted, W, H)), W, H));
+
+    for (const region of ['REGION_MOUTH_CORNER', 'REGION_LIP'] as const) {
+      for (const side of ['left', 'right'] as const) {
+        expect(b[region][side].u).toBeCloseTo(a[region][side].u, 10);
+        expect(b[region][side].v).toBeCloseTo(a[region][side].v, 10);
+      }
+    }
+  });
+
+  it('(8) unilateral mouth-corner motion yields SI 0 — guards against common-mode subtraction', async () => {
+    // The clinical target: one-sided motion must never look symmetric. This pins the SI
+    // formula (ARCHITECTURE §7) against "fixes" that subtract the u common-mode, which
+    // would map unilateral motion to SI ≈ 1.
+    const { measureAbsolute } = await import('../../src/metrics/geometry.ts');
+    const W = 640;
+    const H = 480;
+    const rest = restFacePixels(320, 240);
+    const moved = {
+      ...rest,
+      [MESH.mouthL]: { x: rest[MESH.mouthL]!.x + 12, y: rest[MESH.mouthL]!.y - 10 },
+    };
+    const n = measureAbsolute(asApproved(makeFrame(pixelsToNormalized(rest, W, H)), W, H));
+    const f = measureAbsolute(asApproved(makeFrame(pixelsToNormalized(moved, W, H)), W, H));
+
+    const mc = 'REGION_MOUTH_CORNER' as const;
+    const dL = { u: f[mc].left.u - n[mc].left.u, v: f[mc].left.v - n[mc].left.v };
+    const dRt = { u: -(f[mc].right.u - n[mc].right.u), v: f[mc].right.v - n[mc].right.v };
+    const mL = Math.hypot(dL.u, dL.v);
+    const mR = Math.hypot(dRt.u, dRt.v);
+    const maxM = Math.max(mL, mR);
+    const minM = Math.min(mL, mR);
+    expect(maxM).toBeGreaterThanOrEqual(0.008); // above movementFloorPct — SI defined
+    const cosTheta = mL * mR === 0 ? 0 : (dL.u * dRt.u + dL.v * dRt.v) / (mL * mR);
+    const si = (minM / maxM) * Math.max(0, cosTheta);
+    expect(si).toBe(0);
+  });
 });

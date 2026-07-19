@@ -152,10 +152,17 @@ Anchors / movers:
 
 | Region | Moving points | Anchor |
 |---|---|---|
-| `REGION_MOUTH_CORNER` | corners 61 / 291 | nose tip 1 |
+| `REGION_MOUTH_CORNER` | corners 61 / 291 | same-side eye center — mid(33,133) R / mid(263,362) L |
 | `REGION_BROW` | brow points | same-side eye center |
 | `REGION_EYELID` | upper/lower lid gap vector | eye center |
-| `REGION_LIP` | lip corners | nose tip |
+| `REGION_LIP` | lip corners | same-side eye center |
+
+> Candidate `face-local-vector-v2` (2026-07-19): mouth/lip anchors moved from nose tip 1 to
+> same-side eye centers. The nose tip sits off the face plane; under yaw its projection
+> shifts by ~depth·sin(yaw), injecting a common-mode u error that collapsed SI at 10° yaw
+> (V1 B3 rejection of `face-local-vector-v1` — `tests/analysis/rejected/`). Eye centers are
+> planar and expression-static. Naive common-mode subtraction is forbidden: it maps
+> unilateral motion to SI ≈ 1 (regression-tested in `tests/unit/geometry.test.ts`).
 
 Exact mesh indices are fixed in IMPLEMENTATION Task 6 / geometry kernel code against the MediaPipe mesh map.
 
