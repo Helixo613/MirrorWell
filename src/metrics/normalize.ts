@@ -11,6 +11,8 @@ import { measureAbsolute, type Vec2 } from './geometry.ts';
 
 export interface NormalizedFrame {
   regionDisplacements: Record<RegionId, { left: Vec2; right: Vec2 }>;
+  /** Per-side blendshape scores passed through from LandmarkFrame (blendshape-si-v1). */
+  blendshapes: Record<string, number>;
   timestampMs: number;
 }
 
@@ -81,7 +83,7 @@ function normalize(af: ApprovedFrame): NormalizedFrame {
     };
   }
 
-  return { regionDisplacements, timestampMs: af.lf.timestampMs };
+  return { regionDisplacements, blendshapes: af.lf.blendshapes ?? {}, timestampMs: af.lf.timestampMs };
 }
 
 export const NormalizationLayer = { setBaseline, normalize, clearBaseline };

@@ -111,6 +111,19 @@ function vectorBaseline(overrides: Partial<CalibrationBaseline> = {}): Calibrati
 }
 
 describe('NormalizationLayer — NO_BASELINE', () => {
+  it('normalize() passes LandmarkFrame.blendshapes through to NormalizedFrame ({} when absent)', async () => {
+    const { NormalizationLayer } = await import('../../src/metrics/normalize.ts');
+    NormalizationLayer.setBaseline(vectorBaseline());
+    const lf = makeFrame(pixelsToNormalized(restFacePixels(320, 240), 640, 480));
+    (lf as { blendshapes?: Record<string, number> }).blendshapes = { mouthSmileLeft: 0.4 };
+    const nf = NormalizationLayer.normalize(asApproved(lf));
+    expect(nf.blendshapes).toEqual({ mouthSmileLeft: 0.4 });
+
+    const bare = makeFrame(pixelsToNormalized(restFacePixels(320, 240), 640, 480));
+    delete (bare as { blendshapes?: unknown }).blendshapes;
+    expect(NormalizationLayer.normalize(asApproved(bare)).blendshapes).toEqual({});
+  });
+
   it('normalize() throws NO_BASELINE without setBaseline()', async () => {
     const { NormalizationLayer } = await import('../../src/metrics/normalize.ts');
     NormalizationLayer.clearBaseline();

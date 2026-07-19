@@ -7,31 +7,36 @@ import type { CalibrationBaseline, ExerciseId, RegionId } from '../../src/data/s
  * docs/TESTS.md §2: MetricEngine + RepDetector require 100% branch coverage (hard
  * requirement) — every branch below is deliberate, not incidental.
  *
- * Vector SI math (ARCHITECTURE §7): mirror right ΔR̃=(−ΔR.u, ΔR.v);
- * SI = (min/max)·max(0, cosθ); null under movementFloor.
+ * Blendshape SI (candidate blendshape-si-v1, BACKEND §1.5 / MODEL_AND_DATA §7):
+ * L/R = blendshapes[pair.left/right]; act = max(L,R);
+ * act < blendshapes.activationFloor → SI null; else SI = min(L,R)/max(L,R).
+ * effortIndex = act / comfortableMax[exerciseId] (0..1 activation units).
+ * Trailing 5-frame median smoothing + gapResetMs semantics unchanged.
  */
 
 const ZERO: Vec2 = { u: 0, v: 0 };
 
-function frame(regionId: RegionId, left: Vec2, right: Vec2, timestampMs = 0): NormalizedFrame {
-  const regionDisplacements = {
+function zeroDisplacements(): Record<RegionId, { left: Vec2; right: Vec2 }> {
+  return {
     REGION_BROW: { left: { ...ZERO }, right: { ...ZERO } },
     REGION_EYELID: { left: { ...ZERO }, right: { ...ZERO } },
     REGION_MOUTH_CORNER: { left: { ...ZERO }, right: { ...ZERO } },
     REGION_LIP: { left: { ...ZERO }, right: { ...ZERO } },
   } as Record<RegionId, { left: Vec2; right: Vec2 }>;
-  regionDisplacements[regionId] = { left, right };
-  return { regionDisplacements, timestampMs };
 }
 
-/** Equal same-direction horizontal: left +u, right −u → after mirror both +u → SI=1 */
-function sameDir(mag: number, timestampMs = 0, regionId: RegionId = 'REGION_MOUTH_CORNER'): NormalizedFrame {
-  return frame(regionId, { u: mag, v: 0 }, { u: -mag, v: 0 }, timestampMs);
+/** Frame carrying per-side smile blendshape scores (SI/effort source). */
+function bsFrame(left: number, right: number, timestampMs = 0): NormalizedFrame {
+  return {
+    regionDisplacements: zeroDisplacements(),
+    blendshapes: { mouthSmileLeft: left, mouthSmileRight: right },
+    timestampMs,
+  };
 }
 
-/** Equal opposite horizontal: both +u → after mirror cosθ=−1 → SI=0 */
-function oppositeDir(mag: number, timestampMs = 0): NormalizedFrame {
-  return frame('REGION_MOUTH_CORNER', { u: mag, v: 0 }, { u: mag, v: 0 }, timestampMs);
+/** Frame whose blendshape record lacks the smile pair entirely (scores default 0). */
+function emptyBsFrame(timestampMs = 0): NormalizedFrame {
+  return { regionDisplacements: zeroDisplacements(), blendshapes: {}, timestampMs };
 }
 
 function baseline(comfortableMax: Partial<Record<ExerciseId, number>>): CalibrationBaseline {
@@ -39,12 +44,7 @@ function baseline(comfortableMax: Partial<Record<ExerciseId, number>>): Calibrat
     baselineId: 'b1',
     profileId: 'p1',
     capturedAt: '2026-01-01T00:00:00.000Z',
-    neutralStats: {
-      REGION_BROW: { left: { ...ZERO }, right: { ...ZERO } },
-      REGION_EYELID: { left: { ...ZERO }, right: { ...ZERO } },
-      REGION_MOUTH_CORNER: { left: { ...ZERO }, right: { ...ZERO } },
-      REGION_LIP: { left: { ...ZERO }, right: { ...ZERO } },
-    },
+    neutralStats: zeroDisplacements(),
     comfortableMax,
     qualityScore: 0.9,
     noiseFloorSymmetry: 0.02,
@@ -56,7 +56,7 @@ function baseline(comfortableMax: Partial<Record<ExerciseId, number>>): Calibrat
 describe('MetricEngine — NO_BASELINE', () => {
   it('compute() throws NO_BASELINE before setBaseline() is ever called', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    expect(() => MetricEngine.compute(sameDir(0.05), 'EX_SMILE')).toThrow(
+    expect(() => MetricEngine.compute(bsFrame(0.5, 0.5), 'EX_SMILE')).toThrow(
       expect.objectContaining({ code: 'NO_BASELINE' }),
     );
   });
@@ -67,82 +67,77 @@ describe('MetricEngine — NO_BASELINE', () => {
       expect.objectContaining({ code: 'NO_BASELINE' }),
     );
   });
-});
-
-describe('MetricEngine — direction-aware symmetryIndex (P0-6)', () => {
-  it('equal same-direction motion → SI 1', async () => {
-    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
-    MetricEngine.reset();
-    // left=(0.1,0), right=(-0.1,0) → ΔR̃=(0.1,0) → cos=1, ratio=1 → SI=1
-    const result = MetricEngine.compute(sameDir(0.1, 0), 'EX_SMILE');
-    expect(result.symmetryIndex).toBe(1);
-    expect(result.effortIndex).toBeCloseTo(1.0, 6);
-  });
-
-  it('equal opposite motion → SI 0 (P0-6 regression)', async () => {
-    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
-    MetricEngine.reset();
-    // left=(0.1,0), right=(0.1,0) → ΔR̃=(-0.1,0) → cos=-1 → SI=0
-    const result = MetricEngine.compute(oppositeDir(0.1, 0), 'EX_SMILE');
-    expect(result.symmetryIndex).toBe(0);
-    expect(result.effortIndex).toBeCloseTo(1.0, 6);
-  });
-
-  it('unilateral motion → SI 0', async () => {
-    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
-    MetricEngine.reset();
-    // left only; mR=0 → cosθ=0 (either magnitude zero) → SI=0
-    const result = MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.1, v: 0 }, { u: 0, v: 0 }, 0),
-      'EX_SMILE',
-    );
-    expect(result.symmetryIndex).toBe(0);
-    expect(result.effortIndex).toBeCloseTo(1.0, 6);
-  });
-
-  it('max(mL,mR) exactly at movementFloor (0.008) is NOT null (boundary is strict <)', async () => {
-    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
-    MetricEngine.reset();
-    const result = MetricEngine.compute(sameDir(0.008, 0), 'EX_SMILE');
-    expect(result.symmetryIndex).toBe(1);
-  });
-
-  it('max(mL,mR) below movementFloor yields null symmetryIndex but a real effortIndex', async () => {
-    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
-    MetricEngine.reset();
-    // mL=0.005, mR=0.003 → max under floor
-    const result = MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.005, v: 0 }, { u: -0.003, v: 0 }, 0),
-      'EX_SMILE',
-    );
-    expect(result.symmetryIndex).toBeNull();
-    expect(result.effortIndex).toBeCloseTo(0.05, 6);
-  });
-
-  it('magnitude ratio scales SI when directions align (cosθ>0)', async () => {
-    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
-    MetricEngine.reset();
-    // left m=0.09, right m=0.01 same direction → SI = 0.01/0.09
-    const result = MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.09, v: 0 }, { u: -0.01, v: 0 }, 0),
-      'EX_SMILE',
-    );
-    expect(result.symmetryIndex).toBeCloseTo(0.01 / 0.09, 6);
-    expect(result.effortIndex).toBeCloseTo(0.9, 6);
-  });
 
   it('comfortableMax missing for the exerciseId throws NO_BASELINE (never a silent 0 that disables ease-off)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 })); // no EX_PUCKER key
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 })); // no EX_BROW_RAISE key
     MetricEngine.reset();
-    expect(() => MetricEngine.compute(sameDir(0.05, 0, 'REGION_LIP'), 'EX_PUCKER')).toThrowError(
+    expect(() => MetricEngine.compute(bsFrame(0.5, 0.5), 'EX_BROW_RAISE')).toThrowError(
       expect.objectContaining({ code: 'NO_BASELINE' }),
+    );
+  });
+});
+
+describe('MetricEngine — blendshape symmetryIndex', () => {
+  it('symmetric pair → SI 1', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
+    MetricEngine.reset();
+    const result = MetricEngine.compute(bsFrame(0.5, 0.5), 'EX_SMILE');
+    expect(result.symmetryIndex).toBe(1);
+    expect(result.effortIndex).toBeCloseTo(0.5, 6);
+  });
+
+  it('smirk-grade asymmetry → SI = min/max (probe regression: 0.29/0.67 → ~0.433)', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
+    MetricEngine.reset();
+    const result = MetricEngine.compute(bsFrame(0.29, 0.67), 'EX_SMILE');
+    expect(result.symmetryIndex).toBeCloseTo(0.29 / 0.67, 6);
+    expect(result.effortIndex).toBeCloseTo(0.67, 6);
+  });
+
+  it('unilateral activation → SI 0 (clinical guard: one-sided motion never looks symmetric)', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
+    MetricEngine.reset();
+    const result = MetricEngine.compute(bsFrame(0.4, 0), 'EX_SMILE');
+    expect(result.symmetryIndex).toBe(0);
+    expect(result.effortIndex).toBeCloseTo(0.4, 6);
+  });
+
+  it('act exactly at activationFloor (0.05) is NOT null (boundary is strict <)', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
+    MetricEngine.reset();
+    const result = MetricEngine.compute(bsFrame(0.05, 0.05), 'EX_SMILE');
+    expect(result.symmetryIndex).toBe(1);
+  });
+
+  it('act below activationFloor yields null symmetryIndex but a real effortIndex', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
+    MetricEngine.reset();
+    const result = MetricEngine.compute(bsFrame(0.02, 0.03), 'EX_SMILE');
+    expect(result.symmetryIndex).toBeNull();
+    expect(result.effortIndex).toBeCloseTo(0.03, 6);
+  });
+
+  it('missing pair scores in the record default to 0 (act 0 → null SI, effort 0)', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
+    MetricEngine.reset();
+    const result = MetricEngine.compute(emptyBsFrame(), 'EX_SMILE');
+    expect(result.symmetryIndex).toBeNull();
+    expect(result.effortIndex).toBe(0);
+  });
+
+  it('EX_PUCKER (no blendshapePair — open decision) throws VALIDATION_FAILED, never a silent fallback', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_PUCKER: 1.0 }));
+    MetricEngine.reset();
+    expect(() => MetricEngine.compute(bsFrame(0.5, 0.5), 'EX_PUCKER')).toThrowError(
+      expect.objectContaining({ code: 'VALIDATION_FAILED' }),
     );
   });
 });
@@ -150,99 +145,73 @@ describe('MetricEngine — direction-aware symmetryIndex (P0-6)', () => {
 describe('MetricEngine — trailing 5-frame median (t−4..t only)', () => {
   it('a single-frame spike is killed by the trailing median (both SI and effort)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
 
     for (let i = 0; i < 4; i++) {
-      MetricEngine.compute(sameDir(0.05, i * 10), 'EX_SMILE'); // SI=1, effort=0.5
+      MetricEngine.compute(bsFrame(0.5, 0.5, i * 10), 'EX_SMILE'); // SI=1, effort=0.5
     }
-    // Spike: unequal same-direction → raw SI≈0.111, effort=0.9
-    const spike = MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.09, v: 0 }, { u: -0.01, v: 0 }, 40),
-      'EX_SMILE',
-    );
+    // Spike: raw SI = 0.1/0.9 ≈ 0.111, effort 0.9
+    const spike = MetricEngine.compute(bsFrame(0.9, 0.1, 40), 'EX_SMILE');
     expect(spike.symmetryIndex).toBe(1); // median of [1,1,1,1,0.111] is still 1
     expect(spike.effortIndex).toBeCloseTo(0.5, 6); // median of [.5,.5,.5,.5,.9] is still .5
 
-    // Two more normal frames slide the spike out of the trailing window.
-    MetricEngine.compute(sameDir(0.05, 50), 'EX_SMILE');
-    const after = MetricEngine.compute(sameDir(0.05, 60), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.5, 0.5, 50), 'EX_SMILE');
+    const after = MetricEngine.compute(bsFrame(0.5, 0.5, 60), 'EX_SMILE');
     expect(after.symmetryIndex).toBe(1);
     expect(after.effortIndex).toBeCloseTo(0.5, 6);
   });
 
   it('output at frame t uses frames t−4..t only (trailing, not centered)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
 
-    // Craft distinct SI values via magnitude ratios (same direction):
-    // SI = min/max for same-dir: mags [0.02, 0.04, 0.06, 0.08, 0.10] with partner 0.10
-    // → SI sequence: 0.2, 0.4, 0.6, 0.8, 1.0
-    const leftMags = [0.02, 0.04, 0.06, 0.08, 0.1];
+    // SI sequence 0.2, 0.4, 0.6, 0.8, 1.0 via left = k·0.1 against right = 0.5
+    const leftScores = [0.1, 0.2, 0.3, 0.4, 0.5];
     for (let i = 0; i < 5; i++) {
-      const r = MetricEngine.compute(
-        frame('REGION_MOUTH_CORNER', { u: leftMags[i]!, v: 0 }, { u: -0.1, v: 0 }, i * 10),
-        'EX_SMILE',
-      );
+      const r = MetricEngine.compute(bsFrame(leftScores[i]!, 0.5, i * 10), 'EX_SMILE');
       if (i === 4) {
         // trailing window = all five → median of [0.2,0.4,0.6,0.8,1.0] = 0.6
         expect(r.symmetryIndex).toBeCloseTo(0.6, 6);
       }
     }
 
-    // Frame F with SI=0 (opposite equal): window becomes [0.4,0.6,0.8,1.0,0] → median 0.6
-    // (If centered with lookahead, this frame couldn't use future; trailing drops the oldest 0.2)
-    const f = MetricEngine.compute(oppositeDir(0.1, 50), 'EX_SMILE');
+    // Frame with SI=0 (unilateral): window [0.4,0.6,0.8,1.0,0] → median 0.6
+    const f = MetricEngine.compute(bsFrame(0.5, 0, 50), 'EX_SMILE');
     expect(f.symmetryIndex).toBeCloseTo(0.6, 6);
 
     // Two more SI=0 frames: [0.8,1.0,0,0,0] median=0; then [1.0,0,0,0,0] median=0
-    MetricEngine.compute(oppositeDir(0.1, 60), 'EX_SMILE');
-    const late = MetricEngine.compute(oppositeDir(0.1, 70), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.5, 0, 60), 'EX_SMILE');
+    const late = MetricEngine.compute(bsFrame(0.5, 0, 70), 'EX_SMILE');
     expect(late.symmetryIndex).toBe(0);
   });
 
-  it('smoothed symmetryIndex is null when every frame in the window is under movementFloor', async () => {
+  it('smoothed symmetryIndex is null when every frame in the window is under activationFloor', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    let result = MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.001, v: 0 }, { u: -0.001, v: 0 }, 0),
-      'EX_SMILE',
-    );
-    result = MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.002, v: 0 }, { u: -0.001, v: 0 }, 10),
-      'EX_SMILE',
-    );
-    result = MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.001, v: 0 }, { u: -0.002, v: 0 }, 20),
-      'EX_SMILE',
-    );
+    MetricEngine.compute(bsFrame(0.01, 0.01, 0), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.02, 0.01, 10), 'EX_SMILE');
+    const result = MetricEngine.compute(bsFrame(0.01, 0.02, 20), 'EX_SMILE');
     expect(result.symmetryIndex).toBeNull();
   });
 
   it('filters nulls out of the window when computing smoothed symmetryIndex', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.001, v: 0 }, { u: -0.001, v: 0 }, 0),
-      'EX_SMILE',
-    ); // null
-    const result = MetricEngine.compute(sameDir(0.05, 10), 'EX_SMILE'); // 1
-    expect(result.symmetryIndex).toBe(1); // median of [null, 1] filtered -> median([1]) -> 1
+    MetricEngine.compute(bsFrame(0.01, 0.01, 0), 'EX_SMILE'); // null
+    const result = MetricEngine.compute(bsFrame(0.5, 0.5, 10), 'EX_SMILE'); // 1
+    expect(result.symmetryIndex).toBe(1); // median of [null, 1] filtered → 1
   });
 
   it('even-length present window uses the average of the two middle values', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    // Two same-dir samples with SI 0.5 and 1.0 → even median (0.5+1)/2 = 0.75
-    MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.05, v: 0 }, { u: -0.1, v: 0 }, 0),
-      'EX_SMILE',
-    ); // SI=0.5
-    const result = MetricEngine.compute(sameDir(0.1, 10), 'EX_SMILE'); // SI=1
+    MetricEngine.compute(bsFrame(0.25, 0.5, 0), 'EX_SMILE'); // SI=0.5
+    const result = MetricEngine.compute(bsFrame(0.5, 0.5, 10), 'EX_SMILE'); // SI=1
     expect(result.symmetryIndex).toBeCloseTo(0.75, 6);
   });
 });
@@ -250,46 +219,43 @@ describe('MetricEngine — trailing 5-frame median (t−4..t only)', () => {
 describe('MetricEngine — gap > gapResetMs (250) resets smoothing + ease-off', () => {
   it('gap > 250 ms clears the trailing window so the next sample stands alone', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
 
     for (let i = 0; i < 5; i++) {
-      MetricEngine.compute(sameDir(0.05, i * 10), 'EX_SMILE'); // SI=1, effort=0.5
+      MetricEngine.compute(bsFrame(0.5, 0.5, i * 10), 'EX_SMILE'); // SI=1, effort=0.5
     }
-    // Gap of 251ms from last (40) → 291; window reset, then process opposite SI=0 alone
-    const afterGap = MetricEngine.compute(oppositeDir(0.1, 291), 'EX_SMILE');
+    // Gap of 251ms from last (40) → 291; window reset, unilateral SI=0 stands alone
+    const afterGap = MetricEngine.compute(bsFrame(0.9, 0, 291), 'EX_SMILE');
     expect(afterGap.symmetryIndex).toBe(0);
-    expect(afterGap.effortIndex).toBeCloseTo(1.0, 6);
+    expect(afterGap.effortIndex).toBeCloseTo(0.9, 6);
   });
 
   it('gap of exactly 250 ms does NOT reset (boundary is strict >)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
 
-    MetricEngine.compute(sameDir(0.05, 0), 'EX_SMILE'); // SI=1
-    // Gap exactly 250 — window kept; median of [1, 0] = 0.5 after null-filter? both present → 0.5
-    const result = MetricEngine.compute(oppositeDir(0.1, 250), 'EX_SMILE'); // SI=0
-    expect(result.symmetryIndex).toBeCloseTo(0.5, 6);
+    MetricEngine.compute(bsFrame(0.5, 0.5, 0), 'EX_SMILE'); // SI=1
+    const result = MetricEngine.compute(bsFrame(0.5, 0, 250), 'EX_SMILE'); // SI=0
+    expect(result.symmetryIndex).toBeCloseTo(0.5, 6); // median [1, 0]
   });
 
   it('gap resets ease-off sustain accumulation (must re-sustain after gap)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
 
-    MetricEngine.compute(sameDir(0.07, 0), 'EX_SMILE'); // effort 0.7, start sustain
-    MetricEngine.compute(sameDir(0.07, 200), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 0), 'EX_SMILE'); // effort 0.7, start sustain
+    MetricEngine.compute(bsFrame(0.7, 0.7, 200), 'EX_SMILE');
     expect(MetricEngine.isEaseOffActive()).toBe(false);
 
     // Gap 251ms from 200 → 451; clears sustain; high effort restarts timer at 451
-    MetricEngine.compute(sameDir(0.07, 451), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 451), 'EX_SMILE');
     expect(MetricEngine.isEaseOffActive()).toBe(false);
-    // Only 200ms into the NEW sustain — still not active
-    MetricEngine.compute(sameDir(0.07, 651), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 651), 'EX_SMILE');
     expect(MetricEngine.isEaseOffActive()).toBe(false);
-    // 300ms since 451
-    MetricEngine.compute(sameDir(0.07, 751), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 751), 'EX_SMILE'); // 300ms since 451
     expect(MetricEngine.isEaseOffActive()).toBe(true);
   });
 });
@@ -297,43 +263,44 @@ describe('MetricEngine — gap > gapResetMs (250) resets smoothing + ease-off', 
 describe('MetricEngine — ease-off (sustained > 0.60 for >= 300ms)', () => {
   it('isEaseOffActive() is false before any compute() call', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
     expect(MetricEngine.isEaseOffActive()).toBe(false);
   });
 
   it('fires only once sustained above threshold for >= easeOffSustainMs (300ms)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    MetricEngine.compute(sameDir(0.07, 0), 'EX_SMILE'); // effort 0.7
+    MetricEngine.compute(bsFrame(0.7, 0.7, 0), 'EX_SMILE'); // effort 0.7
     expect(MetricEngine.isEaseOffActive()).toBe(false);
-    MetricEngine.compute(sameDir(0.07, 200), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 200), 'EX_SMILE');
     expect(MetricEngine.isEaseOffActive()).toBe(false);
-    MetricEngine.compute(sameDir(0.07, 300), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 300), 'EX_SMILE');
     expect(MetricEngine.isEaseOffActive()).toBe(true);
   });
 
   it('resets the sustain timer and clears active state the moment effort drops back <= threshold', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    MetricEngine.compute(sameDir(0.07, 0), 'EX_SMILE');
-    MetricEngine.compute(sameDir(0.03, 100), 'EX_SMILE'); // effort 0.3, drop
+    MetricEngine.compute(bsFrame(0.7, 0.7, 0), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.3, 0.3, 100), 'EX_SMILE'); // effort 0.3, drop
     expect(MetricEngine.isEaseOffActive()).toBe(false);
-    MetricEngine.compute(sameDir(0.07, 150), 'EX_SMILE');
-    MetricEngine.compute(sameDir(0.07, 300), 'EX_SMILE'); // only 150ms elapsed
+    MetricEngine.compute(bsFrame(0.7, 0.7, 150), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 300), 'EX_SMILE'); // only 150ms elapsed
     expect(MetricEngine.isEaseOffActive()).toBe(false);
-    MetricEngine.compute(sameDir(0.07, 450), 'EX_SMILE'); // 300ms since 150
+    MetricEngine.compute(bsFrame(0.7, 0.7, 450), 'EX_SMILE'); // 300ms since 150
     expect(MetricEngine.isEaseOffActive()).toBe(true);
   });
 
   it('exactly at threshold (0.60) does not fire — boundary is strict >', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    MetricEngine.compute(sameDir(0.06, 0), 'EX_SMILE'); // effort exactly 0.6
-    MetricEngine.compute(sameDir(0.06, 400), 'EX_SMILE');
+    // Median effort stays exactly 0.6 across the window
+    MetricEngine.compute(bsFrame(0.6, 0.6, 0), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.6, 0.6, 400), 'EX_SMILE');
     expect(MetricEngine.isEaseOffActive()).toBe(false);
   });
 });
@@ -341,23 +308,20 @@ describe('MetricEngine — ease-off (sustained > 0.60 for >= 300ms)', () => {
 describe('MetricEngine — getLastRaw() (DebugHud, Task 8)', () => {
   it('is null before the first compute() call', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
     expect(MetricEngine.getLastRaw()).toBeNull();
   });
 
   it('exposes the pre-smoothing raw values, distinct from the smoothed compute() result', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    MetricEngine.compute(sameDir(0.05, 0), 'EX_SMILE'); // raw SI=1, effort=0.5
-    const smoothed = MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.09, v: 0 }, { u: -0.01, v: 0 }, 10),
-      'EX_SMILE',
-    );
+    MetricEngine.compute(bsFrame(0.5, 0.5, 0), 'EX_SMILE'); // raw SI=1, effort=0.5
+    const smoothed = MetricEngine.compute(bsFrame(0.9, 0.1, 10), 'EX_SMILE');
     const raw = MetricEngine.getLastRaw();
     expect(raw).not.toBeNull();
-    expect(raw!.symmetryIndex).toBeCloseTo(0.01 / 0.09, 6);
+    expect(raw!.symmetryIndex).toBeCloseTo(0.1 / 0.9, 6);
     expect(raw!.effortIndex).toBeCloseTo(0.9, 6);
     expect(smoothed.symmetryIndex).not.toBeCloseTo(raw!.symmetryIndex!, 3);
     expect(smoothed.effortIndex).not.toBeCloseTo(raw!.effortIndex, 3);
@@ -367,12 +331,11 @@ describe('MetricEngine — getLastRaw() (DebugHud, Task 8)', () => {
 describe('MetricEngine — reset()', () => {
   it('reset() clears smoothing window, gap clock, and ease-off state but retains the active baseline', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
-    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.1 }));
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    // Gaps ≤ 250ms so ease-off can actually sustain (gap would otherwise clear it).
-    MetricEngine.compute(sameDir(0.07, 0), 'EX_SMILE');
-    MetricEngine.compute(sameDir(0.07, 200), 'EX_SMILE');
-    MetricEngine.compute(sameDir(0.07, 300), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 0), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 200), 'EX_SMILE');
+    MetricEngine.compute(bsFrame(0.7, 0.7, 300), 'EX_SMILE');
     expect(MetricEngine.isEaseOffActive()).toBe(true);
 
     MetricEngine.reset();
@@ -380,10 +343,7 @@ describe('MetricEngine — reset()', () => {
     expect(MetricEngine.getLastRaw()).toBeNull();
 
     // Baseline retained; window cleared so single frame smoothed == raw.
-    const result = MetricEngine.compute(
-      frame('REGION_MOUTH_CORNER', { u: 0.02, v: 0 }, { u: -0.06, v: 0 }, 0),
-      'EX_SMILE',
-    );
-    expect(result.symmetryIndex).toBeCloseTo(0.02 / 0.06, 6);
+    const result = MetricEngine.compute(bsFrame(0.1, 0.3, 0), 'EX_SMILE');
+    expect(result.symmetryIndex).toBeCloseTo(0.1 / 0.3, 6);
   });
 });

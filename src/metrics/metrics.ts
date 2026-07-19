@@ -9,8 +9,12 @@
 // hold on its own. Mirrors NormalizationLayer's existing setBaseline/module-singleton pattern
 // (src/metrics/normalize.ts) — no new identifiers invented.
 //
-// DOCS-CHANGE (Task B4): API.md §15 — metrics.gapResetMs added. Direction-aware SI via
-// mirrored right vector + cosθ; trailing median; gap > gapResetMs resets smoothing + ease-off.
+// DOCS-CHANGE (Task B4): API.md §15 — metrics.gapResetMs added; trailing median; gap >
+// gapResetMs resets smoothing + ease-off.
+//
+// DOCS-CHANGE (blendshape-si-v1, 2026-07-19): BACKEND §1.5 / MODEL_AND_DATA §7 — SI/effort
+// source is the exercise's per-side blendshape pair (geometry family rejected at V1 B3;
+// evidence tests/analysis/rejected/). Smoothing/gap/ease-off semantics unchanged.
 import type { NormalizedFrame } from './normalize.ts';
 import type { CalibrationBaseline, ExerciseId, RegionId } from '../data/schema.ts';
 import { MirrorWellError } from '../data/errors.ts';
@@ -36,12 +40,12 @@ export interface RawMetricSample {
 }
 
 const {
-  movementFloorPct,
   easeOffThreshold,
   easeOffSustainMs,
   smoothingWindow,
   gapResetMs,
 } = thresholds.metrics;
+const { activationFloor } = thresholds.blendshapes;
 
 let activeBaseline: CalibrationBaseline | null = null;
 let symmetryWindow: (number | null)[] = [];
@@ -91,35 +95,20 @@ function smoothedSymmetry(window: (number | null)[]): number | null {
 }
 
 /**
- * Direction-aware SI (ARCHITECTURE §7):
- *   ΔR̃ = (−ΔR.u, ΔR.v); mL = |ΔL|; mR = |ΔR̃|
- *   if max(mL,mR) < movementFloorPct → null
- *   else SI = (min/max) · max(0, cosθ), cosθ = (ΔL·ΔR̃)/(mL·mR) (0 if either mag is 0)
+ * Blendshape SI (candidate blendshape-si-v1 — BACKEND §1.5 / MODEL_AND_DATA §7):
+ *   L/R = per-side blendshape scores; act = max(L,R)
+ *   if act < blendshapes.activationFloor → null
+ *   else SI = min(L,R)/max(L,R). Unilateral → 0; symmetric → 1.
+ * effortIndex = act / comfortableMax (0..1 activation units).
  */
 function rawSymmetryAndEffort(
-  left: { u: number; v: number },
-  right: { u: number; v: number },
+  left: number,
+  right: number,
   comfortableMax: number,
 ): { symmetryIndex: number | null; effortIndex: number } {
-  const dLu = left.u;
-  const dLv = left.v;
-  const dRTu = -right.u; // mirrored right
-  const dRTv = right.v;
-
-  const mL = Math.hypot(dLu, dLv);
-  const mR = Math.hypot(dRTu, dRTv);
-  const maxM = Math.max(mL, mR);
-  const minM = Math.min(mL, mR);
-
-  let symmetryIndex: number | null;
-  if (maxM < movementFloorPct) {
-    symmetryIndex = null;
-  } else {
-    const cosTheta = mL * mR === 0 ? 0 : (dLu * dRTu + dLv * dRTv) / (mL * mR);
-    symmetryIndex = (minM / maxM) * Math.max(0, cosTheta);
-  }
-
-  const effortIndex = maxM / comfortableMax;
+  const act = Math.max(left, right);
+  const symmetryIndex = act < activationFloor ? null : Math.min(left, right) / act;
+  const effortIndex = act / comfortableMax;
   return { symmetryIndex, effortIndex };
 }
 
@@ -135,14 +124,23 @@ function compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample {
   lastTimestampMs = nf.timestampMs;
 
   const config = exercises[exerciseId]!;
-  const disp = nf.regionDisplacements[config.regionId as RegionId];
+  // No validated per-side blendshape pair (EX_PUCKER open decision, MODEL_AND_DATA §7):
+  // loud stop, never a silent fallback to another measurement source.
+  const pair = config.blendshapePair;
+  if (!pair) {
+    throw new MirrorWellError('VALIDATION_FAILED', `no blendshapePair for ${exerciseId}`);
+  }
   const comfortableMax = activeBaseline.comfortableMax[exerciseId];
   // A missing comfortableMax must never silently produce effortIndex 0 — that would disable
   // the ease-off safety cue for the whole exercise. Uncalibrated exercise → NO_BASELINE.
   if (comfortableMax === undefined || !Number.isFinite(comfortableMax) || comfortableMax <= 0) {
     throw new MirrorWellError('NO_BASELINE', `comfortableMax missing or invalid for ${exerciseId}`);
   }
-  const raw = rawSymmetryAndEffort(disp.left, disp.right, comfortableMax);
+  const raw = rawSymmetryAndEffort(
+    nf.blendshapes[pair.left] ?? 0,
+    nf.blendshapes[pair.right] ?? 0,
+    comfortableMax,
+  );
 
   lastRaw = { symmetryIndex: raw.symmetryIndex, effortIndex: raw.effortIndex };
 
