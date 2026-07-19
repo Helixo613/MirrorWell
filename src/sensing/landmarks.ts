@@ -2,7 +2,7 @@
 // codebase (docs/BACKEND.md §1.2). Contracts: docs/API.md §5.
 //
 // MediaPipe types NEVER escape this module — downstream sees only LandmarkFrame, and only
-// raw landmark geometry, never blendshapes (docs/MODEL_AND_DATA.md §2).
+// raw landmark geometry + per-side blendshape scores (decision reversal, MODEL_AND_DATA §2/§7 2026-07-19).
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import { MirrorWellError } from '../data/errors.ts';
 import { log } from '../log.ts';
@@ -12,6 +12,8 @@ export interface LandmarkFrame {
   landmarks: { x: number; y: number; z: number }[];
   headPose: number[]; // 16 floats, row-major 4x4
   facePresent: boolean;
+  /** faceBlendshapes[0] categoryName → score; {} when the result carries none. */
+  blendshapes: Record<string, number>;
   timestampMs: number;
 }
 
@@ -22,6 +24,7 @@ async function createLandmarker(fileset: Awaited<ReturnType<typeof FilesetResolv
     numFaces: 1,
     runningMode: 'VIDEO' as const,
     outputFacialTransformationMatrixes: true,
+    outputFaceBlendshapes: true,
     minFaceDetectionConfidence: thresholds.landmarker.minFaceDetectionConfidence,
     minFacePresenceConfidence: thresholds.landmarker.minFacePresenceConfidence,
     minTrackingConfidence: thresholds.landmarker.minTrackingConfidence,
@@ -75,11 +78,16 @@ function detect(video: HTMLVideoElement, timestampMs: number): LandmarkFrame {
   // facePresent is defined as faceLandmarks being non-empty — nothing else.
   const faceLandmarks = result.faceLandmarks[0] ?? [];
   const transformationMatrix = result.facialTransformationMatrixes[0]?.data ?? [];
+  const blendshapes: Record<string, number> = {};
+  for (const c of result.faceBlendshapes?.[0]?.categories ?? []) {
+    blendshapes[c.categoryName] = c.score;
+  }
 
   return {
     landmarks: faceLandmarks.map((p) => ({ x: p.x, y: p.y, z: p.z })),
     headPose: Array.from(transformationMatrix),
     facePresent: faceLandmarks.length > 0,
+    blendshapes,
     timestampMs,
   };
 }

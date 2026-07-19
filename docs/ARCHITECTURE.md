@@ -121,7 +121,7 @@ Exactly **one** model, quarantined behind one interface. Everything downstream i
 | Input | The playing `HTMLVideoElement` (camera stream ≥ 640×480) passed to `detectForVideo` with a timestamp — the model handles conversion internally; we never preprocess |
 | Output | `LandmarkFrame { landmarks: Point3D[478] (x,y,z floats, normalized image coords), headPose: Matrix4 (facial transformation matrix, row-major float[16]), facePresent: boolean (faceLandmarks non-empty — the result exposes no per-frame confidence; sensitivity is set via the minFaceDetectionConfidence/minFacePresenceConfidence/minTrackingConfidence options, defaults 0.5), blendshapes: Record<string,number> (faceBlendshapes[0] categoryName → score; {} when absent), timestampMs: number }` |
 | Failure | `MODEL_LOAD_FAILED` at init (blocking screen, retry); `INFERENCE_FAILED` per frame (counts as `FACE_LOST` for gating) |
-| Downstream | `NormalizationLayer` consumes **raw landmark coordinates**, not blendshapes — blendshapes are more prior-laden on atypical faces (MODEL_AND_DATA §2) |
+| Downstream | `NormalizationLayer` consumes raw landmark coordinates; `MetricEngine` consumes `blendshapes` per-side scores as the SI/effort source (decision reversal per MODEL_AND_DATA §2/§7, 2026-07-19 — atypical-face risk gated at V2) |
 | Telemetry release blocker | MediaPipe repo privacy notice mentions Tasks API utilization metrics; runtime network inspection of the pinned package must prove zero telemetry before release. |
 
 ## 7. Metric definitions (canonical math)

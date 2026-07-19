@@ -8,10 +8,24 @@ vi.mock('@mediapipe/tasks-vision', () => ({
   FaceLandmarker: { createFromOptions: (...args: unknown[]) => createFromOptions(...args) },
 }));
 
-function makeFakeResult(overrides: Partial<{ faceLandmarks: unknown[][]; facialTransformationMatrixes: { data: number[] }[] }> = {}) {
+function makeFakeResult(
+  overrides: Partial<{
+    faceLandmarks: unknown[][];
+    facialTransformationMatrixes: { data: number[] }[];
+    faceBlendshapes: { categories: { categoryName: string; score: number }[] }[];
+  }> = {},
+) {
   return {
     faceLandmarks: [[{ x: 0.1, y: 0.2, z: -0.01 }]],
     facialTransformationMatrixes: [{ data: new Array(16).fill(0).map((_, i) => i) }],
+    faceBlendshapes: [
+      {
+        categories: [
+          { categoryName: 'mouthSmileLeft', score: 0.42 },
+          { categoryName: 'mouthSmileRight', score: 0.4 },
+        ],
+      },
+    ],
     ...overrides,
   };
 }
@@ -92,6 +106,23 @@ describe('LandmarkEngine.detect — after init', () => {
     expect(frame.facePresent).toBe(true);
     expect(frame.landmarks).toHaveLength(1);
     expect(frame.timestampMs).toBe(123);
+  });
+
+  it('blendshapes map categoryName to score; empty object when the result has none', async () => {
+    const detectForVideo = vi.fn().mockReturnValue(makeFakeResult());
+    createFromOptions.mockResolvedValueOnce({ detectForVideo });
+    const { LandmarkEngine } = await import('../../src/sensing/landmarks.ts');
+    await LandmarkEngine.init();
+    const frame = LandmarkEngine.detect({} as HTMLVideoElement, 1);
+    expect(frame.blendshapes).toEqual({ mouthSmileLeft: 0.42, mouthSmileRight: 0.4 });
+    expect(createFromOptions.mock.calls[0]![1]).toMatchObject({ outputFaceBlendshapes: true });
+
+    const bare = vi.fn().mockReturnValue(makeFakeResult({ faceBlendshapes: [] }));
+    createFromOptions.mockResolvedValueOnce({ detectForVideo: bare });
+    vi.resetModules();
+    const { LandmarkEngine: LE2 } = await import('../../src/sensing/landmarks.ts');
+    await LE2.init();
+    expect(LE2.detect({} as HTMLVideoElement, 2).blendshapes).toEqual({});
   });
 
   it('facePresent is false when faceLandmarks is empty (no confidence field involved)', async () => {

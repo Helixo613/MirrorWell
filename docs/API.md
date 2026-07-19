@@ -226,7 +226,7 @@ Returns `true` after a successful `init()`.
 
 **Errors (detect):** `NOT_INITIALIZED` (call `init()` first), `INFERENCE_FAILED` (orchestrator converts to `FACE_LOST` **before** `QualityMonitor.evaluate` by passing `null` — never crashes a session)
 
-> **Rule:** MediaPipe types never escape this module. Downstream consumes `LandmarkFrame` only, and **raw landmark geometry only — never blendshapes** (MODEL_AND_DATA §2).
+> **Rule:** MediaPipe types never escape this module; downstream consumes `LandmarkFrame` only. The former "never blendshapes downstream" rule is REVERSED 2026-07-19 (blendshape-si-v1): after the geometry family exhausted its stop rule on V1 B3 (three rejected candidates, `tests/analysis/rejected/`), blendshape probes on the same fixtures showed B3 0.006–0.051 and demonstrated unilateral sensitivity (smirk SI 0.43/0.72 vs 0.99 symmetric). Blendshapes are now the primary SI/effort source; the atypical-face concern stands as a documented risk gated at V2 palsy-fixture validation, and geometry modules are retained as cross-check (MODEL_AND_DATA §2/§7).
 
 ---
 
