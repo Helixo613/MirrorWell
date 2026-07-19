@@ -39,3 +39,10 @@ This directory preserves failing V1 harness evidence so rejected metric candidat
 
 - **B3 (yaw invariance):** the shared nose-tip anchor sits ~0.03 m off the face plane; under yaw its projection shifts by ≈ depth·sin(yaw) ≈ 0.08 IOD at 10° — same order as the smile signal — entering both sides' feature vectors with the same u sign. After the mirror step the sides point opposite → cos θ ≤ 0 → SI clamps to 0 on 100% of yaw-phase frames (live harness JSON and fixture report agree).
 - Successor hypothesis (stop-rule slot 3/3): `face-local-vector-v2` — re-anchor REGION_MOUTH_CORNER/REGION_LIP to same-side eye centers (planar, expression-static). Plan: `docs/superpowers/plans/2026-07-19-candidate3-geometry-v2.md`.
+
+## blendshape-si-v1 — run 2 (fresh trials, 2026-07-19) — FAIL
+- Fixtures: fresh full 2-trial sitting (harness trials 3/4, promoted to 1/2; prior clips in masters/retired-20260719/).
+- Trial 1: B2 dim 0.580, B2 2m 0.804, B3 L 0.257, B3 R 0.201 — smile activation collapsed across phases (frontal 0.655 → dim 0.275 → 2m 0.128).
+- Trial 2: B2 2m 0.146 (act 0.79→0.675), B3 L 0.068 (SI 0.915 vs 0.983); dim and yaw_right passed.
+- All phase-validity cells valid (OK% ≥97, yaw 9.6–10.1° in band). Failure tracks smile-intensity repro (uncontrolled variable), not measurement noise: prior sitting with held intensity (run 1 trial 2: act 0.907/0.880/0.874) passed every bar.
+- Report: v1_S01_blendshape-si-v1_run2_FAILED.json. gitSha bf5dbba.
