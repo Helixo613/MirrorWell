@@ -142,22 +142,77 @@ function startServer() {
 }
 
 /**
- * Map a browser sample row from v1-runner.html into a protocol frame.
- * Expects sampler to emit qualityState, maxDisp (or mouthDisp), symmetryIndex, yawDeg.
+ * Derive protocol frames from raw sampler rows for one trial (MODEL_AND_DATA §7).
+ * The sampler (v1-runner.html) emits absolute face-local features per QUALITY_OK frame;
+ * displacement/SI are computed here against the trial's own neutral-phase median baseline,
+ * mirroring src/metrics/geometry.ts aggregation + src/metrics/metrics.ts SI/smoothing.
+ * Values mirror src/config/thresholds.ts (metrics.*).
  */
-function rowsToFrames(sample) {
-  if (!sample?.rows) return [];
-  return sample.rows.map((r) => ({
-    qualityState: r.qualityState,
-    maxDisp:
-      typeof r.maxDisp === 'number'
-        ? r.maxDisp
-        : typeof r.mouthDisp === 'number'
-          ? r.mouthDisp
-          : null,
-    symmetryIndex: r.symmetryIndex ?? null,
-    yawDeg: typeof r.yawDeg === 'number' ? r.yawDeg : null,
-  }));
+const MOVEMENT_FLOOR_PCT = 0.008;
+const SMOOTHING_WINDOW = 5;
+const GAP_RESET_MS = 250;
+const MOUTH = 'REGION_MOUTH_CORNER';
+
+function median(xs) {
+  const sorted = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function neutralMouthStats(rows) {
+  const ok = (rows ?? []).filter((r) => r.qualityState === 'QUALITY_OK' && r.features?.[MOUTH]);
+  if (ok.length === 0) return null;
+  const comp = (side, c) => median(ok.map((r) => r.features[MOUTH][side][c]));
+  return {
+    left: { u: comp('left', 'u'), v: comp('left', 'v') },
+    right: { u: comp('right', 'u'), v: comp('right', 'v') },
+  };
+}
+
+function deriveTrialFrames(rowsByPhase) {
+  const neutral = neutralMouthStats(rowsByPhase.neutral);
+  const out = {};
+  for (const [phase, rows] of Object.entries(rowsByPhase)) {
+    if (!rows) {
+      out[phase] = null;
+      continue;
+    }
+    let window = [];
+    let lastOkMs = null;
+    out[phase] = rows.map((r) => {
+      let maxDisp = null;
+      let symmetryIndex = null;
+      if (r.qualityState === 'QUALITY_OK' && r.features?.[MOUTH] && neutral) {
+        const f = r.features[MOUTH];
+        const dL = { u: f.left.u - neutral.left.u, v: f.left.v - neutral.left.v };
+        // Mirrored right vector: ΔR̃ = (−ΔR.u, ΔR.v)
+        const dRt = { u: -(f.right.u - neutral.right.u), v: f.right.v - neutral.right.v };
+        const mL = Math.hypot(dL.u, dL.v);
+        const mR = Math.hypot(dRt.u, dRt.v);
+        const maxM = Math.max(mL, mR);
+        const minM = Math.min(mL, mR);
+        maxDisp = maxM;
+        let raw = null;
+        if (maxM >= MOVEMENT_FLOOR_PCT) {
+          const cosTheta = mL * mR === 0 ? 0 : (dL.u * dRt.u + dL.v * dRt.v) / (mL * mR);
+          raw = (minM / maxM) * Math.max(0, cosTheta);
+        }
+        if (lastOkMs !== null && r.timestampMs - lastOkMs > GAP_RESET_MS) window = [];
+        lastOkMs = r.timestampMs;
+        window.push(raw);
+        if (window.length > SMOOTHING_WINDOW) window.shift();
+        const present = window.filter((v) => v !== null);
+        symmetryIndex = present.length === 0 ? null : median(present);
+      }
+      return {
+        qualityState: r.qualityState,
+        maxDisp,
+        symmetryIndex,
+        yawDeg: typeof r.yawDeg === 'number' ? r.yawDeg : null,
+      };
+    });
+  }
+  return out;
 }
 
 /**
@@ -224,10 +279,12 @@ async function sampleAll(discovery, subjectId) {
         const url = `/fixtures/${rel}`;
         console.log(`Sampling trial ${t} ${phase}: ${url}`);
         const sample = await page.evaluate(async (u) => window.__v1.sampleVideo(u, 100), url);
-        sampled[t][phase] = rowsToFrames(sample);
+        sampled[t][phase] = sample?.rows ?? [];
         const ok = sampled[t][phase].filter((f) => f.qualityState === 'QUALITY_OK').length;
         console.log(`  → ${sampled[t][phase].length} frames, ${ok} QUALITY_OK`);
       }
+      // Per-trial derivation: displacement/SI against this trial's neutral baseline.
+      sampled[t] = deriveTrialFrames(sampled[t]);
     }
     return sampled;
   } finally {

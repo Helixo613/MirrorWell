@@ -21,25 +21,33 @@
        * Each QUALITY_OK row records measured yawDeg from headPose (operator label is not
        * evidence). Metric formulas live in scripts/v1-protocol.mjs — this page only samples.
        *
-       * NOTE: regionDistances still uses a scalar path for offline debugging. Production
-       * geometry is the face-local vector kernel (src/sensing/geometry.ts). Full V1 PASS
-       * evidence must use production metrics or an updated sampler that matches them.
+       * Measurement core mirrors production verbatim: quality gates + euler extraction
+       * from src/sensing/quality.ts, face-local vector kernel from src/metrics/geometry.ts.
+       * Rows carry absolute features; scripts/run-v1.mjs derives per-trial displacement/SI.
        */
       import { FaceLandmarker, FilesetResolver } from '/node_modules/@mediapipe/tasks-vision/vision_bundle.mjs';
 
-      // Landmark indices mirrored from src/config/exercises.ts (REGION_MOUTH_CORNER for smile V1).
-      const REGIONS = {
-        REGION_BROW: { left: [105, 159], right: [334, 386] },
-        REGION_EYELID: { left: [159, 145], right: [386, 374] },
-        REGION_MOUTH_CORNER: { left: [291, 1], right: [61, 1] },
-        REGION_LIP: { left: [308, 13], right: [78, 13] },
-      };
-      const LEFT_EYE = 33;
-      const RIGHT_EYE = 263;
+      // ---------------------------------------------------------------------------
+      // Measurement core — VERBATIM ports of the production pipeline (candidate-2):
+      //   pose/quality: src/sensing/quality.ts   kernel: src/metrics/geometry.ts
+      // Rows emit absolute face-local features only; displacement/SI derivation happens
+      // in scripts/run-v1.mjs so neutral baselines are per-trial (MODEL_AND_DATA §7).
+      // ---------------------------------------------------------------------------
+
+      // Canonical mesh indices (anatomical = subject's side) — src/metrics/geometry.ts.
+      const EYE_R_OUTER = 33, EYE_L_OUTER = 263, EYE_R_INNER = 133, EYE_L_INNER = 362;
+      const BROW_L = 334, BROW_R = 105;
+      const LID_UPPER_L = 386, LID_LOWER_L = 374, LID_UPPER_R = 159, LID_LOWER_R = 145;
+      const MOUTH_L = 291, MOUTH_R = 61, LIP_L = 308, LIP_R = 78;
+
+      // Mirrors src/config/thresholds.ts qualityGates + metrics.smoothingWindow.
       const LUMA_MIN = 60;
-      const INTER_OCULAR_MIN_PX = 60;
+      const INTER_OCULAR_MIN_FRAC = 0.09;
       const POSE_MAX_DEG = 15;
-      const MOVEMENT_FLOOR = 0.008;
+      const JITTER_MAX_PCT = 0.005;
+      const JITTER_WINDOW = 5;
+      const FACE_BBOX_MARGIN = 0.1;
+      const LUMA_DOWNSAMPLE = 64;
 
       const statusEl = document.getElementById('status');
       const video = document.getElementById('video');
@@ -51,109 +59,163 @@
         statusEl.textContent = s;
       }
 
-      function dist(a, b) {
-        const dx = a.x - b.x;
-        const dy = a.y - b.y;
-        const dz = a.z - b.z;
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-      }
-
-      function meanLuma64() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return 255;
-        ctx.drawImage(video, 0, 0, 64, 64);
-        const { data } = ctx.getImageData(0, 0, 64, 64);
-        let sum = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        }
-        return sum / (data.length / 4);
-      }
-
+      // --- pose (ZYX Tait-Bryan, row-major 4x4) — mirrors quality.ts extractEulerAnglesDeg ---
       function poseAnglesDeg(m) {
-        // Facial transformation matrix → approximate yaw/pitch/roll (degrees).
         if (!m || m.length < 16) return { yaw: 0, pitch: 0, roll: 0 };
-        const r00 = m[0], r01 = m[1], r02 = m[2];
-        const r10 = m[4], r11 = m[5], r12 = m[6];
-        const r20 = m[8], r21 = m[9], r22 = m[10];
-        const pitch = Math.atan2(-r20, Math.sqrt(r00 * r00 + r10 * r10));
-        const yaw = Math.atan2(r10, r00);
-        const roll = Math.atan2(r21, r22);
+        const r = (row, col) => m[row * 4 + col] ?? 0;
+        const pitch = Math.atan2(r(2, 1), r(2, 2));
+        const yaw = Math.atan2(-r(2, 0), Math.sqrt(r(2, 1) ** 2 + r(2, 2) ** 2));
+        const roll = Math.atan2(r(1, 0), r(0, 0));
         const toDeg = 180 / Math.PI;
         return { yaw: yaw * toDeg, pitch: pitch * toDeg, roll: roll * toDeg };
       }
 
-      function qualityState(lf) {
-        if (!lf.facePresent) return 'FACE_LOST';
-        const luma = meanLuma64();
-        if (luma < LUMA_MIN) return 'LOW_LIGHT';
-        const left = lf.landmarks[LEFT_EYE];
-        const right = lf.landmarks[RIGHT_EYE];
-        if (!left || !right) return 'FACE_LOST';
-        const iodPx = dist(
-          { x: left.x * video.videoWidth, y: left.y * video.videoHeight, z: 0 },
-          { x: right.x * video.videoWidth, y: right.y * video.videoHeight, z: 0 },
-        );
-        if (iodPx < INTER_OCULAR_MIN_PX) return 'TOO_FAR';
+      // --- face-region luma — mirrors quality.ts faceRegionLuma64 ---
+      function faceRegionLuma64(landmarks) {
+        const canvas = document.createElement('canvas');
+        canvas.width = LUMA_DOWNSAMPLE;
+        canvas.height = LUMA_DOWNSAMPLE;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return 255;
+        ctx.drawImage(video, 0, 0, LUMA_DOWNSAMPLE, LUMA_DOWNSAMPLE);
+        const { data } = ctx.getImageData(0, 0, LUMA_DOWNSAMPLE, LUMA_DOWNSAMPLE);
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const p of landmarks) {
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        }
+        if (!Number.isFinite(minX)) return 255;
+        const padX = (maxX - minX) * FACE_BBOX_MARGIN;
+        const padY = (maxY - minY) * FACE_BBOX_MARGIN;
+        minX = Math.max(0, minX - padX); maxX = Math.min(1, maxX + padX);
+        minY = Math.max(0, minY - padY); maxY = Math.min(1, maxY + padY);
+        let x0 = Math.floor(minX * LUMA_DOWNSAMPLE), x1 = Math.ceil(maxX * LUMA_DOWNSAMPLE);
+        let y0 = Math.floor(minY * LUMA_DOWNSAMPLE), y1 = Math.ceil(maxY * LUMA_DOWNSAMPLE);
+        if (x1 <= x0) { x0 = Math.max(0, Math.min(LUMA_DOWNSAMPLE - 1, x0)); x1 = x0 + 1; }
+        if (y1 <= y0) { y0 = Math.max(0, Math.min(LUMA_DOWNSAMPLE - 1, y0)); y1 = y0 + 1; }
+        x0 = Math.max(0, x0); y0 = Math.max(0, y0);
+        x1 = Math.min(LUMA_DOWNSAMPLE, x1); y1 = Math.min(LUMA_DOWNSAMPLE, y1);
+        if (x0 >= x1 || y0 >= y1) return 255;
+        let sum = 0, count = 0;
+        for (let y = y0; y < y1; y++) {
+          for (let x = x0; x < x1; x++) {
+            const i = (y * LUMA_DOWNSAMPLE + x) * 4;
+            sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            count++;
+          }
+        }
+        return count === 0 ? 255 : sum / count;
+      }
+
+      function interOcularDistancePx(landmarks, W, H) {
+        const left = landmarks[EYE_L_OUTER];
+        const right = landmarks[EYE_R_OUTER];
+        if (!left || !right) return 0;
+        const dx = (left.x - right.x) * W;
+        const dy = (left.y - right.y) * H;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      // --- jitter (RMS second difference / IOD) — mirrors quality.ts rollingJitterSecondDiff.
+      // Sampling interval is 100 ms (vs ~33 ms live); second difference still cancels
+      // constant-velocity motion, so the same threshold applies. Reset per video + on non-OK.
+      let prevLandmarks = null, prevPrevLandmarks = null, jitterHistory = [];
+      function resetJitterState() {
+        prevLandmarks = null;
+        prevPrevLandmarks = null;
+        jitterHistory = [];
+      }
+      function rollingJitterSecondDiff(landmarks, interOcularPx, W, H) {
+        if (!prevLandmarks || !prevPrevLandmarks || prevLandmarks.length !== landmarks.length || interOcularPx === 0) {
+          prevPrevLandmarks = prevLandmarks;
+          prevLandmarks = landmarks;
+          if (!prevPrevLandmarks) jitterHistory = [];
+          return 0;
+        }
+        let sumSq = 0;
+        for (let i = 0; i < landmarks.length; i++) {
+          const ax = (landmarks[i].x - 2 * prevLandmarks[i].x + prevPrevLandmarks[i].x) * W;
+          const ay = (landmarks[i].y - 2 * prevLandmarks[i].y + prevPrevLandmarks[i].y) * H;
+          sumSq += ax * ax + ay * ay;
+        }
+        const rmsPx = Math.sqrt(sumSq / landmarks.length);
+        const displacementPct = rmsPx / interOcularPx;
+        prevPrevLandmarks = prevLandmarks;
+        prevLandmarks = landmarks;
+        jitterHistory.push(displacementPct);
+        if (jitterHistory.length > JITTER_WINDOW) jitterHistory.shift();
+        return jitterHistory.reduce((a, b) => a + b, 0) / jitterHistory.length;
+      }
+
+      // --- quality gates, production order (quality.ts evaluate) ---
+      function qualityState(lf, W, H) {
+        if (!lf.facePresent) {
+          resetJitterState();
+          return 'FACE_LOST';
+        }
+        const luma = faceRegionLuma64(lf.landmarks);
+        if (luma < LUMA_MIN) {
+          resetJitterState();
+          return 'LOW_LIGHT';
+        }
+        const interOcular = interOcularDistancePx(lf.landmarks, W, H);
+        if (interOcular < INTER_OCULAR_MIN_FRAC * W) {
+          resetJitterState();
+          return 'TOO_FAR';
+        }
         const { yaw, pitch, roll } = poseAnglesDeg(lf.headPose);
         if (Math.abs(yaw) > POSE_MAX_DEG || Math.abs(pitch) > POSE_MAX_DEG || Math.abs(roll) > POSE_MAX_DEG) {
+          resetJitterState();
           return 'POSE_OUT_OF_RANGE';
+        }
+        const jitter = rollingJitterSecondDiff(lf.landmarks, interOcular, W, H);
+        if (jitter > JITTER_MAX_PCT) {
+          return 'LOW_CONFIDENCE';
         }
         return 'QUALITY_OK';
       }
 
-      function inverseRotateAround(point, center, headPose) {
-        const r = (row, col) => headPose[row * 4 + col] ?? (row === col ? 1 : 0);
-        const x = point.x - center.x;
-        const y = point.y - center.y;
-        const z = point.z - center.z;
-        return {
-          x: center.x + (r(0, 0) * x + r(1, 0) * y + r(2, 0) * z),
-          y: center.y + (r(0, 1) * x + r(1, 1) * y + r(2, 1) * z),
-          z: center.z + (r(0, 2) * x + r(1, 2) * y + r(2, 2) * z),
-        };
-      }
-
-      function sideDistance(landmarks, indices, interOcular, headPose, center) {
-        const a = landmarks[indices[0]];
-        const b = landmarks[indices[1]];
-        if (!a || !b) return 0;
-        const aR = inverseRotateAround(a, center, headPose);
-        const bR = inverseRotateAround(b, center, headPose);
-        return dist(aR, bR) / interOcular;
-      }
-
-      function regionDistances(lf) {
-        const leftEye = lf.landmarks[LEFT_EYE];
-        const rightEye = lf.landmarks[RIGHT_EYE];
-        const interOcular = leftEye && rightEye ? dist(leftEye, rightEye) || 1 : 1;
-        const center =
-          leftEye && rightEye
-            ? {
-                x: (leftEye.x + rightEye.x) / 2,
-                y: (leftEye.y + rightEye.y) / 2,
-                z: (leftEye.z + rightEye.z) / 2,
-              }
-            : { x: 0.5, y: 0.5, z: 0 };
-        const out = {};
-        for (const [regionId, pair] of Object.entries(REGIONS)) {
-          out[regionId] = {
-            left: sideDistance(lf.landmarks, pair.left, interOcular, lf.headPose, center),
-            right: sideDistance(lf.landmarks, pair.right, interOcular, lf.headPose, center),
+      // --- face-local vector kernel — mirrors geometry.ts measureAbsolute ---
+      function measureAbsolutePx(landmarks, W, H) {
+        const toPx = (p) => ({ x: p.x * W, y: p.y * H });
+        const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+        const eyeR = toPx(landmarks[EYE_R_OUTER]);
+        const eyeL = toPx(landmarks[EYE_L_OUTER]);
+        const iod = Math.hypot(eyeL.x - eyeR.x, eyeL.y - eyeR.y) || 1;
+        const uHat = { x: (eyeL.x - eyeR.x) / iod, y: (eyeL.y - eyeR.y) / iod };
+        const vHat = { x: uHat.y, y: -uHat.x };
+        const feature = (moving, anchor) => {
+          const dx = moving.x - anchor.x;
+          const dy = moving.y - anchor.y;
+          return {
+            u: (dx * uHat.x + dy * uHat.y) / iod,
+            v: (dx * vHat.x + dy * vHat.y) / iod,
           };
-        }
-        return out;
-      }
-
-      function symmetryIndex(left, right) {
-        const dL = Math.abs(left);
-        const dR = Math.abs(right);
-        const m = Math.max(dL, dR);
-        if (m < MOVEMENT_FLOOR) return null;
-        return Math.min(dL, dR) / m;
+        };
+        const eyeCenterL = mid(eyeL, toPx(landmarks[EYE_L_INNER]));
+        const eyeCenterR = mid(eyeR, toPx(landmarks[EYE_R_INNER]));
+        // v2 anchors: mouth/lip use same-side eye centers (geometry.ts candidate
+        // face-local-vector-v2) — nose tip removed (off-plane yaw artifact).
+        return {
+          REGION_BROW: {
+            left: feature(toPx(landmarks[BROW_L]), eyeCenterL),
+            right: feature(toPx(landmarks[BROW_R]), eyeCenterR),
+          },
+          REGION_EYELID: {
+            left: feature(toPx(landmarks[LID_UPPER_L]), toPx(landmarks[LID_LOWER_L])),
+            right: feature(toPx(landmarks[LID_UPPER_R]), toPx(landmarks[LID_LOWER_R])),
+          },
+          REGION_MOUTH_CORNER: {
+            left: feature(toPx(landmarks[MOUTH_L]), eyeCenterL),
+            right: feature(toPx(landmarks[MOUTH_R]), eyeCenterR),
+          },
+          REGION_LIP: {
+            left: feature(toPx(landmarks[LIP_L]), eyeCenterL),
+            right: feature(toPx(landmarks[LIP_R]), eyeCenterR),
+          },
+        };
       }
 
       async function init() {
@@ -197,6 +259,7 @@
         await video.play();
 
         const rows = [];
+        resetJitterState();
         let t = 0;
         const durationMs = (video.duration || 0) * 1000;
         // Seek-sample rather than real-time play (faster, deterministic).
@@ -222,8 +285,7 @@
               timestampMs: t,
               qualityState: 'FACE_LOST',
               facePresent: false,
-              regions: null,
-              symmetryIndex: null,
+              features: null,
               error: String(err?.message ?? err),
             });
             t += sampleEveryMs;
@@ -239,38 +301,18 @@
             timestampMs: t,
           };
           const pose = poseAnglesDeg(lf.headPose);
-          const q = qualityState(lf);
-          if (q !== 'QUALITY_OK') {
-            rows.push({
-              timestampMs: t,
-              qualityState: q,
-              facePresent: lf.facePresent,
-              regions: null,
-              symmetryIndex: null,
-              yawDeg: pose.yaw,
-              pitchDeg: pose.pitch,
-              rollDeg: pose.roll,
-              maxDisp: null,
-            });
-          } else {
-            const regions = regionDistances(lf);
-            const mouth = regions.REGION_MOUTH_CORNER;
-            const maxDisp = Math.max(Math.abs(mouth.left), Math.abs(mouth.right));
-            rows.push({
-              timestampMs: t,
-              qualityState: q,
-              facePresent: true,
-              regions,
-              symmetryIndex: symmetryIndex(mouth.left, mouth.right),
-              mouthLeft: mouth.left,
-              mouthRight: mouth.right,
-              mouthDisp: maxDisp,
-              maxDisp,
-              yawDeg: pose.yaw,
-              pitchDeg: pose.pitch,
-              rollDeg: pose.roll,
-            });
-          }
+          const W = video.videoWidth || 640;
+          const H = video.videoHeight || 480;
+          const q = qualityState(lf, W, H);
+          rows.push({
+            timestampMs: t,
+            qualityState: q,
+            facePresent: lf.facePresent,
+            yawDeg: pose.yaw,
+            pitchDeg: pose.pitch,
+            rollDeg: pose.roll,
+            features: q === 'QUALITY_OK' ? measureAbsolutePx(lf.landmarks, W, H) : null,
+          });
           t += sampleEveryMs;
         }
 
