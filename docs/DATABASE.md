@@ -47,7 +47,7 @@ export interface CalibrationBaseline {
   comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max peak blendshape activation max(L,R), 0..1 score units (was IOD-units displacement — blendshape-si-v1, pre-release reset per DG-5), keys = assignedExercises
   qualityScore: number;           // [0..1] = fraction of QUALITY_OK capture frames; >= 0.7 enforced
   noiseFloorSymmetry: number;     // std of smoothed SI over held comfortable-max captures (B1b)
-  noiseFloorDisplacement: number; // std of pre-floor max(mL,mR) over neutral OK frames (B1a)
+  noiseFloorDisplacement: number; // std of blendshape activation max(L,R) over neutral OK frames (B1a, 0..1 score units — blendshape-si-v1)
   isActive: 0 | 1;                // exactly one row with 1 (StorageService invariant)
 }
 
@@ -129,7 +129,7 @@ export const db = new MirrorWellDB();
 | `calibration_baseline.neutralStats` | All four `RegionId` keys present; each side has `{u, v}`; **all components finite only — NOT required `> 0`** (signed face-local projections are legitimately negative) |
 | `calibration_baseline.comfortableMax` | Keys ⊆ profile's `assignedExercises`; values finite `> 0` |
 | `calibration_baseline.noiseFloorSymmetry` | Finite `≥ 0` (held-SI noise; B1b) |
-| `calibration_baseline.noiseFloorDisplacement` | Finite `≥ 0` (rest displacement noise; B1a) |
+| `calibration_baseline.noiseFloorDisplacement` | Finite `≥ 0` (rest activation noise; B1a) |
 | `calibration_baseline.isActive` | `saveBaseline` sets new row to `1` and all others to `0` in one transaction — the "exactly one active" invariant |
 | `session_record.endedAt` | `>= startedAt`; both valid UTC ISO 8601 |
 | `session_record.baselineId` / `profileId` | Must reference existing rows (manual FK check) |

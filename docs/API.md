@@ -115,7 +115,7 @@ Persists a new calibration and atomically deactivates the previous active baseli
     "REGION_MOUTH_CORNER": { "left": { "u": 0.0, "v": 0.507 }, "right": { "u": 0.0, "v": 0.503 } },
     "REGION_LIP":          { "left": { "u": 0.0, "v": 0.231 }, "right": { "u": 0.0, "v": 0.229 } }
   },
-  "comfortableMax": { "EX_SMILE": 0.092, "EX_BROW_RAISE": 0.064 },
+  "comfortableMax": { "EX_SMILE": 0.62, "EX_BROW_RAISE": 0.41 },
   "qualityScore": 0.91,
   "noiseFloorSymmetry": 0.041,
   "noiseFloorDisplacement": 0.008,
@@ -391,7 +391,7 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 | Method | Signature / output | Errors |
 |---|---|---|
 | `captureNeutral()` | `Promise<NeutralCaptureResult>` — `{ neutralStats, qualityScore }` (exact shape: ARCHITECTURE §13). Example: `{"neutralStats": {"REGION_BROW": {"left": {"u": 0.0, "v": 0.418}, "right": {"u": 0.0, "v": 0.421}}, "…": "…"}, "qualityScore": 0.91}` | `QUALITY_TOO_LOW` (coaching UI, retry), `CAMERA_*`, `NOT_ATTESTED` |
-| `captureComfortableMax("EX_SMILE")` | `Promise<number>` — e.g. `0.092` | same |
+| `captureComfortableMax("EX_SMILE")` | `Promise<number>` — e.g. `0.62` (0..1 blendshape-activation units, DATABASE §2) | same |
 | `runNoiseFloorSelfTest()` | `Promise<number>` — e.g. `0.041` (persisted with the active baseline; field ownership: ARCHITECTURE §12) | same + `DB_UNAVAILABLE` |
 | `checkBaselineDrift()` | `Promise<'ok' \| 'recalibrate'>` | `NO_BASELINE`, `CAMERA_*` |
 

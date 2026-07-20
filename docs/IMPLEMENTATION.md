@@ -137,7 +137,7 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 
 - Implement `captureNeutral` (3×3 s, median, `qualityScore` = OK-frame fraction), `captureComfortableMax` (3 gentle reps, **median**), `runNoiseFloorSelfTest` (persists `noiseFloorSymmetry`), `checkBaselineDrift` (> 8% → `'recalibrate'`). Build `CalibrationScreen` per FRONTEND §2.2 with `QualityMonitor`-driven coaching; "gentle — do not strain" copy in `strings.ts`.
 
-**Test:** Full calibration < 4 min by a first-time tester with no verbal help; deliberately dark capture → `QUALITY_TOO_LOW` + coaching + redo (never silently accepted); recalibration flips `isActive` (DB check); `noiseFloorSymmetry` lands in `app_settings`; drift check returns `'recalibrate'` when replaying a mismatched fixture baseline.
+**Test:** Full calibration < 4 min by a first-time tester with no verbal help; deliberately dark capture → `QUALITY_TOO_LOW` + coaching + redo (never silently accepted); recalibration flips `isActive` (DB check); `noiseFloorSymmetry` lands on the active `calibration_baseline` row (DG-4; never `app_settings`); drift check returns `'recalibrate'` when replaying a mismatched fixture baseline.
 
 ---
 
