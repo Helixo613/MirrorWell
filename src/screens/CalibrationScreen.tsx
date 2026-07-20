@@ -18,15 +18,16 @@ import { StorageService } from '@/data/storage';
 
 const INSTRUCTION_ID = 'calibration-instruction-heading';
 const ACTION_HELPER_ID = 'calibration-action-helper';
+const useSessionStub = import.meta.env.VITE_USE_SESSION_STUB === 'true';
 
 export function CalibrationScreen() {
   const navigate = useNavigate();
   const { settings, profile } = useAppState();
-  const cameraEnabled = Boolean(profile);
+  const cameraEnabled = !useSessionStub && Boolean(profile);
   const { videoRef, quality, status, error, retry } =
     useCameraPipeline(cameraEnabled);
-  const pipelineReady = status === 'ready';
-  const qualityOk = quality === 'QUALITY_OK';
+  const pipelineReady = useSessionStub || status === 'ready';
+  const qualityOk = useSessionStub || quality === 'QUALITY_OK';
 
   const flow = useCalibrationFlow(pipelineReady, qualityOk);
 
