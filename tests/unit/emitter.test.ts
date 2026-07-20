@@ -15,7 +15,7 @@ describe('Emitter', () => {
   it('keeps iterating when a listener unsubscribes during emit', () => {
     const emitter = new Emitter<{ tick: number }>();
     const seen: string[] = [];
-    let off = () => undefined;
+    let off: () => void = () => undefined;
     off = emitter.on('tick', () => { seen.push('first'); off(); });
     emitter.on('tick', () => seen.push('second'));
     emitter.emit('tick', 1);

@@ -2,7 +2,7 @@
 # scripts/convert-fixtures.sh — converts recorded fixture masters (webm/mp4) into .mjpeg
 # replays for Chromium's fake video capture (docs/IMPLEMENTATION.md Task 6 /
 # docs/MODEL_AND_DATA.md §4). Chromium's --use-file-for-fake-video-capture accepts ONLY
-# .y4m/.mjpeg (docs/AGENTS.md verified fact #3) — y4m is uncompressed and too large to commit,
+# .y4m/.mjpeg (AGENTS.md verified fact #3) — y4m is uncompressed and too large to commit,
 # so every master gets an mjpeg replay instead.
 #
 # Usage: scripts/convert-fixtures.sh

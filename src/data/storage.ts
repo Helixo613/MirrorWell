@@ -1,6 +1,6 @@
 // src/data/storage.ts — sole owner of mirrorwell_db (docs/DATABASE.md §2).
 // Every read/write goes through StorageService; no other component touches Dexie directly
-// (docs/AGENTS.md non-negotiable). Contracts: docs/API.md §3. Validation matrix: DATABASE.md §3.
+// (AGENTS.md non-negotiable). Contracts: docs/API.md §3. Validation matrix: DATABASE.md §3.
 // Explicit .ts extensions: these files also run under plain Node (scripts/seed-dev.ts,
 // scripts/inspect-db.ts via `node --experimental-strip-types`), whose ESM loader requires
 // fully-specified relative import extensions (unlike Vite/Vitest's bundler resolution).

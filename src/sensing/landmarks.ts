@@ -52,7 +52,7 @@ async function createLandmarker(fileset: Awaited<ReturnType<typeof FilesetResolv
 
 async function init(): Promise<void> {
   try {
-    // Bundled runtime only — never a CDN (docs/AGENTS.md non-negotiable, verified fact #2).
+    // Bundled runtime only — never a CDN (AGENTS.md non-negotiable, verified fact #2).
     const fileset = await FilesetResolver.forVisionTasks('/wasm');
     landmarker = await createLandmarker(fileset);
   } catch (err) {
@@ -74,7 +74,7 @@ function detect(video: HTMLVideoElement, timestampMs: number): LandmarkFrame {
     throw new MirrorWellError('INFERENCE_FAILED', err instanceof Error ? err.message : String(err));
   }
 
-  // FaceLandmarkerResult has NO per-frame confidence field (docs/AGENTS.md verified fact #1).
+  // FaceLandmarkerResult has NO per-frame confidence field (AGENTS.md verified fact #1).
   // facePresent is defined as faceLandmarks being non-empty — nothing else.
   const faceLandmarks = result.faceLandmarks[0] ?? [];
   const transformationMatrix = result.facialTransformationMatrixes[0]?.data ?? [];

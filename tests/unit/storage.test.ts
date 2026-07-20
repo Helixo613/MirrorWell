@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../../src/data/schema';
 import { MirrorWellError } from '../../src/data/errors';
 import { StorageService } from '../../src/data/storage';
-import type { CalibrationBaseline, SessionRecord, UserProfile } from '../../src/data/schema';
+import type { CalibrationBaseline, UserProfile } from '../../src/data/schema';
 import type { SessionRecordInput } from '../../src/data/storage';
 
 const PROFILE_ID = '11111111-1111-4111-8111-111111111111';

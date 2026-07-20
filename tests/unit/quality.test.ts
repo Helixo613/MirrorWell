@@ -52,6 +52,7 @@ function makeFrame(overrides: Partial<LandmarkFrame> = {}): LandmarkFrame {
     facePresent: true,
     timestampMs: 0,
     ...overrides,
+    blendshapes: overrides.blendshapes ?? {},
   };
 }
 
