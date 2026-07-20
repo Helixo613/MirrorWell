@@ -365,7 +365,7 @@ Thresholds (`repStartThreshold` 0.15, `repMinDurationMs` 800, `repEndThreshold` 
 
 Preconditions checked in order: gate (ATTESTED or DEMO) → active baseline exists → baseline drift re-check passes (else recalibration prompt) → camera starts.
 
-**Errors:** `NOT_ATTESTED`, `NO_BASELINE`, `CAMERA_DENIED`, `CAMERA_UNAVAILABLE`, `VALIDATION_FAILED` (empty list or non-assigned exercise)
+**Errors:** `NOT_ATTESTED`, `NO_BASELINE`, `RECALIBRATION_REQUIRED`, `CAMERA_DENIED`, `CAMERA_UNAVAILABLE`, `VALIDATION_FAILED` (empty list or non-assigned exercise)
 
 ### `advance(): void` · `extendRest(seconds: number): void`
 
@@ -387,6 +387,7 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 | `repCompleted` | `{ "event": { "repIndex": 4, "peakSymmetryIndex": 0.71, "peakEffortIndex": 0.47, "durationMs": 1900, "easeOffTriggered": false } }` |
 | `easeOff` | `{ "active": true }` |
 | `sessionEnded` | `{ "record": { "sessionId": "…", "endReason": "completed", "results": ["…"] } }` |
+| `qualityOfferStop` | `{ "visible": true }` |
 
 > **Rule:** no other events exist. The UI must not reach into pipeline internals; if a screen needs data not carried by these events, the event surface is amended here first.
 
@@ -521,6 +522,7 @@ Every tunable, exported as a single frozen object, each with a comment naming it
 | `NOT_INITIALIZED` | LandmarkEngine.detect | true | Internal ordering bug; screens show generic error |
 | `INFERENCE_FAILED` | LandmarkEngine.detect | true | Orchestrator converts to `FACE_LOST` before `evaluate` (passes `null`); never user-visible as an error |
 | `NO_BASELINE` | NormalizationLayer, SessionController | true | Route to `CalibrationScreen` |
+| `RECALIBRATION_REQUIRED` | SessionController.start | true | Route to recalibration |
 | `POSE_OUT_OF_RANGE` | QualityMonitor only (`QualityResult` state; not thrown by `normalize`) | true | Quality UX ("face the camera straight on") |
 | `NOT_ATTESTED` | SafetyGate-gated methods | true | Redirect to `OnboardingScreen` |
 | `CAMERA_DENIED` | CaptureService.start | true | Permission guidance screen with retry |

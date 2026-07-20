@@ -60,6 +60,8 @@ export const thresholds = Object.freeze({
   // SessionController tunables. Owning section: docs/API.md §15 / docs/BACKEND.md (SessionController).
   session: Object.freeze({
     qualityProblemOfferStopMs: 30000,
+    metricEventMinIntervalMs: 66,
+    repMinOkFraction: 0.6,
   }),
 
   // Live V1 protocol harness (dev-only). Owning section: docs/MODEL_AND_DATA.md §7
