@@ -258,6 +258,21 @@ function handleFrame(video: HTMLVideoElement, timestampMs: number, lf: LandmarkF
   handleRepsFrame(quality, timestampMs);
 }
 
+// SessionRecordInput (write shape) omits the parent keys StorageService assigns while
+// persisting (ExerciseResult.sessionId, RepMetric.resultId — see saveSession in
+// src/data/storage.ts). stop() must resolve a SessionRecordFull (docs/API.md §10: "the saved
+// SessionRecordFull"), so mirror that assignment here rather than returning the write shape.
+function toFull(record: SessionRecordInput): SessionRecordFull {
+  return {
+    ...record,
+    results: record.results.map((result) => ({
+      ...result,
+      sessionId: record.sessionId,
+      reps: result.reps.map((rep) => ({ ...rep, resultId: result.resultId })),
+    })),
+  };
+}
+
 async function stopSession(reason: EndReason): Promise<SessionRecordFull> {
   if (stopFrameSource) {
     stopFrameSource();
@@ -283,8 +298,9 @@ async function stopSession(reason: EndReason): Promise<SessionRecordFull> {
   if (!SafetyGate.isDemoMode()) {
     await StorageService.saveSession(record);
   }
-  emitter.emit('sessionEnded', { record });
-  return record;
+  const full = toFull(record);
+  emitter.emit('sessionEnded', { record: full });
+  return full;
 }
 
 export const SessionController = {

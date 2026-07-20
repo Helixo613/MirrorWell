@@ -493,6 +493,11 @@ describe('SessionController session assembly', () => {
     const rep = result.reps[0]!;
     expect(rep.easeOffTriggered === 0 || rep.easeOffTriggered === 1).toBe(true);
 
+    // stop() resolves a SessionRecordFull (docs/API.md §10) — results/reps carry their
+    // parent keys, matching what getSessions() would return for this same session.
+    expect(result.sessionId).toBe(record.sessionId);
+    expect(rep.resultId).toBe(result.resultId);
+
     const saved = await StorageService.getSessions({ from: '2000-01-01T00:00:00.000Z', to: '2100-01-01T00:00:00.000Z' });
     expect(saved.some((s) => s.sessionId === record.sessionId)).toBe(true);
   });
@@ -526,6 +531,9 @@ describe('SessionController session assembly', () => {
 
     expect(record.results[0]!.repsCompleted).toBe(1);
     expect(ended).toHaveBeenCalledTimes(1);
+    // Demo returns the record without persisting, but it must still be Full-shaped.
+    expect(record.results[0]!.sessionId).toBe(record.sessionId);
+    expect(record.results[0]!.reps[0]!.resultId).toBe(record.results[0]!.resultId);
     expect(await db.session_record.count()).toBe(0);
     expect(await db.exercise_result.count()).toBe(0);
     expect(await db.rep_metric.count()).toBe(0);
