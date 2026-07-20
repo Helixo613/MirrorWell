@@ -6,6 +6,7 @@
 // fully-specified relative import extensions (unlike Vite/Vitest's bundler resolution).
 import { db } from './schema.ts';
 import type {
+  AppSettings,
   CalibrationBaseline,
   ExerciseId,
   ExerciseResult,
@@ -191,6 +192,20 @@ export const StorageService = {
       assertDemoWritable();
       assertProfileShape(p);
       await db.user_profile.put(p);
+    });
+  },
+
+  async getSettings(): Promise<AppSettings | null> {
+    return withDbErrors(async () => {
+      const row = await db.app_settings.get('singleton');
+      return row ?? null;
+    });
+  },
+
+  async saveSettings(settings: AppSettings): Promise<void> {
+    return withDbErrors(async () => {
+      assertDemoWritable();
+      await db.app_settings.put(settings);
     });
   },
 

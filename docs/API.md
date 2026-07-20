@@ -99,6 +99,14 @@ Enters DEMO (in-memory flag). Full rule set in ARCHITECTURE §11 — watermark, 
 
 **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (any DATABASE §3 rule; e.g. empty `assignedExercises`, invalid `affectedSide`)
 
+### `getSettings(): Promise<AppSettings | null>`
+
+Gets the `app_settings` row with singleton key `"singleton"`. **Errors:** `DB_UNAVAILABLE`
+
+### `saveSettings(settings: AppSettings): Promise<void>`
+
+Persists the `app_settings` singleton. **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (Demo Mode is read-only)
+
 ### `saveBaseline(b: CalibrationBaseline): Promise<string>`
 
 Persists a new calibration and atomically deactivates the previous active baseline.
