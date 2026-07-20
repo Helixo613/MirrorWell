@@ -38,9 +38,10 @@
   2. Contact corresponding authors / MEEI Facial Nerve Center if membership path fails.
   3. Record: exact license text, access date, access method (membership vs author), any usage constraints, in `tests/fixtures/v2/LICENSE_NOTES.md` (this file IS committed — it holds terms, not data).
 - [ ] **Inventory requirement:** which patients have **video** (not just photos), which expressions are performed. The gate needs a **smile / voluntary-movement video** per scoreable patient; photos alone cannot drive the video pipeline. Deliver clips to `tests/fixtures/v2/meei/` (gitignored).
-- [ ] **Optional strengtheners** (not required for the formal gate; not substitutes):
-  - **YFP** (Hsu et al.): university-email request → password in 3–7 workdays; research-only, no redistribution. ~32 unconstrained speech videos / ~21–22 patients; **no flaccid/synkinetic labels** → exploratory only. GitHub: `AvLab-CV/YouTube-Facial-Palsy-Database`.
-  - **Toronto NeuroFace** (Bandini et al.): ALS/stroke orofacial videos + clinician scores; request page historically at UofT SLP datasets URL was **404** on 2026-07-20 — email lab authors. Strengthener only.
+- [ ] **Immediate exploratory (optional, parallel; not formal gate):** download Hugging Face [`jasir/palsynet-data`](https://huggingface.co/datasets/jasir/palsynet-data) (CC-BY-4.0; ~27 affected + ~20 control mp4). Store gitignored under `tests/fixtures/v2/palsynet/`. Manifest may use `presentation: "unknown_palsy" | "control"`; **do not invent** `affectedSide` or flaccid/synkinetic labels. Reports must stamp `"isGateEvidence": false`.
+- [ ] **Optional strengtheners** (not formal substitutes):
+  - **YFP** (Hsu et al.): university-email request → password in 3–7 workdays; research-only, no redistribution. GitHub: `AvLab-CV/YouTube-Facial-Palsy-Database`.
+  - **Toronto NeuroFace** (Bandini et al.): ALS/stroke; UofT request URL was **404** on 2026-07-20 — email lab authors.
   - **Do not** use Kaggle YFP forks as a license workaround for YFP's no-redistribute rule.
 
 ### Task 1: Manifest + ignore rules
