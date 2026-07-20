@@ -200,8 +200,23 @@ function meanAbsYaw(samples: PhaseSample[]): number | null {
   return Number.isFinite(m) ? m : null;
 }
 
-function downloadBlob(filename: string, body: string, mime: string): void {
-  const blob = new Blob([body], { type: mime });
+/**
+ * Protocol-phase → fixture-condition names expected by scripts/run-v1.mjs
+ * (MODEL_AND_DATA §7): fixture_<subjectId>_<condition>_<trial>.webm
+ */
+const PHASE_TO_FIXTURE_CONDITION: Record<ProtocolPhase, string> = {
+  neutral: 'neutral',
+  frontal_smile: 'smile',
+  left_yaw: 'yaw_left',
+  right_yaw: 'yaw_right',
+  dim_light: 'low_light',
+  distance_2m: 'distance_2m',
+};
+
+const FIXTURE_SUBJECT_ID = 'S01';
+
+function downloadBlob(filename: string, body: string | Blob, mime: string): void {
+  const blob = body instanceof Blob ? body : new Blob([body], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -275,6 +290,9 @@ export function LiveV1Harness() {
   const frameTimesRef = useRef<number[]>([]);
   const resultsRef = useRef<StoredPhaseResult[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Master-clip recording (SAFETY §6 dev-harness exception): download-only, discarded on retry.
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const clipChunksRef = useRef<Blob[]>([]);
 
   const [state, dispatch] = useReducer(reduceHarness, undefined, createInitialHarnessState);
   const [error, setError] = useState<MirrorWellError | null>(null);
@@ -293,6 +311,7 @@ export function LiveV1Harness() {
   const [results, setResults] = useState<StoredPhaseResult[]>([]);
   const [diagOpen, setDiagOpen] = useState(false);
   const [focusedBtn, setFocusedBtn] = useState<string | null>(null);
+  const [recorderSupported, setRecorderSupported] = useState(true);
 
   const phase = currentPhase(state);
   phaseRef.current = phase;
@@ -418,6 +437,11 @@ export function LiveV1Harness() {
 
     return () => {
       unsubscribe();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      mediaRecorderRef.current = null;
+      clipChunksRef.current = [];
       CaptureService.stop();
       NormalizationLayer.clearBaseline();
       MetricEngine.reset();
@@ -441,6 +465,48 @@ export function LiveV1Harness() {
       clearInterval(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
+  }
+
+  /** Best-effort master-clip capture; harness metrics work unchanged when unsupported. */
+  function startClipRecording(): void {
+    clipChunksRef.current = [];
+    const src = mountedVideoRef.current?.srcObject;
+    if (typeof MediaRecorder === 'undefined' || !(src instanceof MediaStream)) {
+      setRecorderSupported(false);
+      return;
+    }
+    try {
+      const mime = ['video/webm;codecs=vp9', 'video/webm'].find((m) =>
+        MediaRecorder.isTypeSupported(m),
+      );
+      const rec = new MediaRecorder(src, mime ? { mimeType: mime } : undefined);
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) clipChunksRef.current.push(e.data);
+      };
+      rec.start();
+      mediaRecorderRef.current = rec;
+      setRecorderSupported(true);
+    } catch {
+      mediaRecorderRef.current = null;
+      setRecorderSupported(false);
+    }
+  }
+
+  function stopClipRecording(): void {
+    const rec = mediaRecorderRef.current;
+    mediaRecorderRef.current = null;
+    if (rec && rec.state !== 'inactive') {
+      try {
+        rec.stop(); // final ondataavailable fires async; chunks read at accept time
+      } catch {
+        clipChunksRef.current = [];
+      }
+    }
+  }
+
+  function discardClip(): void {
+    stopClipRecording();
+    clipChunksRef.current = [];
   }
 
   function applyNeutralBaseline(okCount: number, totalCount: number): void {
@@ -489,6 +555,7 @@ export function LiveV1Harness() {
 
   const finishRecording = useCallback(() => {
     clearRecordingTimer();
+    stopClipRecording();
     recordingRef.current = false;
     setSecondsLeft(0);
 
@@ -552,6 +619,7 @@ export function LiveV1Harness() {
     const durationSec = Math.ceil(durationMs / 1000);
     setSecondsLeft(durationSec);
     recordingRef.current = true;
+    startClipRecording();
     dispatch({ type: 'BEGIN_RECORDING' });
 
     clearRecordingTimer();
@@ -569,6 +637,15 @@ export function LiveV1Harness() {
   function handleAccept(): void {
     if (!reviewValidity || !phase) return;
     if (!reviewValidity.ok) return;
+
+    if (clipChunksRef.current.length > 0) {
+      downloadBlob(
+        `fixture_${FIXTURE_SUBJECT_ID}_${PHASE_TO_FIXTURE_CONDITION[phase]}_${state.trial}.webm`,
+        new Blob(clipChunksRef.current, { type: 'video/webm' }),
+        'video/webm',
+      );
+      clipChunksRef.current = [];
+    }
 
     const stored: StoredPhaseResult = {
       trial: state.trial,
@@ -588,6 +665,7 @@ export function LiveV1Harness() {
   }
 
   function handleRetry(): void {
+    discardClip();
     if (phase === 'neutral') {
       baselineReadyRef.current = false;
       NormalizationLayer.clearBaseline();
@@ -601,6 +679,7 @@ export function LiveV1Harness() {
 
   function handleReset(): void {
     clearRecordingTimer();
+    discardClip();
     recordingRef.current = false;
     phaseSamplesRef.current = [];
     neutralAbsRef.current = [];
@@ -617,6 +696,7 @@ export function LiveV1Harness() {
 
   function handleStopCamera(): void {
     clearRecordingTimer();
+    discardClip();
     recordingRef.current = false;
     CaptureService.stop();
     dispatch({ type: 'SET_CAMERA_READY', ready: false });
@@ -883,6 +963,9 @@ export function LiveV1Harness() {
               )}
             </ul>
           )}
+          <p style={{ margin: '6px 0', fontSize: 13 }}>
+            {recorderSupported ? copy.clipAutoSaveNote : copy.clipUnavailable}
+          </p>
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             <button
               type="button"

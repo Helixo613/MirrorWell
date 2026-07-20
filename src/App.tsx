@@ -24,7 +24,9 @@ export default function App() {
           }
         />
       )}
-      {import.meta.env.DEV && (
+      {/* CaptureHarness and LiveV1Harness both re-parent CaptureService's single <video>
+          element — mounting both leaves one preview black. Opt-in via env flag. */}
+      {import.meta.env.DEV && import.meta.env.VITE_ENABLE_CAPTURE_HARNESS === 'true' && (
         <DevOnly
           loader={() =>
             import('./dev/CaptureHarness').then((m) => ({ default: m.CaptureHarness }))

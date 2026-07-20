@@ -53,6 +53,10 @@ export const strings = Object.freeze({
     reportTitle: 'Protocol report',
     reportTrialHeading: 'Trial summary',
     exportStarted: 'Export download started.',
+    clipAutoSaveNote:
+      'Accepting downloads this phase’s master clip — move it into tests/fixtures/masters/.',
+    clipUnavailable:
+      'Video recording is unavailable in this browser — record master clips externally.',
     errorPrefix: 'Error',
     qualityFixLowLight: 'Add light',
     qualityFixTooFar: 'Come closer',
