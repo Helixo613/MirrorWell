@@ -169,6 +169,10 @@ Any runtime fetchable URL (fonts, images, scripts) is a defect — remove it, us
 
 - [ ] Write `docs/superpowers/plans/2026-07-20-frontend-integration.md` checkboxes as done; summarize in the PR/commit body: what was salvaged, what was killed, open items (stub swap when backend `SessionController` lands; EX_PUCKER pending decision; trends/backend aggregation ownership). Do not merge to `main` — leave the branch for review.
 
+## Demo-mode quick-setup contract (binding on the Session/Calibration wiring)
+
+The real `SessionController.start()` skips `getActiveBaseline`/`checkBaselineDrift`/`setBaseline` entirely in demo mode (demo has no persisted baseline by design — `StorageService` refuses demo writes). **The demo quick-setup flow MUST call `NormalizationLayer.setBaseline(inMemoryBaseline)` and `MetricEngine.setBaseline(inMemoryBaseline)` before the first REPS frame.** If it doesn't, `MetricEngine.compute` throws `NO_BASELINE` inside the frame loop, which the loop's try/catch reports as `FACE_LOST` — demo appears to run while detecting nothing. When wiring `SessionScreen` demo entry (stub or real), the quick-calibration step is not optional polish; it is the thing that makes demo work at all. Add a test asserting demo start without quick-setup surfaces an error state rather than a silent dead session.
+
 ## Backend handshake (owned by the backend track, NOT this plan)
 
 The backend track will deliver, behind the same `SessionApi` surface the stub implements: real `SessionController` (session state machine, event emitter, session assembly with `easeOffTriggered` `0|1` conversion), `CalibrationFlow` (`captureNeutral`, comfortable-max capture in activation units, noise-floor self-test), and `SafetyGate` enforcement. When those land, the only frontend change is deleting the stub import path. Anything in this plan that seems to require touching `src/sensing/`, `src/metrics/`, `src/data/`, or `scripts/` is out of scope — stop and report.
