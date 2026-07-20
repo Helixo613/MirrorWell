@@ -12,13 +12,25 @@
 
 ## Stream D disposition (2026-07-20) — FROZEN BARS UNCHANGED
 
-| Decision | **RUN AS WRITTEN** (MEEI remains primary material) |
+| Decision | **RUN AS WRITTEN** (MEEI remains primary material for formal PASS/FAIL) |
 |---|---|
 | Bars (Task 2) | **Frozen.** Do not restate, soften, or retune after seeing scores. |
-| Source substitution | **None** for the formal gate. YFP / Toronto NeuroFace / HF dumps are contingency or exploratory only (see D1 notes). |
-| Deferral | **Not deferred.** Acquisition is on the critical path and can start immediately (human). Tooling tasks may proceed without clips. |
-| Access correction | MEEI is **not** a public anonymous download as of 2026-07-20. Paper URL `https://www.sircharlesbell.com/standardset` returns **404**. SCBS markets the photo/video standard set under membership **Useful Downloads**. Stream C must reword MODEL_AND_DATA §3/§7 "open via SCBS" — request in `docs/superpowers/coordination/stream-d-requests.md`. Full evidence: `docs/superpowers/reports/external-evidence/2026-07-20-d1-dataset-survey.md`. |
-| Contingency | If MEEI remains unreachable after a documented good-faith attempt (membership and/or author contact), **do not invent a weaker PASS path**. Report `UNDERPOWERED` / blocked acquisition; optional YFP exploratory analysis is **not** a V2 PASS substitute under the frozen bars (no flaccid+synkinetic labels; speech not standardized smile). |
+| Source substitution | **None** for the formal gate. |
+| Deferral | **Not deferred.** Dual track: (1) human MEEI acquisition, (2) optional immediate exploratory run on free video. |
+| Access correction | MEEI is **not** a public anonymous download as of 2026-07-20. Paper URL `https://www.sircharlesbell.com/standardset` returns **404**. SCBS markets the set under membership **Useful Downloads**. Stream C must reword MODEL_AND_DATA §3/§7 — see `stream-d-requests.md`. |
+| Immediate free set | **HF `jasir/palsynet-data`** (~27 affected + ~20 control mp4, CC-BY-4.0) — downloadable **now**. Use only as **exploratory** (`isGateEvidence: false`). No flaccid/synkinetic labels → **not** a V2 PASS path. |
+| Contingency | If MEEI remains unreachable after documented good-faith attempt, report `UNDERPOWERED` / blocked acquisition. Palsynet/YFP/NeuroFace exploratory work must **not** be rewritten into a PASS. |
+| Consolidated note | `docs/superpowers/reports/external-evidence/2026-07-20-stream-d-consolidated.md` (learnings + ordered next steps). Survey: `2026-07-20-d1-dataset-survey.md`. |
+
+### Dual-track execution (post-D research)
+
+| Track | Material | Purpose | When |
+|---|---|---|---|
+| **Formal (Tasks 0, 2–5)** | MEEI via author email and/or SCBS membership | Frozen bars → PASS / FAIL / UNDERPOWERED | Human start now; expect ~1–4 weeks |
+| **Exploratory (optional, parallel)** | `jasir/palsynet-data` → gitignored `tests/fixtures/v2/palsynet/` | Prior-suppression SI dist, OK%, optional blinded ordering; dry-run tooling | **Implementable immediately** |
+| **Dry-run only** | Existing S01 masters | Task 4 regression (smile/smirk) before any external clips | Now |
+
+Product/backend merge does **not** wait on formal V2. Metric claims stay **PROVISIONAL** until formal gate or an honest UNDERPOWERED/FAIL pivot.
 
 ---
 
