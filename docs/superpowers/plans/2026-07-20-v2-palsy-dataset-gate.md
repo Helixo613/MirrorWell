@@ -2,16 +2,30 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans, task-by-task. This plan is evidence-generating research, not feature work: **bars are predeclared before any data is scored; nothing is tuned against results** (same discipline as the V1 kill-gate). Canonical spec: `docs/MODEL_AND_DATA.md` §2–§7 (V2 row) — this plan operationalizes it, it does not replace it.
 
-**Goal:** Answer the project's #1 open scientific question — does the blendshape model's canonical-face prior suppress genuine palsy asymmetry? — using the openly available MEEI Facial Palsy Standard Set (50 patients: 25 flaccid, 25 synkinetic), producing a PASS / FAIL-with-fallback verdict for gate **B7** plus ordering agreement.
+**Goal:** Answer the project's #1 open scientific question — does the blendshape model's canonical-face prior suppress genuine palsy asymmetry? — using the MEEI Facial Palsy Standard Set (target: flaccid + synkinetic patients with standardized movement video), producing a PASS / FAIL-with-fallback verdict for gate **B7** plus ordering agreement.
 
 **Architecture:** Reuse the entire V1 measurement stack unchanged (`tests/analysis/v1-runner.html` sampling core → per-frame blendshapes + quality states). New pieces are only: a clip manifest, a manifest-driven runner (`v2-runner.mjs`), a blinded human-ordering protocol, and an analysis script. Dataset clips are **evaluation-only, never committed, never redistributed, never shipped** (MODEL_AND_DATA §3 rule) — they live in a gitignored directory exactly like the S01 webcam masters.
 
 **Verdict semantics (from MODEL_AND_DATA §7):** PASS = B7 met + ordering agreement → blendshape-si-v1 validated on real palsy anatomy. FAIL → §2 fallback ladder (re-derived raw geometry → hybrid landmarks+optical-flow → narrowed product claims, longitudinal-trend claims dropped) — a documented pivot, not a project death.
 
+---
+
+## Stream D disposition (2026-07-20) — FROZEN BARS UNCHANGED
+
+| Decision | **RUN AS WRITTEN** (MEEI remains primary material) |
+|---|---|
+| Bars (Task 2) | **Frozen.** Do not restate, soften, or retune after seeing scores. |
+| Source substitution | **None** for the formal gate. YFP / Toronto NeuroFace / HF dumps are contingency or exploratory only (see D1 notes). |
+| Deferral | **Not deferred.** Acquisition is on the critical path and can start immediately (human). Tooling tasks may proceed without clips. |
+| Access correction | MEEI is **not** a public anonymous download as of 2026-07-20. Paper URL `https://www.sircharlesbell.com/standardset` returns **404**. SCBS markets the photo/video standard set under membership **Useful Downloads**. Stream C must reword MODEL_AND_DATA §3/§7 "open via SCBS" — request in `docs/superpowers/coordination/stream-d-requests.md`. Full evidence: `docs/superpowers/reports/external-evidence/2026-07-20-d1-dataset-survey.md`. |
+| Contingency | If MEEI remains unreachable after a documented good-faith attempt (membership and/or author contact), **do not invent a weaker PASS path**. Report `UNDERPOWERED` / blocked acquisition; optional YFP exploratory analysis is **not** a V2 PASS substitute under the frozen bars (no flaccid+synkinetic labels; speech not standardized smile). |
+
+---
+
 ## Global Constraints
 
 - No network calls in any app/runner code. Dataset download is a human research activity outside the app.
-- **License first:** confirm the Sir Charles Bell Society / MEEI license terms before the first clip lands on disk; evaluation-only use, no redistribution, no clips in git ever (`tests/fixtures/v2/` is gitignored in Task 1). If the license forbids even local derived metrics, stop and report.
+- **License first:** confirm the Sir Charles Bell Society / MEEI license terms (or author DUA) **before** the first clip lands on disk; evaluation-only use, no redistribution, no clips in git ever (`tests/fixtures/v2/` is gitignored in Task 1). If the license forbids even local derived metrics, stop and report.
 - No frame, video, or landmark persistence — per-clip **aggregates only** in reports (means, stds, orderings). Patient clips are more sensitive than S01's own face: report files contain clip IDs and numbers, never images.
 - Bars and analysis choices are frozen in Task 2 (docs amendment) **before** Task 4 ever runs on real clips. Changing a bar after seeing scores is a defect.
 - Human ordering (Task 3) is collected **before** any app scores exist for those clips (blinding). Log the collection date in the report.
@@ -19,9 +33,15 @@
 
 ### Task 0: Acquisition (human; can start immediately, weeks of lead time)
 
-- [ ] Request/download the **MEEI Facial Palsy Photo & Video Standard Set** via the Sir Charles Bell Society. Record: exact license text, access date, any usage constraints, in `tests/fixtures/v2/LICENSE_NOTES.md` (this file IS committed — it holds terms, not data).
-- [ ] Optional strengtheners if access allows: Toronto NeuroFace (request-based). Not required for the gate.
-- [ ] Deliver clips to `tests/fixtures/v2/meei/` (gitignored). Inventory: which patients have video (not just photos), which expressions are performed (the gate needs a smile/voluntary-movement clip per patient; photos alone cannot drive the video pipeline).
+- [ ] **Primary — MEEI Facial Palsy Photo & Video Standard Set** via the Sir Charles Bell Society and/or paper authors (Greene et al. 2020). **Do not assume anonymous open download.** Practical paths as of 2026-07-20:
+  1. SCBS membership → restricted **Useful Downloads** (site copy describes 65 photo sets incl. 10 normals; flaccid and synkinetic equally represented): `https://www.sircharlesbell.com/` / membership application `https://scbs.memberclicks.net/sir-charles-bell-society-membership-application`.
+  2. Contact corresponding authors / MEEI Facial Nerve Center if membership path fails.
+  3. Record: exact license text, access date, access method (membership vs author), any usage constraints, in `tests/fixtures/v2/LICENSE_NOTES.md` (this file IS committed — it holds terms, not data).
+- [ ] **Inventory requirement:** which patients have **video** (not just photos), which expressions are performed. The gate needs a **smile / voluntary-movement video** per scoreable patient; photos alone cannot drive the video pipeline. Deliver clips to `tests/fixtures/v2/meei/` (gitignored).
+- [ ] **Optional strengtheners** (not required for the formal gate; not substitutes):
+  - **YFP** (Hsu et al.): university-email request → password in 3–7 workdays; research-only, no redistribution. ~32 unconstrained speech videos / ~21–22 patients; **no flaccid/synkinetic labels** → exploratory only. GitHub: `AvLab-CV/YouTube-Facial-Palsy-Database`.
+  - **Toronto NeuroFace** (Bandini et al.): ALS/stroke orofacial videos + clinician scores; request page historically at UofT SLP datasets URL was **404** on 2026-07-20 — email lab authors. Strengthener only.
+  - **Do not** use Kaggle YFP forks as a license workaround for YFP's no-redistribute rule.
 
 ### Task 1: Manifest + ignore rules
 
