@@ -4,6 +4,7 @@ import { StorageService } from '../../src/data/storage.ts';
 import type { UserProfile } from '../../src/data/schema.ts';
 import { CalibrationFlow } from '../../src/session/calibration.ts';
 import type { LandmarkFrame } from '../../src/sensing/landmarks.ts';
+import { QualityMonitor } from '../../src/sensing/quality.ts';
 
 const capture = vi.hoisted(() => ({ subscribers: new Set<(video: HTMLVideoElement, timestampMs: number) => void>() }));
 const safety = vi.hoisted(() => ({ isAttested: vi.fn(), isDemoMode: vi.fn() }));
@@ -70,6 +71,47 @@ async function captureThree(result: Promise<unknown>, values: (LandmarkFrame | n
   await result;
 }
 
+async function captureThreeWithFrames(result: Promise<unknown>, windows: LandmarkFrame[][]): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  for (let attempt = 0; capture.subscribers.size === 0 && attempt < 10; attempt++) await Promise.resolve();
+  const durationMs = thresholds.calibration.captureSeconds * 1000;
+  for (let index = 0; index < windows.length; index++) {
+    const start = index * durationMs * 3;
+    for (let offset = 0; offset < windows[index]!.length; offset++) {
+      emit(windows[index]![offset]!, start + (offset === windows[index]!.length - 1 ? durationMs : offset));
+    }
+    await Promise.resolve();
+  }
+  await result;
+}
+
+async function captureOne(result: Promise<unknown>, framesForWindow: LandmarkFrame[]): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  for (let attempt = 0; capture.subscribers.size === 0 && attempt < 10; attempt++) await Promise.resolve();
+  const durationMs = thresholds.calibration.captureSeconds * 1000;
+  for (let index = 0; index < framesForWindow.length; index++) {
+    emit(framesForWindow[index]!, index === framesForWindow.length - 1 ? durationMs : index);
+  }
+  await result;
+}
+
+async function persistBaseline(): Promise<void> {
+  await captureThree(CalibrationFlow.captureNeutral(), [frame(), frame(), frame()]);
+  await captureThree(CalibrationFlow.captureComfortableMax('EX_SMILE'), [
+    frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }),
+    frame({ mouthSmileLeft: 0.7, mouthSmileRight: 0.7 }),
+    frame({ mouthSmileLeft: 0.9, mouthSmileRight: 0.9 }),
+  ]);
+  await captureOne(CalibrationFlow.runNoiseFloorSelfTest(), [
+    frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }),
+    frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }),
+  ]);
+}
+
 beforeEach(async () => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -89,6 +131,7 @@ beforeEach(async () => {
   await StorageService.deleteAllData();
   await StorageService.saveProfile(PROFILE);
   vi.spyOn(StorageService, 'getProfile').mockResolvedValue(PROFILE);
+  QualityMonitor.evaluate(video, null);
 });
 
 describe('CalibrationFlow', () => {
@@ -122,6 +165,17 @@ describe('CalibrationFlow', () => {
     await expect(result).resolves.toBe(0.7);
   });
 
+  it('uses the median of per-rep peaks, not all frame activations', async () => {
+    const result = CalibrationFlow.captureComfortableMax('EX_SMILE');
+    await captureThreeWithFrames(result, [
+      [frame({ mouthSmileLeft: 0.2, mouthSmileRight: 0.2 }), frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.2 })],
+      [frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.2 }), frame({ mouthSmileLeft: 0.7, mouthSmileRight: 0.2 })],
+      [frame({ mouthSmileLeft: 0.4, mouthSmileRight: 0.2 }), frame({ mouthSmileLeft: 0.9, mouthSmileRight: 0.2 })],
+    ]);
+
+    await expect(result).resolves.toBe(0.7);
+  });
+
   it('rejects EX_PUCKER without a blendshape pair', async () => {
     await expect(CalibrationFlow.captureComfortableMax('EX_PUCKER')).rejects.toMatchObject({
       code: 'VALIDATION_FAILED',
@@ -148,6 +202,62 @@ describe('CalibrationFlow', () => {
 
     await expect(noise).resolves.toBeCloseTo(0);
     expect((await StorageService.getActiveBaseline())?.noiseFloorSymmetry).toBeCloseTo(0);
+  });
+
+  it('persists the trailing-median SI noise of an alternating stream', async () => {
+    await captureThree(CalibrationFlow.captureNeutral(), [frame(), frame(), frame()]);
+    await captureThree(CalibrationFlow.captureComfortableMax('EX_SMILE'), [
+      frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }),
+      frame({ mouthSmileLeft: 0.7, mouthSmileRight: 0.7 }),
+      frame({ mouthSmileLeft: 0.9, mouthSmileRight: 0.9 }),
+    ]);
+    const noise = CalibrationFlow.runNoiseFloorSelfTest();
+    await captureOne(noise, [
+      frame({ mouthSmileLeft: 1, mouthSmileRight: 1 }),
+      frame({ mouthSmileLeft: 1, mouthSmileRight: 0.5 }),
+    ]);
+
+    // The 3 s sample gap resets MetricEngine's 250 ms smoothing window: SI values are 1 and 0.5,
+    // whose population std is 0.25.
+    await expect(noise).resolves.toBeCloseTo(0.25);
+  });
+
+  it('reports ok for identical drift frames and recalibrate for shifted features', async () => {
+    await persistBaseline();
+    vi.spyOn(StorageService, 'getActiveBaseline').mockResolvedValue((await StorageService.getActiveBaseline())!);
+    QualityMonitor.evaluate(video, null);
+    const ok = CalibrationFlow.checkBaselineDrift();
+    await captureOne(ok, [frame(), frame()]);
+    await expect(ok).resolves.toBe('ok');
+
+    const shifted = frame();
+    for (const index of [334, 105, 386, 374, 159, 145, 291, 61, 308, 78]) {
+      shifted.landmarks[index] = { ...shifted.landmarks[index]!, y: shifted.landmarks[index]!.y + 0.2 };
+    }
+    QualityMonitor.evaluate(video, null);
+    const drift = CalibrationFlow.checkBaselineDrift();
+    await captureOne(drift, [shifted, shifted]);
+    await expect(drift).resolves.toBe('recalibrate');
+  });
+
+  it('persists the actual neutral QUALITY_OK fraction', async () => {
+    const neutral = CalibrationFlow.captureNeutral();
+    await captureThreeWithFrames(neutral, [
+      [frame({}, 0), frame({}, 0), frame({}, 0), frame({}, 0)],
+      [frame({}, 0), frame({}, 0), frame({}, 0)],
+      [Object.assign(frame({}, 0), { facePresent: false }), frame({}, 0), frame({}, 0)],
+    ]);
+    await captureThree(CalibrationFlow.captureComfortableMax('EX_SMILE'), [
+      frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }),
+      frame({ mouthSmileLeft: 0.7, mouthSmileRight: 0.7 }),
+      frame({ mouthSmileLeft: 0.9, mouthSmileRight: 0.9 }),
+    ]);
+    await captureOne(CalibrationFlow.runNoiseFloorSelfTest(), [
+      frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }),
+      frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }),
+    ]);
+
+    expect((await StorageService.getActiveBaseline())?.qualityScore).toBeCloseTo(0.9);
   });
 
   it('reports NO_BASELINE for drift checks without an active baseline', async () => {

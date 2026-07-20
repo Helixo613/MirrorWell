@@ -16,6 +16,7 @@ type FrameSource = (onFrame: (video: HTMLVideoElement, lf: LandmarkFrame | null)
 type Capture = { total: number; approved: ApprovedFrame[] };
 
 let neutralStats: NeutralStats | null = null;
+let neutralQualityScore: number | null = null;
 let noiseFloorDisplacement = 0;
 let comfortableMax: Partial<Record<ExerciseId, number>> = {};
 let comfortableExercise: ExerciseId | null = null;
@@ -69,14 +70,12 @@ function captureFor(durationMs: number): Promise<Capture> {
   });
 }
 
-async function captureWindows(count: number): Promise<Capture> {
-  const all: Capture = { total: 0, approved: [] };
+async function captureWindows(count: number): Promise<Capture[]> {
+  const captures: Capture[] = [];
   for (let index = 0; index < count; index++) {
-    const window = await captureFor(thresholds.calibration.captureSeconds * 1000);
-    all.total += window.total;
-    all.approved.push(...window.approved);
+    captures.push(await captureFor(thresholds.calibration.captureSeconds * 1000));
   }
-  return all;
+  return captures;
 }
 
 function activation(frame: ApprovedFrame, exerciseId: ExerciseId): number {
@@ -106,7 +105,7 @@ async function makeBaseline(noiseFloorSymmetry: number): Promise<CalibrationBase
     capturedAt: new Date().toISOString(),
     neutralStats,
     comfortableMax,
-    qualityScore: thresholds.calibration.minQualityScore,
+    qualityScore: neutralQualityScore!,
     noiseFloorSymmetry,
     noiseFloorDisplacement,
     isActive: 1,
@@ -116,12 +115,14 @@ async function makeBaseline(noiseFloorSymmetry: number): Promise<CalibrationBase
 async function captureNeutral(): Promise<{ neutralStats: NeutralStats; qualityScore: number }> {
   await assertGated();
   const profile = await StorageService.getProfile();
-  const capture = await captureWindows(thresholds.calibration.neutralCaptures);
+  const captures = await captureWindows(thresholds.calibration.neutralCaptures);
+  const capture = { total: captures.reduce((sum, item) => sum + item.total, 0), approved: captures.flatMap((item) => item.approved) };
   const qualityScore = capture.total === 0 ? 0 : capture.approved.length / capture.total;
   if (qualityScore < thresholds.calibration.minQualityScore) {
     throw new MirrorWellError('QUALITY_TOO_LOW', 'neutral capture quality too low');
   }
   neutralStats = aggregateNeutral(capture.approved.map(measureAbsolute));
+  neutralQualityScore = qualityScore;
   noiseFloorDisplacement = standardDeviation(neutralActivations(capture.approved, profile?.assignedExercises ?? []));
   return { neutralStats, qualityScore };
 }
@@ -131,8 +132,11 @@ async function captureComfortableMax(exerciseId: ExerciseId): Promise<number> {
   if (!exercises[exerciseId]!.blendshapePair) {
     throw new MirrorWellError('VALIDATION_FAILED', `no blendshapePair for ${exerciseId}`);
   }
-  const capture = await captureWindows(thresholds.calibration.neutralCaptures);
-  const peaks = capture.approved.map((frame) => activation(frame, exerciseId));
+  const captures = await captureWindows(thresholds.calibration.neutralCaptures);
+  if (captures.some((capture) => capture.approved.length === 0)) {
+    throw new MirrorWellError('QUALITY_TOO_LOW', 'comfortable-max capture quality too low');
+  }
+  const peaks = captures.map((capture) => Math.max(...capture.approved.map((frame) => activation(frame, exerciseId))));
   if (peaks.length < thresholds.calibration.neutralCaptures) {
     throw new MirrorWellError('QUALITY_TOO_LOW', 'comfortable-max capture quality too low');
   }
