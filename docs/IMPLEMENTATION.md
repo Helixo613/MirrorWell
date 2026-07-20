@@ -24,7 +24,12 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 | 6 — Fixtures + NormalizationLayer + **V1 kill-gate** | **BLOCKED** | Revised face-local-vector geometry implemented (remediation B1–B7); awaiting V1 fixture capture + pass. Rejected scalar evidence: [`tests/analysis/rejected/README.md`](../tests/analysis/rejected/README.md). Runner + protocol: `scripts/run-v1.mjs`, [`docs/MODEL_AND_DATA.md`](MODEL_AND_DATA.md) §7. Dry-run candidate report (INVALID cells): [`tests/analysis/v1_S01_face-local-vector-v1_report.json`](../tests/analysis/v1_S01_face-local-vector-v1_report.json) | 2026-07-13 |
 | 7 — MetricEngine + RepDetector | PROVISIONAL | `src/metrics/`; commit `12b19a2` — implemented but depends on Task 6 acceptance | 2026-07-12 |
 | 8 — DebugHud | PROVISIONAL | `src/dev/`; commit `c3c1b57` — implemented but depends on Task 6 acceptance | 2026-07-12 |
-| 9+ — SafetyGate through release | NOT_STARTED | — | 2026-07-12 |
+| 9 — SafetyGate (+ OnboardingScreen, Demo Mode) | PROVISIONAL (backend half) | `src/session/safety.ts` + `tests/unit/safety.test.ts`; branch `backend-services-v1`. Screens pending `docs/superpowers/plans/2026-07-20-frontend-integration.md`; acceptance blocked on Task 6 like Tasks 7–8 | 2026-07-20 |
+| 10 — CalibrationFlow (+ CalibrationScreen) | PROVISIONAL (backend half) | `src/session/calibration.ts` + tests; frame-timestamp-driven capture windows (no wall-clock timers). Screens pending frontend plan | 2026-07-20 |
+| 11 — SessionController (+ SessionScreen, FeedbackRenderer) | PROVISIONAL (backend half) | `src/session/controller.ts`, `src/session/emitter.ts` + tests; closed 7-event surface, session assembly. Screens + FeedbackRenderer pending frontend plan | 2026-07-20 |
+| 14 — TrendsService (+ TrendsScreen, CaregiverScreen) | PROVISIONAL (backend half) | `src/data/trends.ts` + tests; baseline-scoped, noise-floor-aware. Screens pending frontend plan | 2026-07-20 |
+| 15 — ExportService (+ ExportScreen, SettingsScreen) | PROVISIONAL (backend half) | `src/data/export.ts`, `src/data/settings.ts` + tests + `tests/schemas/export.schema.json`. Screens pending frontend plan | 2026-07-20 |
+| 12, 13, 16–18 — remaining | NOT_STARTED | — | 2026-07-12 |
 
 ---
 
