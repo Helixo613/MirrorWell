@@ -1,7 +1,8 @@
 // src/data/export.ts — ExportService (docs/API.md §13, ARCHITECTURE.md §13, SAFETY §8).
 // Assembles a printable/exportable summary from TrendsService + StorageService only — no
-// Dexie import here. ATTESTED-gated: demo mode is NOT an export path (SafetyGate.isAttested()
-// is the only gate checked; SafetyGate.isDemoMode() has no bearing on this service).
+// Dexie import here. ATTESTED-gated AND demo-blocked: an already-attested user can call
+// enterDemoMode(), so both SafetyGate.isDemoMode() and SafetyGate.isAttested() are checked
+// (API §17 gate matrix; rationale at the check itself in generateSummary).
 import type { EndReason, ExerciseId } from './schema.ts';
 import { StorageService } from './storage.ts';
 import { TrendsService } from './trends.ts';
@@ -138,7 +139,10 @@ async function generateSummary(range: { from: string; to: string }): Promise<{ j
   }
   const activeBaseline = await StorageService.getActiveBaseline();
   if (!activeBaseline) {
-    throw new MirrorWellError('VALIDATION_FAILED', 'no active calibration baseline available for export');
+    // NO_BASELINE, not VALIDATION_FAILED: reachable by an attested user who has not yet
+    // calibrated (§17 gates ExportScreen on attestation alone), and it is the canonical code
+    // for this exact state elsewhere (SessionController.start, NormalizationLayer.setBaseline).
+    throw new MirrorWellError('NO_BASELINE', 'no active calibration baseline available for export');
   }
 
   const storageRange = toStorageRange(range);

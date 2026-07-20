@@ -466,7 +466,7 @@ JSON validates against `tests/schemas/export.schema.json`. **Full example:**
 }
 ```
 
-`noiseFloorSymmetry` in the export is sourced from the **active `calibration_baseline`** row (not `app_settings`). The HTML blob is a printable one-page A4 summary with the same content and the same non-diagnostic header. **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (bad range)
+`noiseFloorSymmetry` in the export is sourced from the **active `calibration_baseline`** row (not `app_settings`). The HTML blob is a printable one-page A4 summary carrying the same non-diagnostic header and the same underlying data (trend series, adherence, sessions); it may present that data more compactly than the JSON to stay one page. **Errors:** `NOT_ATTESTED` (unattested **or** in Demo Mode — an attested user can `enterDemoMode()`, and export is ❌ in DEMO per §17), `NO_BASELINE` (attested but never calibrated — reachable, since §17 gates `ExportScreen` on attestation alone), `DB_UNAVAILABLE`, `VALIDATION_FAILED` (bad range, or no profile row)
 
 > **Rules:** download only — no Web Share API, no clipboard auto-copy; no fields beyond the schema; `nonDiagnosticNotice` is mandatory and its text lives in `strings.ts` (audited, SAFETY §8).
 ---

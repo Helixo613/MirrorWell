@@ -255,6 +255,16 @@ describe('ExportService.generateSummary — gating and validation errors', () =>
     await expect(ExportService.generateSummary(RANGE)).rejects.toMatchObject({ code: 'NOT_ATTESTED' });
   });
 
+  it('rejects an attested-but-uncalibrated profile with NO_BASELINE, not VALIDATION_FAILED', async () => {
+    // Reachable in a real flow: API.md §17 gates ExportScreen on attestation alone, so a user
+    // who attested but has not calibrated yet can reach export. NO_BASELINE is the canonical
+    // code for this state (SessionController.start, NormalizationLayer.setBaseline).
+    await StorageService.saveProfile(makeProfile());
+    vi.spyOn(SafetyGate, 'isAttested').mockResolvedValue(true);
+
+    await expect(ExportService.generateSummary(RANGE)).rejects.toMatchObject({ code: 'NO_BASELINE' });
+  });
+
   it('rejects a bad range (from > to) with VALIDATION_FAILED', async () => {
     await seedAttestedExportFixture();
 
