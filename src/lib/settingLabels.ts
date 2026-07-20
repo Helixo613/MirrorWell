@@ -1,5 +1,5 @@
 import { strings } from '@/config/strings';
-import type { AppSettings } from '@/types/app';
+import type { AppSettings } from '@/data/schema';
 
 export type EditableAppSettingKey = Exclude<
   keyof AppSettings,

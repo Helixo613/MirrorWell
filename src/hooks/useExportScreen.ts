@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { compareYmd, formatYmd, isValidYmd } from '@/lib/dateRange';
 import { downloadBlob } from '@/lib/downloadBlob';
 import { strings } from '@/config/strings';
+import { useAppState } from '@/context/useAppState';
 import { ExportService } from '@/data/export';
 import { isMirrorWellError } from '@/data/errors';
 import { SettingsService } from '@/data/settings';
-import type { AppSettings } from '@/types/app';
-import { DEFAULT_SETTINGS } from '@/types/app';
+import type { AppSettings } from '@/data/schema';
 import type {
   ExportDateRange,
   ExportScreenStatus,
@@ -37,8 +37,9 @@ export interface UseExportScreenResult {
 }
 
 export function useExportScreen(): UseExportScreenResult {
+  const { settings: appSettings } = useAppState();
   const [status, setStatus] = useState<ExportScreenStatus>('loading');
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<AppSettings>(appSettings);
   const [range, setRange] = useState<ExportDateRange>(() =>
     ExportService.defaultRange(),
   );

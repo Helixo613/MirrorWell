@@ -1,8 +1,8 @@
 import { StorageService } from '@/data/storage';
 import { SettingsService } from '@/data/settings';
 import { SafetyGate } from '@/session/safety';
-import type { CalibrationBaseline, UserProfile } from '@/data/schema';
-import type { AppSettings, GateState } from '@/types/app';
+import type { AppSettings, CalibrationBaseline, UserProfile } from '@/data/schema';
+import type { GateState } from '@/types/app';
 
 export async function hydrateAppState(): Promise<{
   profile: UserProfile | null;

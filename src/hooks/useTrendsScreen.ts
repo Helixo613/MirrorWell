@@ -2,14 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EXERCISES } from '@/config/exercises';
 import { thresholds } from '@/config/thresholds';
 import { strings } from '@/config/strings';
+import { useAppState } from '@/context/useAppState';
 import { isMirrorWellError } from '@/data/errors';
 import { SettingsService } from '@/data/settings';
 import { TrendsService } from '@/data/trends';
-import type { ExerciseId } from '@/data/schema';
+import type { AppSettings, ExerciseId } from '@/data/schema';
 import { buildTrendCaption, steadyPeriodLabels } from '@/lib/trendCaption';
 import { formatPeriodLabel } from '@/lib/trendPeriods';
-import type { AppSettings } from '@/types/app';
-import { DEFAULT_SETTINGS } from '@/types/app';
 import type {
   TrendGranularity,
   TrendSeries,
@@ -45,15 +44,16 @@ export interface UseTrendsScreenResult {
 export function useTrendsScreen(
   assignedExercises: ExerciseId[],
 ): UseTrendsScreenResult {
+  const { settings: appSettings } = useAppState();
   const [status, setStatus] = useState<TrendsScreenStatus>('loading');
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<AppSettings>(appSettings);
   const [settingsReady, setSettingsReady] = useState(false);
   const [selectedExerciseId, setSelectedExerciseId] =
     useState<ExerciseId | null>(assignedExercises[0] ?? null);
   const [granularity, setGranularityState] = useState<TrendGranularity>(
-    DEFAULT_SETTINGS.trendGranularity,
+    appSettings.trendGranularity,
   );
   const [viewMode, setViewMode] = useState<TrendsViewMode>('chart');
   const [series, setSeries] = useState<TrendSeries | null>(null);

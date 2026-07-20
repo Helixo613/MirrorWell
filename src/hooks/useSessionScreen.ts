@@ -13,7 +13,7 @@ import {
   pulseEaseOffHaptic,
   pulseRepHaptic,
 } from '@/session/cues';
-import type { QualityState } from '@/types/sensing';
+import type { QualityState } from '@/sensing/quality';
 import type { SessionPhase } from '@/types/session';
 import { useAppState } from '@/context/useAppState';
 import { useCameraPipeline } from '@/hooks/useCameraPipeline';

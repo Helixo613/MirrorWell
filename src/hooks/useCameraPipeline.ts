@@ -3,7 +3,7 @@ import { CaptureService } from '@/sensing/capture';
 import { LandmarkEngine } from '@/sensing/landmarks';
 import { QualityMonitor } from '@/sensing/quality';
 import { isMirrorWellError } from '@/data/errors';
-import type { QualityState } from '@/types/sensing';
+import type { QualityState } from '@/sensing/quality';
 
 export type CameraPipelineStatus =
   | 'idle'

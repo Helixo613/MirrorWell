@@ -8,8 +8,7 @@ import { SettingsService } from '@/data/settings';
 import { StorageService } from '@/data/storage';
 import { isHapticsAvailable } from '@/lib/deviceCapabilities';
 import { settingLabelFor, type EditableAppSettingKey } from '@/lib/settingLabels';
-import type { AppSettings } from '@/types/app';
-import { DEFAULT_SETTINGS } from '@/types/app';
+import type { AppSettings } from '@/data/schema';
 import type { DeleteDataPhase, SettingsScreenStatus } from '@/types/settingsScreen';
 import { SETTINGS_HEADING_ID } from '@/types/settingsScreen';
 
@@ -37,6 +36,7 @@ export interface UseSettingsScreenResult {
 export function useSettingsScreen(): UseSettingsScreenResult {
   const navigate = useNavigate();
   const {
+    settings: appSettings,
     setProfile,
     setActiveBaseline,
     setSettings: setGlobalSettings,
@@ -44,7 +44,7 @@ export function useSettingsScreen(): UseSettingsScreenResult {
   } = useAppState();
 
   const [status, setStatus] = useState<SettingsScreenStatus>('loading');
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<AppSettings>(appSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [deletePhase, setDeletePhase] = useState<DeleteDataPhase>('idle');
@@ -166,7 +166,6 @@ export function useSettingsScreen(): UseSettingsScreenResult {
       await StorageService.deleteAllData();
       setProfile(null);
       setActiveBaseline(null);
-      setGlobalSettings(DEFAULT_SETTINGS);
       setGate('UNATTESTED');
       navigate('/onboarding', { replace: true });
     } catch (error) {

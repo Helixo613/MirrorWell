@@ -1,6 +1,6 @@
 import { strings } from '@/config/strings';
 import { cn } from '@/lib/utils';
-import type { QualityState } from '@/types/sensing';
+import type { QualityState } from '@/sensing/quality';
 
 export interface QualityBannerProps {
   quality: QualityState;

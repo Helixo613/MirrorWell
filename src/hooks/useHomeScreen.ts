@@ -6,11 +6,11 @@ import {
   sessionRangeFromProfileCreated,
 } from '@/lib/sessionRange';
 import { strings } from '@/config/strings';
+import { useAppState } from '@/context/useAppState';
 import { isMirrorWellError } from '@/data/errors';
 import { StorageService } from '@/data/storage';
 import { SettingsService } from '@/data/settings';
-import type { AppSettings } from '@/types/app';
-import { DEFAULT_SETTINGS } from '@/types/app';
+import type { AppSettings } from '@/data/schema';
 
 export type HomeScreenStatus = 'loading' | 'error' | 'empty' | 'ready';
 
@@ -29,8 +29,9 @@ export function useHomeScreen(
   profileCreatedAt: string,
   assignedExerciseCount: number,
 ): HomeScreenData {
+  const { settings: appSettings } = useAppState();
   const [status, setStatus] = useState<HomeScreenStatus>('loading');
-  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [settings, setSettings] = useState<AppSettings>(appSettings);
   const [showRecalibration, setShowRecalibration] = useState(false);
   const [lastSessionSummary, setLastSessionSummary] = useState<string | null>(
     null,
@@ -119,7 +120,7 @@ export function useHomeScreen(
 
   return {
     status,
-    settings: settings ?? DEFAULT_SETTINGS,
+    settings,
     showRecalibration,
     lastSessionSummary,
     isFirstRun,

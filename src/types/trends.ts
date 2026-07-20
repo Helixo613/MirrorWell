@@ -1,8 +1,9 @@
 import type { ExerciseId } from '@/data/schema';
 
+// UI display shapes. TrendsService becomes their backend owner in Task 3.
 export interface TrendPoint {
   periodStart: string;
-  meanSymmetryIndex: number | null;
+  meanSymmetryIndex: number;
   sampleCount: number;
   aboveNoiseFloor: boolean;
 }
@@ -20,7 +21,6 @@ export interface Adherence {
 }
 
 export type TrendGranularity = TrendSeries['granularity'];
-
 export type TrendsViewMode = 'chart' | 'table';
 
 export const TRENDS_HEADING_ID = 'trends-heading';

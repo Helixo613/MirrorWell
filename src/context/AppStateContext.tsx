@@ -9,10 +9,8 @@ import {
 import { hydrateAppState } from '@/context/hydrateAppState';
 import { SafetyGate } from '@/session/safety';
 import { strings } from '@/config/strings';
-import type { CalibrationBaseline, UserProfile } from '@/data/schema';
+import type { AppSettings, CalibrationBaseline, UserProfile } from '@/data/schema';
 import {
-  DEFAULT_SETTINGS,
-  type AppSettings,
   type AppStateContextValue,
   type GateState,
 } from '@/types/app';
@@ -23,7 +21,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [profile, setProfileState] = useState<UserProfile | null>(null);
   const [activeBaseline, setActiveBaselineState] =
     useState<CalibrationBaseline | null>(null);
-  const [settings, setSettingsState] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettingsState] = useState<AppSettings | null>(null);
   const [gate, setGateState] = useState<GateState>('UNATTESTED');
   const [hydrated, setHydrated] = useState(false);
 
@@ -60,8 +58,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setSettingsState(next);
   }, []);
 
-  const value = useMemo<AppStateContextValue>(
-    () => ({
+  const value = useMemo<AppStateContextValue | null>(() => {
+    if (!settings) {
+      return null;
+    }
+    return {
       profile,
       activeBaseline,
       settings,
@@ -70,8 +71,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setGate,
       setActiveBaseline,
       setSettings,
-    }),
-    [
+    };
+  }, [
       profile,
       activeBaseline,
       settings,
@@ -80,10 +81,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       setGate,
       setActiveBaseline,
       setSettings,
-    ],
-  );
+  ]);
 
-  if (!hydrated) {
+  if (!hydrated || !value) {
     return (
       <main className="flex min-h-dvh items-center justify-center text-muted-foreground">
         {strings.app.loading}
