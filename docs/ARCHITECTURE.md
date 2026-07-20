@@ -43,7 +43,18 @@ Cadence: `CaptureService → LandmarkEngine → QualityMonitor → Normalization
 |---|---|---|
 | Language | TypeScript 5.9.3 | Typed contracts between tracks; AI-agent friendly. |
 | UI | React 18.3.1 + react-dom 18.3.1 | Mature, free, componentized screens. |
+| UI primitives | `@radix-ui/react-checkbox` 1.3.2 | UI primitives (offline, no network at runtime). |
+| UI primitives | `@radix-ui/react-label` 2.1.7 | UI primitives (offline, no network at runtime). |
+| UI primitives | `@radix-ui/react-slot` 1.2.3 | UI primitives (offline, no network at runtime). |
+| UI utilities | `class-variance-authority` 0.7.1 | UI primitives (offline, no network at runtime). |
+| UI utilities | `clsx` 2.1.1 | UI primitives (offline, no network at runtime). |
+| UI icons | `lucide-react` 0.525.0 | UI primitives (offline, no network at runtime). |
+| Routing | `react-router-dom` 6.30.1 | Routing per FRONTEND.md route guards (offline, no network at runtime). |
+| UI utilities | `tailwind-merge` 3.3.1 | UI primitives (offline, no network at runtime). |
 | Build/PWA | Vite 5.4.21 + `@vitejs/plugin-react` 5.2.0 + `vite-plugin-pwa` 1.3.0 | Fast builds; offline-first install on both target platforms. |
+| Build-time styling | `tailwindcss` 3.4.17 | Build-time styling (offline, no network at runtime). |
+| Build-time styling | `autoprefixer` 10.4.21 | Build-time styling (offline, no network at runtime). |
+| Build-time styling | `postcss` 8.5.6 | Build-time styling (offline, no network at runtime). |
 | Face landmarks | `@mediapipe/tasks-vision` FaceLandmarker 0.10.35 | Pretrained 478-point mesh + facial transformation matrix, on-device WASM, GPU delegate (backend not asserted; WebGPU unverified for 0.10.35), free. |
 | Storage | Dexie 4.4.4 (IndexedDB) | Typed offline persistence for numeric metrics only. |
 | Charts | Recharts 2.15.4 | Declarative trends chart. |
