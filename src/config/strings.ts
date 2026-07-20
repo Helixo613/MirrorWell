@@ -3,6 +3,13 @@
  * docs/SAFETY_AND_COMPLIANCE.md §8). Populated task by task — never inline UI copy.
  */
 export const strings = Object.freeze({
+  // ExportService (docs/API.md §13). Exact wording verified against SAFETY_AND_COMPLIANCE.md
+  // §8 (approved register only: symmetry/movement/calibration; no diagnosis, severity grade,
+  // or recovery prediction) — copied verbatim from API.md §13's full example payload.
+  exportSummary: Object.freeze({
+    nonDiagnosticNotice:
+      "MirrorWell is an exercise-support tool. This summary describes exercise activity and movement symmetry relative to the user's own calibration. It is not a clinical assessment, score, or measure of recovery.",
+  }),
   v1Harness: Object.freeze({
     title: 'Live V1 protocol harness',
     intro:

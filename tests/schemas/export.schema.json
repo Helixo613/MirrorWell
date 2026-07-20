@@ -1,0 +1,212 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mirrorwell.local/schemas/export.schema.json",
+  "title": "MirrorWellExportSummary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "nonDiagnosticNotice",
+    "range",
+    "profile",
+    "noiseFloorSymmetry",
+    "adherence",
+    "trends",
+    "sessions"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "nonDiagnosticNotice": {
+      "type": "string",
+      "minLength": 1
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "to": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["affectedSide", "assignedExercises"],
+      "properties": {
+        "affectedSide": {
+          "type": "string",
+          "enum": ["left", "right", "unknown"]
+        },
+        "assignedExercises": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "EX_BROW_RAISE",
+              "EX_EYE_CLOSURE",
+              "EX_SMILE",
+              "EX_PUCKER"
+            ]
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "noiseFloorSymmetry": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "adherence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sessionsPerWeek", "completionRate"],
+      "properties": {
+        "sessionsPerWeek": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "completionRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "trends": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["exerciseId", "granularity", "baselineId", "points"],
+        "properties": {
+          "exerciseId": {
+            "type": "string",
+            "enum": [
+              "EX_BROW_RAISE",
+              "EX_EYE_CLOSURE",
+              "EX_SMILE",
+              "EX_PUCKER"
+            ]
+          },
+          "granularity": {
+            "type": "string",
+            "enum": ["weekly", "monthly"]
+          },
+          "baselineId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "periodStart",
+                "meanSymmetryIndex",
+                "sampleCount",
+                "aboveNoiseFloor"
+              ],
+              "properties": {
+                "periodStart": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "meanSymmetryIndex": {
+                  "type": ["number", "null"]
+                },
+                "sampleCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "aboveNoiseFloor": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sessions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sessionId",
+          "startedAt",
+          "endedAt",
+          "endReason",
+          "results"
+        ],
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 1 },
+          "startedAt": { "type": "string", "format": "date-time" },
+          "endedAt": { "type": "string", "format": "date-time" },
+          "endReason": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "user_stopped",
+              "red_flag_stopped",
+              "quality_abandoned"
+            ]
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "resultId",
+                "exerciseId",
+                "repsCompleted",
+                "meanSymmetryIndex",
+                "meanEffortIndex",
+                "easeOffCount",
+                "lowQualityFramePct"
+              ],
+              "properties": {
+                "resultId": { "type": "string", "minLength": 1 },
+                "exerciseId": {
+                  "type": "string",
+                  "enum": [
+                    "EX_BROW_RAISE",
+                    "EX_EYE_CLOSURE",
+                    "EX_SMILE",
+                    "EX_PUCKER"
+                  ]
+                },
+                "repsCompleted": { "type": "integer", "minimum": 0 },
+                "meanSymmetryIndex": { "type": ["number", "null"] },
+                "meanEffortIndex": { "type": ["number", "null"] },
+                "easeOffCount": { "type": "integer", "minimum": 0 },
+                "lowQualityFramePct": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
