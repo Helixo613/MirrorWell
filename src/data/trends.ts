@@ -87,7 +87,13 @@ async function getTrend(exerciseId: ExerciseId, granularity: 'weekly' | 'monthly
     const { sum, count } = buckets.get(key)!;
     const meanSymmetryIndex = sum / count;
     // Sub-noise-floor period-over-period change reads as "steady" (never up/down), so the
-    // comparison is against the magnitude of the change, not its sign (API §12).
+    // comparison is against the magnitude of the change, not its sign (API §12). Equality
+    // (delta === noiseFloorSymmetry) is NOT sub-noise-floor: spec says false only when change
+    // is strictly < the floor, so >= reads as above. Note: `previousMean` is the last bucket
+    // that had a sample, not necessarily the immediately preceding calendar period — an empty
+    // middle bucket (no qualifying session that period) is skipped entirely rather than
+    // inserted as a zero, so the comparison deliberately spans across the gap to the nearest
+    // non-empty period on either side.
     const aboveNoiseFloor =
       previousMean === null
         ? true // no prior period to compare against
@@ -106,6 +112,8 @@ async function getAdherence(range: { from: string; to: string }): Promise<Adhere
 
   const total = sessions.length;
   const completed = sessions.filter((s) => s.endReason === 'completed').length;
+  // No sessions in range: report 0 rather than NaN (0/0) — an empty range has no adherence to
+  // measure, and a UI-bound percentage should never render NaN.
   const completionRate = total === 0 ? 0 : completed / total;
 
   const sessionsPerWeek: number[] = [];

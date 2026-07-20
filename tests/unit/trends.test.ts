@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../../src/data/schema';
 import { StorageService } from '../../src/data/storage';
 import { TrendsService } from '../../src/data/trends';
+import { MirrorWellError } from '../../src/data/errors';
 import type { CalibrationBaseline, EndReason, ExerciseId, UserProfile } from '../../src/data/schema';
 import type { SessionRecordInput } from '../../src/data/storage';
 
@@ -87,6 +88,7 @@ function makeSession(opts: {
 beforeEach(async () => {
   await Promise.all(db.tables.map((t) => t.clear()));
   sessionCounter = 0;
+  vi.restoreAllMocks();
 });
 
 describe('TrendsService.getTrend', () => {
@@ -161,6 +163,36 @@ describe('TrendsService.getTrend', () => {
     expect(series.points[1].aboveNoiseFloor).toBe(false);
     expect(series.points[2].aboveNoiseFloor).toBe(true);
     expect(series.points[3].aboveNoiseFloor).toBe(true); // decline, magnitude above noise floor
+  });
+
+  it('marks aboveNoiseFloor true when the period-over-period delta equals noiseFloorSymmetry exactly', async () => {
+    // 0.75 - 0.5 === 0.25 is exact in IEEE 754 (all three are exact binary fractions), so this
+    // hits the boundary bit-for-bit rather than approximately. Spec: false only when change is
+    // strictly < the floor, so an exact-equal delta must read true (>=, not >).
+    await StorageService.saveProfile(makeProfile());
+    await StorageService.saveBaseline(makeBaseline({ noiseFloorSymmetry: 0.25 }));
+
+    await StorageService.saveSession(
+      makeSession({ baselineId: BASELINE_ID_NEW, startedAt: '2026-01-06T12:00:00.000Z', meanSymmetryIndex: 0.5 }),
+    );
+    await StorageService.saveSession(
+      makeSession({ baselineId: BASELINE_ID_NEW, startedAt: '2026-02-06T12:00:00.000Z', meanSymmetryIndex: 0.75 }),
+    );
+
+    const series = await TrendsService.getTrend('EX_SMILE', 'monthly');
+
+    expect(series.points[1].meanSymmetryIndex - series.points[0].meanSymmetryIndex).toBe(0.25);
+    expect(series.points[1].aboveNoiseFloor).toBe(true);
+  });
+
+  it('propagates DB_UNAVAILABLE from StorageService.getActiveBaseline', async () => {
+    vi.spyOn(StorageService, 'getActiveBaseline').mockRejectedValueOnce(
+      new MirrorWellError('DB_UNAVAILABLE', 'simulated outage'),
+    );
+
+    await expect(TrendsService.getTrend('EX_SMILE', 'monthly')).rejects.toMatchObject({
+      code: 'DB_UNAVAILABLE',
+    });
   });
 
   it('reads the noise floor from calibration_baseline, never app_settings (which has no such field)', async () => {
@@ -276,5 +308,15 @@ describe('TrendsService.getAdherence', () => {
     await expect(
       TrendsService.getAdherence({ from: 'not-a-date', to: '2026-01-01T00:00:00.000Z' }),
     ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('propagates DB_UNAVAILABLE from StorageService.getSessions', async () => {
+    vi.spyOn(StorageService, 'getSessions').mockRejectedValueOnce(
+      new MirrorWellError('DB_UNAVAILABLE', 'simulated outage'),
+    );
+
+    await expect(
+      TrendsService.getAdherence({ from: '2026-01-01T00:00:00.000Z', to: '2026-01-31T00:00:00.000Z' }),
+    ).rejects.toMatchObject({ code: 'DB_UNAVAILABLE' });
   });
 });
