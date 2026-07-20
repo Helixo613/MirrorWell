@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppState } from '@/context/useAppState';
-import type { SessionRecordFull } from '@/data/schema';
+import type { SessionRecordFull } from '@/data/storage';
 import {
   SUMMARY_HEADING_ID,
   type SummaryLocationState,
