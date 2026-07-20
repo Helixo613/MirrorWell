@@ -15,6 +15,7 @@
     "seed:dev": "node --experimental-strip-types scripts/seed-dev.ts",
     "inspect-db": "node --experimental-strip-types scripts/inspect-db.ts",
     "check:docs": "node scripts/check-docs.mjs",
+    "typecheck": "tsc -b",
     "postinstall": "node --experimental-strip-types scripts/copy-wasm.ts && node --experimental-strip-types scripts/verify-model.ts"
   },
   "dependencies": {

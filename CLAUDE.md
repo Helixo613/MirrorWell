@@ -33,6 +33,7 @@ These were verified against primary sources during doc review. Standard tutorial
 4. **`detectForVideo` takes the `HTMLVideoElement` directly.** Do not construct WebCodecs `VideoFrame` objects (Firefox compatibility risk; also unnecessary).
 5. **Firefox 143+ on Windows supports web-app install; older Firefox runs as offline-capable tab; Firefox remains a hard test gate either way.** Do not drop Firefox testing. Do not "correct" this back to "Firefox cannot install PWAs" — that was the pre-143 fact and is stale.
 6. **IndexedDB cannot index booleans.** Indexed flags are `0 | 1` in the schema (`isActive`, `easeOffTriggered`); `RepEvent.easeOffTriggered` is `boolean` on the event surface and `SessionController` converts during session assembly.
+7. **`npx tsc --noEmit` type-checks NOTHING in this repo — never use it.** The root `tsconfig.json` is a solution-style file (`"files": []` + project references), so `--noEmit` runs against an empty file set and always reports success. The real check is **`npm run typecheck`** (`tsc -b`), which is also what `npm run build` runs. A task is not verified until `tsc -b` is green; three real type errors survived a session's worth of "tsc clean" claims because of this.
 
 ## Workflow per task
 
