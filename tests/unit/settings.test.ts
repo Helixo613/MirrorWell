@@ -24,6 +24,13 @@ describe('SettingsService', () => {
     expect(await SettingsService.get()).toEqual(DEFAULT_SETTINGS);
   });
 
+  it('does not share unset defaults between get calls', async () => {
+    const settings = await SettingsService.get();
+    settings.highContrast = true;
+
+    expect(await SettingsService.get()).toEqual(DEFAULT_SETTINGS);
+  });
+
   it('merges a partial update and persists it', async () => {
     const updated = await SettingsService.update({ caregiverViewEnabled: true, textScale: 1.5 });
 
@@ -35,6 +42,12 @@ describe('SettingsService', () => {
     await expect(
       SettingsService.update({ unknown: true } as unknown as Partial<AppSettings>),
     ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('rejects settingsId updates', async () => {
+    await expect(SettingsService.update({ settingsId: 'other' } as any)).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+    });
   });
 
   it('rejects textScale above 2.0', async () => {

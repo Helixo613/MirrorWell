@@ -15,7 +15,6 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 const SETTINGS_KEYS = new Set<keyof AppSettings>([
-  'settingsId',
   'highContrast',
   'textScale',
   'hapticsEnabled',
@@ -35,17 +34,18 @@ function assertSettings(settings: AppSettings): void {
   }
 }
 
-export const SettingsService = {
-  async get(): Promise<AppSettings> {
-    return (await StorageService.getSettings()) ?? DEFAULT_SETTINGS;
-  },
+async function get(): Promise<AppSettings> {
+  return (await StorageService.getSettings()) ?? { ...DEFAULT_SETTINGS };
+}
 
+export const SettingsService = {
+  get,
   async update(partial: Partial<AppSettings>): Promise<AppSettings> {
     if (Object.keys(partial).some((key) => !SETTINGS_KEYS.has(key as keyof AppSettings))) {
       throw new MirrorWellError('VALIDATION_FAILED', 'unknown settings key');
     }
 
-    const settings = { ...(await this.get()), ...partial };
+    const settings = { ...(await get()), ...partial };
     assertSettings(settings);
     await StorageService.saveSettings(settings);
     return settings;
