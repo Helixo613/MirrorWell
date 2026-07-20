@@ -37,11 +37,17 @@ type FrameSource = (onFrame: (video: HTMLVideoElement, timestampMs: number, lf: 
 
 const frameSource: FrameSource = (onFrame) => {
   const unsubscribe = CaptureService.onFrame((video, timestampMs) => {
+    // Narrow: only LandmarkEngine.detect is caught (INFERENCE_FAILED -> null). onFrame is
+    // called exactly once, outside the try, so a downstream pipeline exception (e.g.
+    // NO_BASELINE from compute) propagates instead of being swallowed and re-dispatched as a
+    // second, phantom FACE_LOST frame (double frame counting).
+    let lf: LandmarkFrame | null;
     try {
-      onFrame(video, timestampMs, LandmarkEngine.detect(video, timestampMs));
+      lf = LandmarkEngine.detect(video, timestampMs);
     } catch {
-      onFrame(video, timestampMs, null);
+      lf = null;
     }
+    onFrame(video, timestampMs, lf);
   });
   return () => {
     unsubscribe();
@@ -56,6 +62,10 @@ let exercisesInSession: ExerciseId[] = [];
 let index = 0;
 let state: State | null = null;
 let stopping = false;
+// Set by the first call to stop() (public or auto-triggered) and never cleared until the
+// next start() — every subsequent call (concurrent or after completion) returns this SAME
+// promise instead of re-running assembly/persistence (idempotent stop()).
+let stopPromise: Promise<SessionRecordFull> | null = null;
 let stopFrameSource: (() => void) | null = null;
 let sessionId = '';
 let profileId = '';
@@ -220,8 +230,9 @@ function handleRepsFrame(quality: QualityResult, timestampMs: number): void {
 
 function endRestPeriod(): void {
   if (index === exercisesInSession.length - 1) {
+    if (stopPromise) return;
     stopping = true;
-    void stopSession('completed');
+    stopPromise = stopSession('completed');
     return;
   }
   index += 1;
@@ -297,6 +308,10 @@ export const SessionController = {
     } else {
       const baseline = await StorageService.getActiveBaseline();
       if (!baseline) throw new MirrorWellError('NO_BASELINE', 'no active baseline');
+      const profile = await StorageService.getProfile();
+      if (!profile || exerciseIds.some((id) => !profile.assignedExercises.includes(id))) {
+        throw new MirrorWellError('VALIDATION_FAILED', 'exercise not assigned to profile');
+      }
       if ((await CalibrationFlow.checkBaselineDrift()) === 'recalibrate') {
         throw new MirrorWellError('RECALIBRATION_REQUIRED', 'recalibration required');
       }
@@ -322,6 +337,7 @@ export const SessionController = {
     results = [];
     lastQualityState = null;
     stopping = false;
+    stopPromise = null;
     state = 'DEMO';
     resetExerciseAccumulators();
     emitState();
@@ -345,8 +361,10 @@ export const SessionController = {
   },
 
   async stop(reason: EndReason): Promise<SessionRecordFull> {
+    if (stopPromise) return stopPromise;
     stopping = true;
-    return stopSession(reason);
+    stopPromise = stopSession(reason);
+    return stopPromise;
   },
 
   on<E extends keyof Events>(event: E, callback: (payload: Events[E]) => void): () => void {

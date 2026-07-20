@@ -222,6 +222,13 @@ describe('SessionController preconditions', () => {
     await expect(SessionController.start(['EX_SMILE'])).rejects.toMatchObject({ code: 'RECALIBRATION_REQUIRED' });
   });
 
+  it('rejects an exercise not assigned to the profile', async () => {
+    await seedAttested(['EX_SMILE']); // profile.assignedExercises = ['EX_SMILE'] only
+    await expect(SessionController.start(['EX_SMILE', 'EX_BROW_RAISE'])).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+    });
+  });
+
   it('skips the storage baseline/drift checks in demo mode', async () => {
     vi.spyOn(SafetyGate, 'isAttested').mockResolvedValue(false);
     vi.spyOn(SafetyGate, 'isDemoMode').mockReturnValue(true);
@@ -420,6 +427,25 @@ describe('SessionController hot path', () => {
     expect(seenQuality).toEqual(['FACE_LOST']);
   });
 
+  it('propagates a downstream pipeline error instead of swallowing it as a phantom FACE_LOST frame', async () => {
+    await seedAttested(['EX_SMILE']);
+    await SessionController.start(['EX_SMILE']);
+    SessionController.advance();
+    const seenQuality: string[] = [];
+    on('qualityUpdate', (p) => seenQuality.push(p.state));
+
+    // detect() succeeds (a real OK frame) but the downstream pipeline (MetricEngine.compute)
+    // throws. The narrowed frameSource try/catch only wraps LandmarkEngine.detect, so this
+    // must propagate out of the frame callback rather than being caught and re-dispatched as
+    // a FACE_LOST frame.
+    vi.spyOn(MetricEngine, 'compute').mockImplementationOnce(() => {
+      throw new MirrorWellError('NO_BASELINE', 'forced test failure');
+    });
+
+    expect(() => emitOk({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }, 0)).toThrow();
+    expect(seenQuality).not.toContain('FACE_LOST');
+  });
+
   it('extendRest(seconds) lengthens the REST deadline; no API exists to shorten it', async () => {
     await seedAttested(['EX_EYE_CLOSURE', 'EX_SMILE']);
     await SessionController.start(['EX_EYE_CLOSURE', 'EX_SMILE']);
@@ -503,5 +529,32 @@ describe('SessionController session assembly', () => {
     expect(await db.session_record.count()).toBe(0);
     expect(await db.exercise_result.count()).toBe(0);
     expect(await db.rep_metric.count()).toBe(0);
+  });
+
+  it('stop() is idempotent: two concurrent calls persist once and resolve to the same record', async () => {
+    await seedAttested(['EX_SMILE']);
+    await SessionController.start(['EX_SMILE']);
+    SessionController.advance();
+    driveOkRepFrames(exercises.EX_SMILE.blendshapePair!, 0, 7, 0);
+
+    const ended = vi.fn();
+    on('sessionEnded', ended);
+    const saveSpy = vi.spyOn(StorageService, 'saveSession');
+
+    const [a, b] = await Promise.all([
+      SessionController.stop('user_stopped'),
+      SessionController.stop('red_flag_stopped'), // different reason -> must be ignored
+    ]);
+
+    expect(a).toBe(b);
+    expect(a.endReason).toBe('user_stopped');
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(ended).toHaveBeenCalledTimes(1);
+
+    // A third call after full completion must not re-persist or re-emit either.
+    const c = await SessionController.stop('quality_abandoned');
+    expect(c).toBe(a);
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(ended).toHaveBeenCalledTimes(1);
   });
 });

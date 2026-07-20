@@ -23,11 +23,16 @@ let comfortableExercise: ExerciseId | null = null;
 
 const frameSource: FrameSource = (onFrame) => {
   const unsubscribe = CaptureService.onFrame((video, timestampMs) => {
+    // Narrow: only LandmarkEngine.detect is caught (INFERENCE_FAILED -> null). onFrame is
+    // called exactly once, outside the try, so a downstream exception isn't swallowed and
+    // re-dispatched as a second, phantom null frame (mirrors src/session/controller.ts).
+    let lf: LandmarkFrame | null;
     try {
-      onFrame(video, LandmarkEngine.detect(video, timestampMs));
+      lf = LandmarkEngine.detect(video, timestampMs);
     } catch {
-      onFrame(video, null);
+      lf = null;
     }
+    onFrame(video, lf);
   });
   return () => {
     unsubscribe();
