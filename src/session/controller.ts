@@ -1,53 +1,355 @@
+// src/session/controller.ts — the session state machine, event surface, and session
+// assembly (docs/BACKEND.md §1.6). Contracts: docs/API.md §10. The frontend's primary
+// integration surface; event shapes are the closed table in ARCHITECTURE §12 — no others.
 import type { EndReason, ExerciseId } from '../data/schema.ts';
 import { MirrorWellError } from '../data/errors.ts';
-import { StorageService } from '../data/storage.ts';
+import { StorageService, type ExerciseResultInput, type RepMetricInput, type SessionRecordFull, type SessionRecordInput } from '../data/storage.ts';
 import { exercises } from '../config/exercises.ts';
-import { MetricEngine } from '../metrics/metrics.ts';
+import { thresholds } from '../config/thresholds.ts';
+import { MetricEngine, type MetricSample } from '../metrics/metrics.ts';
 import { NormalizationLayer } from '../metrics/normalize.ts';
-import { RepDetector } from '../metrics/reps.ts';
+import { RepDetector, type RepEvent } from '../metrics/reps.ts';
 import { CalibrationFlow } from './calibration.ts';
 import { Emitter } from './emitter.ts';
 import { SafetyGate } from './safety.ts';
+import { CaptureService } from '../sensing/capture.ts';
+import { LandmarkEngine, type LandmarkFrame } from '../sensing/landmarks.ts';
+import { QualityMonitor, type QualityResult, type QualityState } from '../sensing/quality.ts';
 
 type State = 'DEMO' | 'REPS' | 'REST';
-type Events = { stateChanged: { exerciseId: ExerciseId; state: State }; sessionEnded: { record: any } };
+
+type Events = {
+  stateChanged: { exerciseId: ExerciseId; state: State };
+  metricUpdate: { sample: MetricSample };
+  qualityUpdate: { state: QualityState };
+  repCompleted: { event: RepEvent };
+  easeOff: { active: boolean };
+  sessionEnded: { record: SessionRecordFull };
+  qualityOfferStop: { visible: boolean };
+};
+
+// Local frame-source seam mirroring src/session/calibration.ts's frameSource, extended to
+// carry the raw CaptureService timestamp alongside `lf` — calibration.ts's 2-arg shape loses
+// the timestamp on the INFERENCE_FAILED catch branch, but SessionController's REST deadline,
+// offer-stop window, and metricUpdate throttle all derive from frame timestamps (fixed design
+// decision) and must keep ticking through a non-OK/inference-failed frame too.
+type FrameSource = (onFrame: (video: HTMLVideoElement, timestampMs: number, lf: LandmarkFrame | null) => void) => () => void;
+
+const frameSource: FrameSource = (onFrame) => {
+  const unsubscribe = CaptureService.onFrame((video, timestampMs) => {
+    try {
+      onFrame(video, timestampMs, LandmarkEngine.detect(video, timestampMs));
+    } catch {
+      onFrame(video, timestampMs, null);
+    }
+  });
+  return () => {
+    unsubscribe();
+    CaptureService.stop();
+  };
+};
+
 const emitter = new Emitter<Events>();
+
+// --- Session-scope state (reset in start()) ---
 let exercisesInSession: ExerciseId[] = [];
 let index = 0;
 let state: State | null = null;
+let stopping = false;
+let stopFrameSource: (() => void) | null = null;
+let sessionId = '';
+let profileId = '';
+let baselineId = '';
+let startedAt = '';
+let results: ExerciseResultInput[] = [];
+let lastQualityState: QualityState | null = null;
 
-function emitState(): void { emitter.emit('stateChanged', { exerciseId: exercisesInSession[index]!, state: state! }); }
-function reset(): void { MetricEngine.reset(); RepDetector.reset(); }
+// --- Per-exercise-scope state (reset in resetExerciseAccumulators()) ---
+let currentReps: RepMetricInput[] = [];
+let exerciseFrameTotal = 0;
+let exerciseFrameOk = 0;
+let symmetrySum = 0;
+let symmetryCount = 0;
+let effortSum = 0;
+let effortCount = 0;
+let easeOffCount = 0;
+let easeOffWasActive = false;
+let repFrameTotal = 0;
+let repFrameOk = 0;
+let nonOkStreakStartMs: number | null = null;
+let offerStopVisible = false;
+let lastMetricEmitMs: number | null = null;
+
+// --- REST-scope state ---
+let restDeadlineMs = 0;
+
+function emitState(): void {
+  emitter.emit('stateChanged', { exerciseId: exercisesInSession[index]!, state: state! });
+}
+
+function resetExerciseAccumulators(): void {
+  currentReps = [];
+  exerciseFrameTotal = 0;
+  exerciseFrameOk = 0;
+  symmetrySum = 0;
+  symmetryCount = 0;
+  effortSum = 0;
+  effortCount = 0;
+  easeOffCount = 0;
+  easeOffWasActive = false;
+  repFrameTotal = 0;
+  repFrameOk = 0;
+  nonOkStreakStartMs = null;
+  offerStopVisible = false;
+  lastMetricEmitMs = null;
+  MetricEngine.reset();
+  RepDetector.reset();
+}
+
+function finalizeCurrentExerciseResult(): ExerciseResultInput {
+  const exerciseId = exercisesInSession[index]!;
+  return {
+    resultId: crypto.randomUUID(),
+    exerciseId,
+    repsCompleted: currentReps.length,
+    meanSymmetryIndex: symmetryCount === 0 ? null : symmetrySum / symmetryCount,
+    meanEffortIndex: effortCount === 0 ? null : effortSum / effortCount,
+    easeOffCount,
+    lowQualityFramePct: exerciseFrameTotal === 0 ? 0 : 1 - exerciseFrameOk / exerciseFrameTotal,
+    reps: currentReps,
+  };
+}
+
+function maybeEmitMetricUpdate(sample: MetricSample): void {
+  if (lastMetricEmitMs !== null && sample.timestampMs - lastMetricEmitMs < thresholds.session.metricEventMinIntervalMs) {
+    return;
+  }
+  lastMetricEmitMs = sample.timestampMs;
+  emitter.emit('metricUpdate', { sample });
+}
+
+function maybeEmitEaseOff(): void {
+  const active = MetricEngine.isEaseOffActive();
+  if (active === easeOffWasActive) return;
+  easeOffWasActive = active;
+  if (active) easeOffCount += 1;
+  emitter.emit('easeOff', { active });
+}
+
+// Offer-stop tracking is scoped to REPS only (BACKEND §1.6: "quality problems persisting
+// > 30 s in REPS"). ≥30 s continuous non-OK → visible: true; first OK frame after → false.
+function handleOfferStop(isOk: boolean, timestampMs: number): void {
+  if (isOk) {
+    if (offerStopVisible) {
+      offerStopVisible = false;
+      emitter.emit('qualityOfferStop', { visible: false });
+    }
+    nonOkStreakStartMs = null;
+    return;
+  }
+  if (nonOkStreakStartMs === null) {
+    nonOkStreakStartMs = timestampMs;
+  } else if (!offerStopVisible && timestampMs - nonOkStreakStartMs >= thresholds.session.qualityProblemOfferStopMs) {
+    offerStopVisible = true;
+    emitter.emit('qualityOfferStop', { visible: true });
+  }
+}
+
+function handleRepsFrame(quality: QualityResult, timestampMs: number): void {
+  const exerciseId = exercisesInSession[index]!;
+  const wasRepActive = RepDetector.getState() === 'active';
+
+  exerciseFrameTotal += 1;
+  if (wasRepActive) repFrameTotal += 1;
+
+  if (quality.state !== 'QUALITY_OK') {
+    handleOfferStop(false, timestampMs);
+    return;
+  }
+  exerciseFrameOk += 1;
+  if (wasRepActive) repFrameOk += 1;
+  handleOfferStop(true, timestampMs);
+
+  const nf = NormalizationLayer.normalize(quality.frame);
+  const sample = MetricEngine.compute(nf, exerciseId);
+
+  if (sample.symmetryIndex !== null) {
+    symmetrySum += sample.symmetryIndex;
+    symmetryCount += 1;
+  }
+  effortSum += sample.effortIndex;
+  effortCount += 1;
+
+  maybeEmitMetricUpdate(sample);
+  maybeEmitEaseOff();
+
+  const event = RepDetector.feed(sample);
+  const isRepActiveNow = RepDetector.getState() === 'active';
+
+  if (!wasRepActive && isRepActiveNow) {
+    // Rep just started on this (OK) frame — this frame wasn't tallied above (wasRepActive
+    // was false), so it seeds the new span's counters.
+    repFrameTotal = 1;
+    repFrameOk = 1;
+  } else if (wasRepActive && !isRepActiveNow) {
+    // Rep span just closed (event emitted, or silently discarded inside RepDetector for
+    // being too short / a gap-abort with no restart — either way nothing to count).
+    const okFraction = repFrameTotal === 0 ? 1 : repFrameOk / repFrameTotal;
+    if (event && okFraction >= thresholds.session.repMinOkFraction) {
+      currentReps.push({
+        repId: crypto.randomUUID(),
+        repIndex: event.repIndex,
+        peakSymmetryIndex: event.peakSymmetryIndex,
+        peakEffortIndex: event.peakEffortIndex,
+        durationMs: event.durationMs,
+        easeOffTriggered: event.easeOffTriggered ? 1 : 0,
+      });
+      emitter.emit('repCompleted', { event });
+    }
+    repFrameTotal = 0;
+    repFrameOk = 0;
+  }
+
+  if (currentReps.length >= exercises[exerciseId]!.repsPerSet) {
+    results.push(finalizeCurrentExerciseResult());
+    state = 'REST';
+    restDeadlineMs = timestampMs + exercises[exerciseId]!.restSeconds * 1000;
+    emitState();
+  }
+}
+
+function endRestPeriod(): void {
+  if (index === exercisesInSession.length - 1) {
+    stopping = true;
+    void stopSession('completed');
+    return;
+  }
+  index += 1;
+  state = 'DEMO';
+  resetExerciseAccumulators();
+  emitState();
+}
+
+function handleFrame(video: HTMLVideoElement, timestampMs: number, lf: LandmarkFrame | null): void {
+  if (!state || stopping) return;
+
+  const quality = QualityMonitor.evaluate(video, lf);
+  if (quality.state !== lastQualityState) {
+    lastQualityState = quality.state;
+    emitter.emit('qualityUpdate', { state: quality.state });
+  }
+
+  if (state === 'REST') {
+    if (timestampMs >= restDeadlineMs) endRestPeriod();
+    return;
+  }
+  if (state === 'DEMO') return;
+  handleRepsFrame(quality, timestampMs);
+}
+
+async function stopSession(reason: EndReason): Promise<SessionRecordFull> {
+  if (stopFrameSource) {
+    stopFrameSource();
+    stopFrameSource = null;
+  }
+  if (state === 'REPS') {
+    results.push(finalizeCurrentExerciseResult());
+  }
+
+  const record: SessionRecordInput = {
+    sessionId,
+    profileId,
+    baselineId,
+    startedAt,
+    endedAt: new Date().toISOString(),
+    endReason: reason,
+    results,
+  };
+
+  state = null;
+  stopping = false;
+
+  if (!SafetyGate.isDemoMode()) {
+    await StorageService.saveSession(record);
+  }
+  emitter.emit('sessionEnded', { record });
+  return record;
+}
 
 export const SessionController = {
   async start(exerciseIds: ExerciseId[]): Promise<void> {
-    if (!(await SafetyGate.isAttested()) && !SafetyGate.isDemoMode()) throw new MirrorWellError('NOT_ATTESTED', 'attestation required');
-    if (exerciseIds.length === 0 || exerciseIds.some((id) => !exercises[id]?.blendshapePair)) throw new MirrorWellError('VALIDATION_FAILED', 'invalid exercises');
-    const baseline = await StorageService.getActiveBaseline();
-    if (!baseline) throw new MirrorWellError('NO_BASELINE', 'no active baseline');
-    if (await CalibrationFlow.checkBaselineDrift() === 'recalibrate') throw new MirrorWellError('RECALIBRATION_REQUIRED', 'recalibration required');
-    NormalizationLayer.setBaseline(baseline);
-    MetricEngine.setBaseline(baseline);
+    if (!(await SafetyGate.isAttested()) && !SafetyGate.isDemoMode()) {
+      throw new MirrorWellError('NOT_ATTESTED', 'attestation required');
+    }
+    if (exerciseIds.length === 0 || exerciseIds.some((id) => !exercises[id]?.blendshapePair)) {
+      throw new MirrorWellError('VALIDATION_FAILED', 'invalid exercises');
+    }
+
+    if (SafetyGate.isDemoMode()) {
+      // Demo's ephemeral quick-calibration (ARCHITECTURE §11) runs as an inline overlay in
+      // SessionScreen (a later plan) and calls NormalizationLayer/MetricEngine.setBaseline
+      // directly before start() — there is no persisted baseline to fetch, and no active-
+      // baseline check applies. profileId/baselineId here are session-local placeholders:
+      // the record is returned/emitted only, never persisted (assertDemoWritable backstop),
+      // so no canonical identifier or storage row is invented.
+      profileId = crypto.randomUUID();
+      baselineId = crypto.randomUUID();
+    } else {
+      const baseline = await StorageService.getActiveBaseline();
+      if (!baseline) throw new MirrorWellError('NO_BASELINE', 'no active baseline');
+      if ((await CalibrationFlow.checkBaselineDrift()) === 'recalibrate') {
+        throw new MirrorWellError('RECALIBRATION_REQUIRED', 'recalibration required');
+      }
+      NormalizationLayer.setBaseline(baseline);
+      MetricEngine.setBaseline(baseline);
+      profileId = baseline.profileId;
+      baselineId = baseline.baselineId;
+    }
+
+    stopFrameSource = frameSource(handleFrame);
+    try {
+      await CaptureService.start();
+    } catch (err) {
+      stopFrameSource();
+      stopFrameSource = null;
+      throw err;
+    }
+
     exercisesInSession = exerciseIds;
     index = 0;
+    sessionId = crypto.randomUUID();
+    startedAt = new Date().toISOString();
+    results = [];
+    lastQualityState = null;
+    stopping = false;
     state = 'DEMO';
-    reset();
+    resetExerciseAccumulators();
     emitState();
   },
+
   advance(): void {
     if (!state) return;
-    if (state === 'DEMO') { state = 'REPS'; emitState(); return; }
+    if (state === 'DEMO') {
+      state = 'REPS';
+      emitState();
+      return;
+    }
     if (state === 'REST') {
-      if (index === exercisesInSession.length - 1) { void this.stop('completed'); return; }
-      index++; state = 'DEMO'; reset(); emitState();
+      endRestPeriod();
     }
   },
-  extendRest(_seconds: number): void {},
-  async stop(reason: EndReason): Promise<any> {
-    const record = { sessionId: crypto.randomUUID(), endReason: reason, results: [] };
-    state = null;
-    emitter.emit('sessionEnded', { record });
-    return record;
+
+  extendRest(seconds: number): void {
+    if (state !== 'REST') return;
+    restDeadlineMs += seconds * 1000;
   },
-  on<E extends keyof Events>(event: E, callback: (payload: Events[E]) => void): () => void { return emitter.on(event, callback); },
+
+  async stop(reason: EndReason): Promise<SessionRecordFull> {
+    stopping = true;
+    return stopSession(reason);
+  },
+
+  on<E extends keyof Events>(event: E, callback: (payload: Events[E]) => void): () => void {
+    return emitter.on(event, callback);
+  },
 };
