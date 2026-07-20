@@ -28,6 +28,12 @@ afterEach(() => {
 });
 
 describe('SafetyGate', () => {
+  it('returns false without a profile when the consent version is unset', async () => {
+    Reflect.deleteProperty(import.meta.env, 'VITE_CONSENT_VERSION');
+
+    expect(await SafetyGate.isAttested()).toBe(false);
+  });
+
   it('re-gates attestation when the consent version changes', async () => {
     expect(await SafetyGate.isAttested()).toBe(false);
 
@@ -47,6 +53,16 @@ describe('SafetyGate', () => {
       attestedAt: expect.any(String),
       consentVersion: '1',
     });
+  });
+
+  it('rejects attestation without a profile', async () => {
+    await expect(SafetyGate.recordAttestation('1')).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('rejects an attestation version that differs from the current version', async () => {
+    await StorageService.saveProfile(makeProfile());
+
+    await expect(SafetyGate.recordAttestation('2')).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
   });
 
   it('keeps demo mode in module memory only', async () => {

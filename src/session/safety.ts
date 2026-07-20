@@ -1,4 +1,5 @@
 import { MirrorWellError } from '../data/errors.ts';
+// Deliberate lazy-reference cycle: StorageService imports SafetyGate; do not hoist either call to module scope.
 import { StorageService } from '../data/storage.ts';
 
 let demoMode = false;
@@ -6,7 +7,7 @@ let demoMode = false;
 export const SafetyGate = {
   async isAttested(): Promise<boolean> {
     const profile = await StorageService.getProfile();
-    return profile?.attestedAt !== null && profile?.consentVersion === import.meta.env.VITE_CONSENT_VERSION;
+    return profile != null && profile.attestedAt !== null && profile.consentVersion === import.meta.env.VITE_CONSENT_VERSION;
   },
 
   async recordAttestation(consentVersion: string): Promise<void> {
@@ -17,7 +18,6 @@ export const SafetyGate = {
     if (!profile) {
       throw new MirrorWellError('VALIDATION_FAILED', 'profile must exist before attestation');
     }
-    demoMode = false;
     await StorageService.saveProfile({ ...profile, attestedAt: new Date().toISOString(), consentVersion });
   },
 
