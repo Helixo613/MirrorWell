@@ -1,3 +1,8 @@
+> **⚠️ SUPERSEDED (2026-07-20)** by `2026-07-20-parallel-completion.md`, which re-cuts this
+> same content for parallel multi-stream execution (Gate 0 → Streams A/B/C/D) and is verified
+> against the `backend-services-v1` branch. Do not follow the sequencing below; it is retained
+> for history only. All agents work from the parallel-completion plan.
+
 # Backend Completion Plan (no new recordings)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development — fresh implementer subagent per task, independent reviewer per task, fix rounds until approved, controller commits. That loop caught a session-hanging deadlock and two silent metric-corruption bugs that a green 203-test suite did not. Execute tasks strictly in order; do not start a task whose predecessor is not approved. Self-contained; other required reading: repo `CLAUDE.md`, `docs/ARCHITECTURE.md` §12/§13, `docs/API.md`, `docs/BACKEND.md`.
