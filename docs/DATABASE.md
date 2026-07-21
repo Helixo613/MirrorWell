@@ -125,6 +125,7 @@ export const db = new MirrorWellDB();
 |---|---|
 | `user_profile.assignedExercises` | Non-empty array; every entry a valid `ExerciseId`; no duplicates |
 | `user_profile.affectedSide` | One of `left`/`right`/`unknown` |
+| `user_profile.profileId` | At most one local profile row. `saveProfile` updates the existing row only when `profileId` matches; a different `profileId` is rejected with `VALIDATION_FAILED`. |
 | `calibration_baseline.qualityScore` | `[0..1]`; **`< 0.7` rejected with `QUALITY_TOO_LOW` (not VALIDATION_FAILED)** |
 | `calibration_baseline.neutralStats` | All four `RegionId` keys present; each side has `{u, v}`; **all components finite only — NOT required `> 0`** (signed face-local projections are legitimately negative) |
 | `calibration_baseline.comfortableMax` | Keys ⊆ profile's `assignedExercises`; values finite `> 0` |
@@ -136,6 +137,7 @@ export const db = new MirrorWellDB();
 | `exercise_result.*Index` fields | `meanSymmetryIndex` null or `[0..1]`; `lowQualityFramePct` `[0..1]`; counts non-negative integers |
 | `rep_metric.durationMs` | Integer `> 0` |
 | `app_settings.textScale` | `[1.0..2.0]` |
+| Demo read access to `app_settings` | Allowed as API §17's non-sensitive static-config exception so Demo Mode retains accessibility settings; writes remain blocked. |
 | All string PKs/FKs | Non-empty uuid v4 format |
 
 ## 4. Per-table ownership & retention
