@@ -125,7 +125,11 @@ function compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample {
 
   const config = exercises[exerciseId]!;
   // No validated per-side blendshape pair (EX_PUCKER open decision, MODEL_AND_DATA §7):
-  // loud stop, never a silent fallback to another measurement source.
+  // loud stop, never a silent fallback to another measurement source. This guard is an
+  // intentional invariant, NOT dead code (A-REQ-1): EX_PUCKER stays a valid ExerciseId but is
+  // not assignable in v1, so this is the last line of defence for a caller that bypasses the
+  // assignable filter. Removing it — or replacing it with a fallback — is a defect
+  // (CLAUDE.md "loud stop, never a silent fallback"); covered by metrics.test.ts.
   const pair = config.blendshapePair;
   if (!pair) {
     throw new MirrorWellError('VALIDATION_FAILED', `no blendshapePair for ${exerciseId}`);

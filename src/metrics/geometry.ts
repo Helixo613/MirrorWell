@@ -1,5 +1,15 @@
-// src/metrics/geometry.ts — face-local 2D vector geometry kernel (ARCHITECTURE §7).
+// src/metrics/geometry.ts — face-local 2D vector geometry kernel (math: ARCHITECTURE §7).
 // Baseline-free measurement: measureAbsolute accepts only ApprovedFrame (type barrier).
+//
+// SCOPE — geometry vs SI (do NOT conflate; MODEL_AND_DATA §7):
+//   This kernel is NOT the production symmetry-index source. Its only consumers are the
+//   calibration path — CalibrationFlow.captureNeutral (neutral-baseline capture) and
+//   checkBaselineDrift (baseline-drift detection) in src/session/calibration.ts — plus the
+//   neutral-subtraction step inside NormalizationLayer.normalize (src/metrics/normalize.ts).
+//   symmetryIndex / effortIndex are computed from per-side blendshape pairs in
+//   src/metrics/metrics.ts (candidate blendshape-si-v1); the geometry SI family was rejected
+//   at V1 B3 (evidence: tests/analysis/rejected/). Keep these two paths distinct.
+//
 // Exact mesh indices recorded below against the canonical MediaPipe 468-point face-mesh map
 // (FaceLandmarker 478-point output shares this base; 468–477 are iris-only and unused).
 
