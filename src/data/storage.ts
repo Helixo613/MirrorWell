@@ -60,6 +60,12 @@ function assertDemoWritable(): void {
   }
 }
 
+function assertDemoReadable(): void {
+  if (SafetyGate.isDemoMode()) {
+    throw new MirrorWellError('VALIDATION_FAILED', 'demo mode cannot read saved data');
+  }
+}
+
 async function withDbErrors<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
@@ -182,6 +188,7 @@ function assertSessionRecordInput(s: SessionRecordInput): void {
 export const StorageService = {
   async getProfile(): Promise<UserProfile | null> {
     return withDbErrors(async () => {
+      assertDemoReadable();
       const row = await db.user_profile.toCollection().first();
       return row ?? null;
     });
@@ -197,6 +204,7 @@ export const StorageService = {
 
   async getSettings(): Promise<AppSettings | null> {
     return withDbErrors(async () => {
+      assertDemoReadable();
       const row = await db.app_settings.get('singleton');
       return row ?? null;
     });
@@ -245,6 +253,7 @@ export const StorageService = {
 
   async getActiveBaseline(): Promise<CalibrationBaseline | null> {
     return withDbErrors(async () => {
+      assertDemoReadable();
       const row = await db.calibration_baseline.where('isActive').equals(1).first();
       return row ?? null;
     });
@@ -313,6 +322,7 @@ export const StorageService = {
 
   async getSessions(range: { from: string; to: string }): Promise<SessionRecordFull[]> {
     return withDbErrors(async () => {
+      assertDemoReadable();
       if (!isValidIsoUtc(range.from) || !isValidIsoUtc(range.to)) {
         throw new MirrorWellError('VALIDATION_FAILED', 'malformed date in range');
       }
@@ -343,6 +353,7 @@ export const StorageService = {
 
   async deleteAllData(): Promise<void> {
     return withDbErrors(async () => {
+      assertDemoWritable();
       // Dexie's typed transaction() overloads cap out below 6 explicit tables — pass
       // db.tables (all six) directly instead.
       await db.transaction('rw', db.tables, async () => {

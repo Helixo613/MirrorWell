@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../../src/data/schema';
 import { MirrorWellError } from '../../src/data/errors';
 import { StorageService } from '../../src/data/storage';
+import { SafetyGate } from '../../src/session/safety';
+import { seedDev } from '../../src/dev/seed';
 import type { CalibrationBaseline, UserProfile } from '../../src/data/schema';
 import type { SessionRecordInput } from '../../src/data/storage';
 
@@ -224,6 +226,68 @@ describe('StorageService.deleteAllData', () => {
     for (const table of db.tables) {
       expect(await table.count()).toBe(0);
     }
+  });
+});
+
+describe('Demo Mode isolation', () => {
+  it('blocks every sensitive read and leaves seeded history unchanged when writes are attempted', async () => {
+    import.meta.env.VITE_CONSENT_VERSION = '1';
+    await seedDev();
+    const profile = (await StorageService.getProfile())!;
+    const baseline = (await StorageService.getActiveBaseline())!;
+    const sessions = await StorageService.getSessions({
+      from: '1970-01-01T00:00:00.000Z',
+      to: new Date().toISOString(),
+    });
+    const countsBefore = await Promise.all(db.tables.map((table) => table.count()));
+
+    SafetyGate.enterDemoMode();
+
+    for (const read of [
+      () => StorageService.getProfile(),
+      () => StorageService.getSettings(),
+      () => StorageService.getActiveBaseline(),
+      () => StorageService.getSessions({ from: '1970-01-01T00:00:00.000Z', to: new Date().toISOString() }),
+    ]) {
+      await expect(read()).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    }
+
+    for (const write of [
+      () => StorageService.saveProfile(profile),
+      () => StorageService.saveSettings({
+        settingsId: 'singleton',
+        highContrast: false,
+        textScale: 1,
+        hapticsEnabled: true,
+        audioCuesEnabled: true,
+        reducedFacePreview: false,
+        trendGranularity: 'monthly',
+        showAffectedSideMarker: true,
+        caregiverViewEnabled: false,
+      }),
+      () => StorageService.saveBaseline(baseline),
+      () => StorageService.saveSession({ ...sessions[0]!, results: sessions[0]!.results.map((result) => ({ ...result, reps: result.reps })) }),
+      () => StorageService.deleteAllData(),
+    ]) {
+      await expect(write()).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    }
+
+    expect(await Promise.all(db.tables.map((table) => table.count()))).toEqual(countsBefore);
+
+    await SafetyGate.recordAttestation('1');
+  });
+
+  it('treats demo as unattested, then recordAttestation exits demo and persists attestation', async () => {
+    import.meta.env.VITE_CONSENT_VERSION = '1';
+    await StorageService.saveProfile(makeProfile());
+    SafetyGate.enterDemoMode();
+
+    await expect(SafetyGate.isAttested()).resolves.toBe(false);
+    await expect(SafetyGate.recordAttestation('1')).resolves.toBeUndefined();
+
+    expect(SafetyGate.isDemoMode()).toBe(false);
+    await expect(SafetyGate.isAttested()).resolves.toBe(true);
+    expect(await StorageService.getProfile()).toMatchObject({ consentVersion: '1' });
   });
 });
 
