@@ -228,6 +228,21 @@ export function LiveDemoView() {
     setCameraOn(false);
     setQuality(null);
     clearReadings();
+    // Invariant: after stopCamera, the component is in the same state as a fresh mount — every
+    // ref and piece of state a subsequent Start->Capture-neutral sequence could read must be
+    // cleared here, not just the ones the current step happens to be using. Left stale, the next
+    // window's first frame computes its elapsed time against a timestamp carried over from the
+    // previous camera session (windowStartRef), against sample buffers from the previous attempt,
+    // or against a baseline nothing rebuilt yet — none of that is safe to leave lying around.
+    setStep('idle');
+    windowStartRef.current = null;
+    neutralAbsRef.current = [];
+    holdActsRef.current = [];
+    holdSiRef.current = [];
+    setNoiseFloor(0);
+    setError(null);
+    NormalizationLayer.clearBaseline();
+    MetricEngine.reset();
   }
 
   function beginNeutral(): void {
