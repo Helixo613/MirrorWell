@@ -9,6 +9,20 @@ export const strings = Object.freeze({
   exportSummary: Object.freeze({
     nonDiagnosticNotice:
       "MirrorWell is an exercise-support tool. This summary describes exercise activity and movement symmetry relative to the user's own calibration. It is not a clinical assessment, score, or measure of recovery.",
+    // Printable HTML export copy (export.ts renderHtml) — relocated verbatim, §8-audited.
+    htmlTitle: 'MirrorWell summary',
+    rangeLabel: 'Range:',
+    affectedSideLabel: 'Affected side:',
+    noiseFloorLabel: 'Noise floor (symmetry):',
+    completionRateLabel: 'Completion rate:',
+    trendsHeading: 'Trends',
+    exerciseColumn: 'Exercise',
+    granularityColumn: 'Granularity',
+    pointsColumn: 'Points',
+    sessionsHeading: 'Sessions',
+    startedColumn: 'Started',
+    endedColumn: 'Ended',
+    endReasonColumn: 'End reason',
   }),
   v1Harness: Object.freeze({
     title: 'Live V1 protocol harness',

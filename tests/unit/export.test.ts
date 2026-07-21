@@ -230,6 +230,20 @@ describe('ExportService.generateSummary — nonDiagnosticNotice', () => {
   });
 });
 
+describe('ExportService.generateSummary — HTML labels sourced from strings.ts', () => {
+  it('HTML blob contains every exportSummary label string, not a hardcoded literal', async () => {
+    await seedAttestedExportFixture();
+
+    const { html } = await ExportService.generateSummary(RANGE);
+    const htmlText = await html.text();
+    const labels = strings.exportSummary;
+
+    for (const value of Object.values(labels)) {
+      expect(htmlText).toContain(value);
+    }
+  });
+});
+
 describe('ExportService.generateSummary — noiseFloorSymmetry sourcing', () => {
   it("uses the active baseline's noiseFloorSymmetry, not the inactive baseline's value", async () => {
     await seedAttestedExportFixture(); // OLD 0.09 (inactive), NEW 0.05 (active)

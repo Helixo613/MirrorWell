@@ -95,11 +95,13 @@ function renderHtml(summary: ExportSummary): string {
     .map((s) => `<tr><td>${s.startedAt}</td><td>${s.endedAt}</td><td>${s.endReason}</td></tr>`)
     .join('');
 
+  const t = strings.exportSummary;
+
   return `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>MirrorWell summary</title>
+<title>${t.htmlTitle}</title>
 <style>
   @page { size: A4; margin: 16mm; }
   body { font-family: sans-serif; }
@@ -108,16 +110,16 @@ function renderHtml(summary: ExportSummary): string {
 </style>
 </head>
 <body>
-<h1>MirrorWell summary</h1>
+<h1>${t.htmlTitle}</h1>
 <p>${summary.nonDiagnosticNotice}</p>
-<p>Range: ${summary.range.from} to ${summary.range.to}</p>
-<p>Affected side: ${summary.profile.affectedSide}</p>
-<p>Noise floor (symmetry): ${summary.noiseFloorSymmetry}</p>
-<p>Completion rate: ${summary.adherence.completionRate}</p>
-<h2>Trends</h2>
-<table><thead><tr><th>Exercise</th><th>Granularity</th><th>Points</th></tr></thead><tbody>${trendRows}</tbody></table>
-<h2>Sessions</h2>
-<table><thead><tr><th>Started</th><th>Ended</th><th>End reason</th></tr></thead><tbody>${sessionRows}</tbody></table>
+<p>${t.rangeLabel} ${summary.range.from} to ${summary.range.to}</p>
+<p>${t.affectedSideLabel} ${summary.profile.affectedSide}</p>
+<p>${t.noiseFloorLabel} ${summary.noiseFloorSymmetry}</p>
+<p>${t.completionRateLabel} ${summary.adherence.completionRate}</p>
+<h2>${t.trendsHeading}</h2>
+<table><thead><tr><th>${t.exerciseColumn}</th><th>${t.granularityColumn}</th><th>${t.pointsColumn}</th></tr></thead><tbody>${trendRows}</tbody></table>
+<h2>${t.sessionsHeading}</h2>
+<table><thead><tr><th>${t.startedColumn}</th><th>${t.endedColumn}</th><th>${t.endReasonColumn}</th></tr></thead><tbody>${sessionRows}</tbody></table>
 </body>
 </html>`;
 }
