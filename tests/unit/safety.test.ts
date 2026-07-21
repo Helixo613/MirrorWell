@@ -1,8 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { db } from '../../src/data/schema';
 import type { UserProfile } from '../../src/data/schema';
-import { StorageService } from '../../src/data/storage';
-import { SafetyGate } from '../../src/session/safety';
+
+// SafetyGate holds module-level `demoMode` with no public exit (enterDemoMode is one-way by
+// design; recordAttestation is the documented demo-exit path). A test that enters demo therefore
+// leaked into every test after it — isAttested() short-circuits to false in demo and
+// StorageService reads are demo-blocked, so the attestation tests failed whenever they happened
+// to run after the demo test. Each test now gets a fresh module graph via vi.resetModules() +
+// dynamic import, mirroring tests/unit/controller.test.ts — no test-only reset is added to the
+// production contract.
+let db: typeof import('../../src/data/schema').db;
+let StorageService: typeof import('../../src/data/storage').StorageService;
+let SafetyGate: typeof import('../../src/session/safety').SafetyGate;
 
 const PROFILE_ID = '11111111-1111-4111-8111-111111111111';
 const ORIGINAL_CONSENT_VERSION = import.meta.env.VITE_CONSENT_VERSION;
@@ -19,6 +27,10 @@ function makeProfile(): UserProfile {
 }
 
 beforeEach(async () => {
+  vi.resetModules();
+  ({ db } = await import('../../src/data/schema'));
+  ({ StorageService } = await import('../../src/data/storage'));
+  ({ SafetyGate } = await import('../../src/session/safety'));
   await Promise.all(db.tables.map((table) => table.clear()));
   import.meta.env.VITE_CONSENT_VERSION = '1';
 });
