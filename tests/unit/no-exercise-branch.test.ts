@@ -42,7 +42,10 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SRC_ROOT = path.resolve(__dirname, '../../src');
-const EXCLUDED_DIR_NAMES = new Set(['config', 'dev']);
+// Excluded by absolute path (direct children of SRC_ROOT only) — NOT by directory name at any
+// depth, so a future src/session/config/ or src/metrics/dev/ is not silently exempted from the
+// guard the way a name-only Set(['config', 'dev']) match would exempt it.
+const EXCLUDED_DIRS = new Set([path.join(SRC_ROOT, 'config'), path.join(SRC_ROOT, 'dev')]);
 
 const EXERCISE_ID_ALTERNATION = 'EX_(BROW_RAISE|EYE_CLOSURE|SMILE|PUCKER)';
 const BRANCH_PATTERN = new RegExp(
@@ -54,13 +57,14 @@ const BRANCH_PATTERN = new RegExp(
 function collectSourceFiles(dir: string): string[] {
   const out: string[] = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (EXCLUDED_DIR_NAMES.has(entry.name)) continue;
-      out.push(...collectSourceFiles(path.join(dir, entry.name)));
+      if (EXCLUDED_DIRS.has(fullPath)) continue;
+      out.push(...collectSourceFiles(fullPath));
     } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\.(ts|tsx)$/.test(entry.name)) {
       // Excludes src-colocated *.test.ts(x) too — this guard is scoped to the production
       // tree, not test code, which may legitimately assert against literal exercise ids.
-      out.push(path.join(dir, entry.name));
+      out.push(fullPath);
     }
   }
   return out;

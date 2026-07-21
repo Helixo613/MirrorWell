@@ -515,16 +515,36 @@ describe('SessionController hot path', () => {
 
       const fromPair = exercises[fromId]!.blendshapePair!;
       const toPair = exercises[toId]!.blendshapePair!;
-
-      // Asymmetric leak probe: sub-startThreshold (no rep triggered) but leaves a distinctly
-      // asymmetric entry in MetricEngine's smoothing window.
-      emitOk({ [fromPair.left]: 0.14, [fromPair.right]: 0.02 }, 0);
+      const repsPerSet = exercises[fromId]!.repsPerSet;
 
       let ts = 2000;
-      for (let i = 0; i < exercises[fromId]!.repsPerSet; i++) {
+      for (let i = 0; i < repsPerSet - 1; i++) {
         ts = driveOkRepFrames(fromPair, ts, 6, 0) + 2000;
       }
-      const lastComputedTs = ts - 2000;
+
+      // Final rep of fromId, driven by hand instead of via driveOkRepFrames: 3 high frames
+      // (matching driveOkRepFrames' holdCount=3) followed by 3 low-effort ASYMMETRIC closing
+      // frames instead of driveOkRepFrames' low-SYMMETRIC tail. Closing the last rep and
+      // leaving REPS(fromId) for REST happen inside the SAME handleRepsFrame call
+      // (src/session/controller.ts ~line 196-201), and no frame is ever computed again while
+      // in REST/DEMO (handleFrame returns early for both) — so whatever sits in MetricEngine's
+      // smoothing window right when this closing frame is processed is exactly what's still
+      // there the instant toId's first REPS frame computes. act=max(0.06,0.01)=0.06 is low
+      // enough that 3 of them reliably close the rep (same "3 lows outvote the window"
+      // trailing-median mechanics driveOkRepFrames relies on — verified numerically against
+      // MetricEngine's 5-entry window) while symmetryIndex=0.01/0.06≈0.167 is clearly
+      // asymmetric. Because 3 of the resulting 5 window entries are asymmetric (not 1-of-5),
+      // the leak survives the trailing median at the switch instead of being outvoted by it.
+      emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
+      ts += 200;
+      emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
+      ts += 200;
+      emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
+      for (let i = 0; i < 3; i++) {
+        ts += 200;
+        emitOk({ [fromPair.left]: 0.06, [fromPair.right]: 0.01 }, ts);
+      }
+      const lastComputedTs = ts;
 
       const metricResetSpy = vi.spyOn(MetricEngine, 'reset');
       const repResetSpy = vi.spyOn(RepDetector, 'reset');
@@ -537,7 +557,7 @@ describe('SessionController hot path', () => {
       const samples: Array<{ symmetryIndex: number | null }> = [];
       on('metricUpdate', (p) => samples.push(p.sample));
       // Small gap (<= metrics.gapResetMs) from the last `fromId` compute — if reset() were
-      // skipped, the leaked asymmetric window entry would still be live here.
+      // skipped, the leaked asymmetric window entries would still be live here.
       emitOk({ [toPair.left]: 0.3, [toPair.right]: 0.3 }, lastComputedTs + 50);
       expect(samples[0]!.symmetryIndex).toBe(1);
     },
