@@ -330,7 +330,10 @@ describe('SessionController preconditions', () => {
 
     await expect(SessionController.start(['EX_SMILE'])).rejects.toMatchObject({ code: 'CAMERA_DENIED' });
     expect(capture.subscribers.size).toBe(0);
-    expect(capture.stop).toHaveBeenCalledTimes(1);
+    // A rejected start() acquires nothing (capture.ts leaves stream === null), so the seam must
+    // NOT call stop() on the failed-start path — that could tear down a camera another consumer
+    // owns (frames.ts finding 1). Unsubscribe is the whole cleanup; subscribers.size === 0 above.
+    expect(capture.stop).not.toHaveBeenCalled();
   });
 });
 
