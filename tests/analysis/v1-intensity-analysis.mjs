@@ -38,11 +38,13 @@ const SMOOTHING_WINDOW = 5;
 const YAW_BAND = [7, 13];
 const B2_BAR = 0.05;
 const B3_BAR = 0.05;
-// Classification rule for the intensity hypothesis: a bar breach is "intensity-linked"
-// when the phase's smile activation is meaningfully below its frontal reference —
-// activationRatioVsFrontal < 0.85 (≥ 15% activation drop). At/above 0.85 the smile
-// is essentially matched to frontal, so a breach means the METRIC is pose/lighting
-// sensitive, not that the subject smiled less — that CONTRADICTS the intensity story.
+// Classification rule for the intensity hypothesis. B2 IS the activation-deviation
+// bar (|meanActivation − smileMeanAct| / smileMeanAct), so a B2 breach is BY DEFINITION
+// an intensity change (drop OR increase) — it is ALWAYS intensity-linked and can never
+// contradict the intensity story. Only B3 (an SI delta, independent of activation
+// magnitude) can contradict: when a B3 bar breaches while smile activation is matched
+// to frontal (activationRatioVsFrontal ≥ 0.85, i.e. < 15% deviation), the SI shift is
+// not explained by reduced smile intensity, so the METRIC itself is pose-sensitive.
 const INTENSITY_RATIO_THRESHOLD = 0.85;
 
 const MIME = {
@@ -206,7 +208,10 @@ async function main() {
             activationDrop: activationDrop === null ? null : Number(activationDrop.toFixed(4)),
             frontalSmileMeanActivation: Number(smileMeanAct.toFixed(4)),
           };
-          if (ratio !== null && ratio < INTENSITY_RATIO_THRESHOLD) {
+          // B2 IS the activation-deviation bar, so a B2 breach is intensity-linked by
+          // definition (regardless of drop/increase). Only a B3 (SI) breach at matched
+          // activation (ratio ≥ threshold) can contradict the intensity story.
+          if (b.bar === 'B2' || (ratio !== null && ratio < INTENSITY_RATIO_THRESHOLD)) {
             rec.classification = 'intensity-linked';
             intensityLinked.push(rec);
           } else {

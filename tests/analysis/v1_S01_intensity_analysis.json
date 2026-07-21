@@ -2,7 +2,7 @@
   "kind": "exploratory-analysis",
   "isGateEvidence": false,
   "subject": "S01",
-  "generatedAt": "2026-07-21T10:44:26.230Z",
+  "generatedAt": "2026-07-21T10:53:05.288Z",
   "activationFloor": 0.05,
   "smoothingWindow": 5,
   "note": "Exploratory pooled intensity analysis across 4 V1 trials (run-1 retired + run-2 current). NOT a V1 gate report; does not adjust any bar.",
@@ -246,16 +246,6 @@
         "activationDrop": 0.0435,
         "frontalSmileMeanActivation": 0.7908,
         "classification": "contradicts-intensity (metric pose/lighting-sensitive)"
-      },
-      {
-        "trial": "run2-t2",
-        "phase": "distance_2m",
-        "bar": "B2",
-        "value": 0.1464,
-        "activationRatioVsFrontal": 0.8536,
-        "activationDrop": 0.1464,
-        "frontalSmileMeanActivation": 0.7908,
-        "classification": "contradicts-intensity (metric pose/lighting-sensitive)"
       }
     ],
     "intensityLinked": [
@@ -308,8 +298,18 @@
         "activationDrop": 0.8044,
         "frontalSmileMeanActivation": 0.6555,
         "classification": "intensity-linked"
+      },
+      {
+        "trial": "run2-t2",
+        "phase": "distance_2m",
+        "bar": "B2",
+        "value": 0.1464,
+        "activationRatioVsFrontal": 0.8536,
+        "activationDrop": 0.1464,
+        "frontalSmileMeanActivation": 0.7908,
+        "classification": "intensity-linked"
       }
     ],
-    "summary": "The intensity hypothesis is PARTIAL / DOES NOT FULLY HOLD: 5 breach(es) were intensity-linked, but 3 breach(es) CONTRADICT it — the bar failed while smile activation was matched to frontal (activationRatioVsFrontal ≥ 0.85), indicating genuine pose/lighting sensitivity of the metric: run1-t1/yaw_right (B3=0.051, ratio=0.8891); run2-t2/yaw_left (B3=0.0673, ratio=0.9565); run2-t2/distance_2m (B2=0.1464, ratio=0.8536)."
+    "summary": "The intensity hypothesis is PARTIAL / DOES NOT FULLY HOLD: 6 breach(es) were intensity-linked, but 2 breach(es) CONTRADICT it — the bar failed while smile activation was matched to frontal (activationRatioVsFrontal ≥ 0.85), indicating genuine pose/lighting sensitivity of the metric: run1-t1/yaw_right (B3=0.051, ratio=0.8891); run2-t2/yaw_left (B3=0.0673, ratio=0.9565)."
   }
 }
