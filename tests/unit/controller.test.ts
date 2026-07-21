@@ -381,6 +381,38 @@ describe('SessionController hot path', () => {
     expect(record.results[1]!.repsCompleted).toBe(exercises.EX_SMILE.repsPerSet);
   });
 
+  // Task A2 — EX_BROW_RAISE previously appeared in no controller test at all. This walks the
+  // same DEMO->REPS->REST->auto-stop arc as the test above but for EX_BROW_RAISE alone, reading
+  // repsPerSet/restSeconds/blendshapePair from exercises.EX_BROW_RAISE (never as literals) so the
+  // test actually proves config-drivenness rather than passing by coincidence.
+  it('EX_BROW_RAISE completes stateChanged DEMO->REPS->REST->auto-stop completed, driven purely by config', async () => {
+    await seedAttested(['EX_BROW_RAISE']);
+    const seen: Array<{ exerciseId: string; state: string }> = [];
+    on('stateChanged', (p) => seen.push(p));
+    const ended = vi.fn();
+    on('sessionEnded', ended);
+
+    await SessionController.start(['EX_BROW_RAISE']);
+    expect(seen.at(-1)).toEqual({ exerciseId: 'EX_BROW_RAISE', state: 'DEMO' });
+
+    SessionController.advance();
+    expect(seen.at(-1)).toEqual({ exerciseId: 'EX_BROW_RAISE', state: 'REPS' });
+
+    let ts = 1000;
+    for (let i = 0; i < exercises.EX_BROW_RAISE.repsPerSet; i++) {
+      ts = driveOkRepFrames(exercises.EX_BROW_RAISE.blendshapePair!, ts + 2000, 6, 0);
+    }
+    expect(seen.at(-1)).toEqual({ exerciseId: 'EX_BROW_RAISE', state: 'REST' });
+
+    emitOk({}, ts + exercises.EX_BROW_RAISE.restSeconds * 1000 + 10);
+    await vi.waitFor(() => expect(ended).toHaveBeenCalledTimes(1));
+    const record = ended.mock.calls[0]![0].record;
+    expect(record.endReason).toBe('completed');
+    expect(record.results).toHaveLength(1);
+    expect(record.results[0]!.exerciseId).toBe('EX_BROW_RAISE');
+    expect(record.results[0]!.repsCompleted).toBe(exercises.EX_BROW_RAISE.repsPerSet);
+  });
+
   it('throttles metricUpdate to <= 15 events under a 30Hz synthetic frame stream', async () => {
     await seedAttested(['EX_SMILE']);
     await SessionController.start(['EX_SMILE']);
@@ -467,36 +499,49 @@ describe('SessionController hot path', () => {
     expect(seen).toEqual([true, false]);
   });
 
-  it('resets MetricEngine/RepDetector on exercise transition; no metric state leaks between exercises', async () => {
-    await seedAttested(['EX_EYE_CLOSURE', 'EX_SMILE']);
-    await SessionController.start(['EX_EYE_CLOSURE', 'EX_SMILE']);
-    SessionController.advance();
+  // Task A2: parameterized over exercise pairs (was EX_EYE_CLOSURE->EX_SMILE only) so
+  // EX_BROW_RAISE gets the same reset/no-leak coverage, and so repsPerSet/blendshapePair are
+  // read from each pair's own config (EX_BROW_RAISE.repsPerSet=10 vs EX_EYE_CLOSURE.repsPerSet=5)
+  // instead of the test only passing because two exercises happen to share a value.
+  it.each([
+    ['EX_EYE_CLOSURE', 'EX_SMILE'],
+    ['EX_BROW_RAISE', 'EX_SMILE'],
+  ] as const)(
+    'resets MetricEngine/RepDetector on %s->%s transition; no metric state leaks between exercises',
+    async (fromId, toId) => {
+      await seedAttested([fromId, toId]);
+      await SessionController.start([fromId, toId]);
+      SessionController.advance();
 
-    // Asymmetric leak probe: sub-startThreshold (no rep triggered) but leaves a distinctly
-    // asymmetric entry in MetricEngine's smoothing window.
-    emitOk({ eyeBlinkLeft: 0.14, eyeBlinkRight: 0.02 }, 0);
+      const fromPair = exercises[fromId]!.blendshapePair!;
+      const toPair = exercises[toId]!.blendshapePair!;
 
-    let ts = 2000;
-    for (let i = 0; i < exercises.EX_EYE_CLOSURE.repsPerSet; i++) {
-      ts = driveOkRepFrames(exercises.EX_EYE_CLOSURE.blendshapePair!, ts, 6, 0) + 2000;
-    }
-    const lastComputedTs = ts - 2000;
+      // Asymmetric leak probe: sub-startThreshold (no rep triggered) but leaves a distinctly
+      // asymmetric entry in MetricEngine's smoothing window.
+      emitOk({ [fromPair.left]: 0.14, [fromPair.right]: 0.02 }, 0);
 
-    const metricResetSpy = vi.spyOn(MetricEngine, 'reset');
-    const repResetSpy = vi.spyOn(RepDetector, 'reset');
+      let ts = 2000;
+      for (let i = 0; i < exercises[fromId]!.repsPerSet; i++) {
+        ts = driveOkRepFrames(fromPair, ts, 6, 0) + 2000;
+      }
+      const lastComputedTs = ts - 2000;
 
-    SessionController.advance(); // REST -> DEMO(EX_SMILE): must call both resets
-    expect(metricResetSpy).toHaveBeenCalledTimes(1);
-    expect(repResetSpy).toHaveBeenCalledTimes(1);
+      const metricResetSpy = vi.spyOn(MetricEngine, 'reset');
+      const repResetSpy = vi.spyOn(RepDetector, 'reset');
 
-    SessionController.advance(); // DEMO -> REPS(EX_SMILE)
-    const samples: Array<{ symmetryIndex: number | null }> = [];
-    on('metricUpdate', (p) => samples.push(p.sample));
-    // Small gap (<= metrics.gapResetMs) from the last EX_EYE_CLOSURE compute — if reset()
-    // were skipped, the leaked asymmetric window entry would still be live here.
-    emitOk({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }, lastComputedTs + 50);
-    expect(samples[0]!.symmetryIndex).toBe(1);
-  });
+      SessionController.advance(); // REST -> DEMO(toId): must call both resets
+      expect(metricResetSpy).toHaveBeenCalledTimes(1);
+      expect(repResetSpy).toHaveBeenCalledTimes(1);
+
+      SessionController.advance(); // DEMO -> REPS(toId)
+      const samples: Array<{ symmetryIndex: number | null }> = [];
+      on('metricUpdate', (p) => samples.push(p.sample));
+      // Small gap (<= metrics.gapResetMs) from the last `fromId` compute — if reset() were
+      // skipped, the leaked asymmetric window entry would still be live here.
+      emitOk({ [toPair.left]: 0.3, [toPair.right]: 0.3 }, lastComputedTs + 50);
+      expect(samples[0]!.symmetryIndex).toBe(1);
+    },
+  );
 
   it('treats a thrown detect() (INFERENCE_FAILED) as a non-crashing FACE_LOST frame', async () => {
     await seedAttested(['EX_SMILE']);
