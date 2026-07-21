@@ -90,7 +90,11 @@ gate is meaningful.
   `tsconfig.test.json` to the build references** so every stream's TDD tests are type-checked.
 - **Verification command set (every task):** `npm run typecheck` (= `tsc -b`; **never** `npx tsc
   --noEmit`, which type-checks the empty solution file and always passes — `CLAUDE.md` fact 7),
-  `npx vitest run`, `npm run test:coverage` **for any task touching `src/metrics/**`** (the 100%-branch
+  `npx vitest run` (**order-randomised**: `vitest.config.ts` sets `sequence: { shuffle: true }` — do
+  not remove it. Several units hold module-level state with no public reset, so a leak between tests
+  is invisible under the default order and resurfaces later as "flakiness"; shuffle found a real
+  order dependency on its first run after 21 clean sequential runs. Vitest prints the seed, so a
+  shuffled failure stays reproducible), `npm run test:coverage` **for any task touching `src/metrics/**`** (the 100%-branch
   gate on `metrics.ts`/`reps.ts` only runs under `--coverage`, not `vitest run`), `npm run build`,
   `node scripts/check-docs.mjs`, then **`npm run build` → `npx playwright test tests/e2e/no-network.spec.ts`**
   (the e2e `webServer` serves `dist/` via `preview`, so it needs a fresh build first).
