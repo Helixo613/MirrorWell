@@ -523,7 +523,7 @@ Every tunable, exported as a single frozen object, each with a comment naming it
 | `MODEL_LOAD_FAILED` | LandmarkEngine.init | **false** | Blocking retry screen before calibration/session |
 | `NOT_INITIALIZED` | LandmarkEngine.detect | true | Internal ordering bug; screens show generic error |
 | `INFERENCE_FAILED` | LandmarkEngine.detect | true | Orchestrator converts to `FACE_LOST` before `evaluate` (passes `null`); never user-visible as an error |
-| `NO_BASELINE` | NormalizationLayer, SessionController | true | Route to `CalibrationScreen` |
+| `NO_BASELINE` | NormalizationLayer, MetricEngine, SessionController | true | Route to `CalibrationScreen` |
 | `RECALIBRATION_REQUIRED` | SessionController.start | true | Route to recalibration |
 | `POSE_OUT_OF_RANGE` | QualityMonitor only (`QualityResult` state; not thrown by `normalize`) | true | Quality UX ("face the camera straight on") |
 | `NOT_ATTESTED` | SafetyGate-gated methods | true | Redirect to `OnboardingScreen` |
