@@ -220,7 +220,11 @@ All values live in `src/config/thresholds.ts`, each commented with its owning do
 VITE_CONSENT_VERSION=1          # bump forces re-onboarding for all users
 VITE_ENABLE_DEBUG_HUD=false     # true only in dev; HUD is tree-shaken from prod builds
 VITE_DEMO_MODE_ENABLED=true     # shows "Try a demo" entry on OnboardingScreen
+VITE_ENABLE_CAPTURE_HARNESS=false # dev-only fixture-capture harness
+VITE_ENABLE_LIVE_DEMO=false     # dev-only live symmetry demo; replaces the V1 protocol harness
 ```
+
+Every dev harness re-parents `CaptureService`'s single `<video>` element, so the dev-only mounts are **mutually exclusive by construction**: `VITE_ENABLE_LIVE_DEMO=true` swaps `LiveV1Harness` for `LiveDemoView` rather than mounting both (two consumers would leave one preview black). All of `src/dev/` is dropped from production builds regardless of these flags.
 
 `.env` is git-ignored; `.env.example` is committed. Client-side exposure risk: none from config (nothing sensitive exists to expose). The actual sensitive asset is **user health data in IndexedDB**, readable by anyone with device access — policy and compensating controls (device-lock guidance, minimization, one-tap deletion) are owned by SAFETY_AND_COMPLIANCE §6. **CI enforcement:** a Playwright check intercepts all network requests after page load and fails the build if any outbound request occurs (same-origin asset loads only).
 

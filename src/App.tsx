@@ -14,10 +14,19 @@ function DevOnly({ loader }: { loader: () => Promise<{ default: ComponentType }>
 }
 
 export default function App() {
+  // Every dev harness re-parents CaptureService's single <video>, so the live demo and the V1
+  // protocol harness are mutually exclusive: VITE_ENABLE_LIVE_DEMO=true swaps the default
+  // harness for the demo readout rather than mounting both and leaving one preview black.
+  const liveDemo = import.meta.env.VITE_ENABLE_LIVE_DEMO === 'true';
   return (
     <div>
       MirrorWell
-      {import.meta.env.DEV && (
+      {import.meta.env.DEV && liveDemo && (
+        <DevOnly
+          loader={() => import('./dev/LiveDemoView').then((m) => ({ default: m.LiveDemoView }))}
+        />
+      )}
+      {import.meta.env.DEV && !liveDemo && (
         <DevOnly
           loader={() =>
             import('./dev/LiveV1Harness').then((m) => ({ default: m.LiveV1Harness }))
