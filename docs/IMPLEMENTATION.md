@@ -6,7 +6,9 @@
 
 Scaffold through Task 8 exists in-repo: Vite/React/TS PWA skeleton with pinned deps and CI no-network gate (Task 1); `StorageService` + schema + seed/inspect (Task 2); `CaptureService` (Task 3); `LandmarkEngine` + bundled WASM/model lock (Task 4); `QualityMonitor` (Task 5); `NormalizationLayer` + landmark indices + V1 analysis harness (Task 6); `MetricEngine` + `RepDetector` (Task 7); `DebugHud` (Task 8).
 
-**Kill-gate status:** Task 6 remains **BLOCKED**. Remediation (2026-07-12 plan) replaced the failing scalar-radial geometry with a face-local 2D vector kernel (`ApprovedFrame` type barrier, `measureAbsolute` / vector `normalize`, direction-aware SI, quality-gate repairs, V1 harness + runner). Scalar-radial failure evidence is preserved under `tests/analysis/rejected/`. Fixture capture for the 2-trial × 6-phase protocol was completed 2026-07-19 (12 webcam masters, local-only) and the gate run for real: candidate `face-local-vector-v1` is **REJECTED** on B3 (SI collapse 0.92 → ~0 at 10° yaw; aggregate 0.878/0.757 vs 0.05 bar; B1a/B1b PASS) — evidence in `tests/analysis/rejected/v1_S01_report_face-local-vector-v1_FAILED.json`. Candidate 3 `face-local-vector-v2` (same-side eye-center anchors for mouth/lip; **stop-rule slot 3 of 3**) is in progress per `docs/superpowers/plans/2026-07-19-candidate3-geometry-v2.md`. Runner: `scripts/run-v1.mjs` + protocol in `docs/MODEL_AND_DATA.md` §7. Tasks 7–8 remain **provisional** until Task 6 passes. Tasks 9+ are not started.
+**Kill-gate status (2026-07-20):** Task 6 remains **BLOCKED** on a formal PASS, but the measurement family is settled. The 2D-geometry family is exhausted (stop rule 3/3: `scalar-radial`, `face-local-vector-v1`, `face-local-vector-v2` — all REJECTED, evidence in `tests/analysis/rejected/`). Current candidate `blendshape-si-v1` (new family, slot 1) is implemented end-to-end and has strong partial evidence: one full trial passed every bar (run 1 trial 2), and both failed runs trace to uncontrolled smile-intensity reproduction by the operator, not measurement instability (`tests/analysis/rejected/README.md`). Remaining step: protocol v2 (measured smile-activation band mirroring the yaw band) + one fresh 2-trial recording. Runner: `scripts/run-v1.mjs --candidate blendshape-si-v1` + protocol in `docs/MODEL_AND_DATA.md` §7.
+
+**Owner decision (2026-07-20):** the "stop all feature work" rule in Task 6 is relaxed to match how Tasks 7–8 already proceeded: backend halves of Tasks 9–11 and 14–15 may be implemented **PROVISIONAL** per `docs/superpowers/plans/2026-07-20-backend-services-v1.md`, and screen integration proceeds per `docs/superpowers/plans/2026-07-20-frontend-integration.md`. Nothing becomes ACCEPTED until Task 6 passes; a Task 6 candidate failure that changes the metric contract invalidates provisional work built on it (accepted risk, given the passing-trial evidence).
 
 Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks; Android phone from Task 17.
 
@@ -22,7 +24,12 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 | 6 — Fixtures + NormalizationLayer + **V1 kill-gate** | **BLOCKED** | Revised face-local-vector geometry implemented (remediation B1–B7); awaiting V1 fixture capture + pass. Rejected scalar evidence: [`tests/analysis/rejected/README.md`](../tests/analysis/rejected/README.md). Runner + protocol: `scripts/run-v1.mjs`, [`docs/MODEL_AND_DATA.md`](MODEL_AND_DATA.md) §7. Dry-run candidate report (INVALID cells): [`tests/analysis/v1_S01_face-local-vector-v1_report.json`](../tests/analysis/v1_S01_face-local-vector-v1_report.json) | 2026-07-13 |
 | 7 — MetricEngine + RepDetector | PROVISIONAL | `src/metrics/`; commit `12b19a2` — implemented but depends on Task 6 acceptance | 2026-07-12 |
 | 8 — DebugHud | PROVISIONAL | `src/dev/`; commit `c3c1b57` — implemented but depends on Task 6 acceptance | 2026-07-12 |
-| 9+ — SafetyGate through release | NOT_STARTED | — | 2026-07-12 |
+| 9 — SafetyGate (+ OnboardingScreen, Demo Mode) | PROVISIONAL (backend half) | `src/session/safety.ts` + `tests/unit/safety.test.ts`; branch `backend-services-v1`. Screens pending `docs/superpowers/plans/2026-07-20-frontend-integration.md`; acceptance blocked on Task 6 like Tasks 7–8 | 2026-07-20 |
+| 10 — CalibrationFlow (+ CalibrationScreen) | PROVISIONAL (backend half) | `src/session/calibration.ts` + tests; frame-timestamp-driven capture windows (no wall-clock timers). Screens pending frontend plan | 2026-07-20 |
+| 11 — SessionController (+ SessionScreen, FeedbackRenderer) | PROVISIONAL (backend half) | `src/session/controller.ts`, `src/session/emitter.ts` + tests; closed 7-event surface, session assembly. Screens + FeedbackRenderer pending frontend plan | 2026-07-20 |
+| 14 — TrendsService (+ TrendsScreen, CaregiverScreen) | PROVISIONAL (backend half) | `src/data/trends.ts` + tests; baseline-scoped, noise-floor-aware. Screens pending frontend plan | 2026-07-20 |
+| 15 — ExportService (+ ExportScreen, SettingsScreen) | PROVISIONAL (backend half) | `src/data/export.ts`, `src/data/settings.ts` + tests + `tests/schemas/export.schema.json`. Screens pending frontend plan | 2026-07-20 |
+| 12, 13, 16–18 — remaining | NOT_STARTED | — | 2026-07-12 |
 
 ---
 
@@ -137,7 +144,7 @@ Dev assumptions unchanged: Node ≥ 20 and npm ≥ 10; webcam for manual checks;
 
 - Implement `captureNeutral` (3×3 s, median, `qualityScore` = OK-frame fraction), `captureComfortableMax` (3 gentle reps, **median**), `runNoiseFloorSelfTest` (persists `noiseFloorSymmetry`), `checkBaselineDrift` (> 8% → `'recalibrate'`). Build `CalibrationScreen` per FRONTEND §2.2 with `QualityMonitor`-driven coaching; "gentle — do not strain" copy in `strings.ts`.
 
-**Test:** Full calibration < 4 min by a first-time tester with no verbal help; deliberately dark capture → `QUALITY_TOO_LOW` + coaching + redo (never silently accepted); recalibration flips `isActive` (DB check); `noiseFloorSymmetry` lands in `app_settings`; drift check returns `'recalibrate'` when replaying a mismatched fixture baseline.
+**Test:** Full calibration < 4 min by a first-time tester with no verbal help; deliberately dark capture → `QUALITY_TOO_LOW` + coaching + redo (never silently accepted); recalibration flips `isActive` (DB check); `noiseFloorSymmetry` lands on the active `calibration_baseline` row (DG-4; never `app_settings`); drift check returns `'recalibrate'` when replaying a mismatched fixture baseline.
 
 ---
 

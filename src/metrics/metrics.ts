@@ -16,7 +16,7 @@
 // source is the exercise's per-side blendshape pair (geometry family rejected at V1 B3;
 // evidence tests/analysis/rejected/). Smoothing/gap/ease-off semantics unchanged.
 import type { NormalizedFrame } from './normalize.ts';
-import type { CalibrationBaseline, ExerciseId, RegionId } from '../data/schema.ts';
+import type { CalibrationBaseline, ExerciseId } from '../data/schema.ts';
 import { MirrorWellError } from '../data/errors.ts';
 import { exercises } from '../config/exercises.ts';
 import { thresholds } from '../config/thresholds.ts';

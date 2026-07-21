@@ -1,9 +1,31 @@
-// Stub per docs/IMPLEMENTATION.md Task 2 ("stub the import until Task 9"). Task 9 implements
-// the real gate (UNATTESTED/ATTESTED/DEMO) per docs/API.md §2. StorageService's demo-mode
-// write backstop needs SafetyGate.isDemoMode() to exist now; it must never actually be true
-// until Task 9 wires real demo-mode entry.
+import { MirrorWellError } from '../data/errors.ts';
+// Deliberate lazy-reference cycle: StorageService imports SafetyGate; do not hoist either call to module scope.
+import { StorageService } from '../data/storage.ts';
+
+let demoMode = false;
+
 export const SafetyGate = {
+  async isAttested(): Promise<boolean> {
+    const profile = await StorageService.getProfile();
+    return profile != null && profile.attestedAt !== null && profile.consentVersion === import.meta.env.VITE_CONSENT_VERSION;
+  },
+
+  async recordAttestation(consentVersion: string): Promise<void> {
+    if (consentVersion !== import.meta.env.VITE_CONSENT_VERSION) {
+      throw new MirrorWellError('VALIDATION_FAILED', 'consent version must match VITE_CONSENT_VERSION');
+    }
+    const profile = await StorageService.getProfile();
+    if (!profile) {
+      throw new MirrorWellError('VALIDATION_FAILED', 'profile must exist before attestation');
+    }
+    await StorageService.saveProfile({ ...profile, attestedAt: new Date().toISOString(), consentVersion });
+  },
+
+  enterDemoMode(): void {
+    demoMode = true;
+  },
+
   isDemoMode(): boolean {
-    return false;
+    return demoMode;
   },
 };

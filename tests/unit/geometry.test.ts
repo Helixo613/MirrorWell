@@ -84,7 +84,7 @@ function pixelsToNormalized(
 }
 
 function makeFrame(landmarks: Point[]): LandmarkFrame {
-  return { landmarks, headPose: identityHeadPose(), facePresent: true, timestampMs: 0 };
+  return { landmarks, headPose: identityHeadPose(), facePresent: true, blendshapes: {}, timestampMs: 0 };
 }
 
 /** Test-only: forge ApprovedFrame without going through QualityMonitor (brand is private). */

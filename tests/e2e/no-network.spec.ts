@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * The no-network privacy gate (docs/AGENTS.md non-negotiable; docs/ARCHITECTURE.md §9;
+ * The no-network privacy gate (AGENTS.md non-negotiable; docs/ARCHITECTURE.md §9;
  * docs/IMPLEMENTATION.md Task 1 acceptance). MirrorWell must never make a network call:
  * no fetch, no CDN, no telemetry, no crash reporting, no analytics.
  *

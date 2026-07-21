@@ -1,11 +1,12 @@
 // src/data/storage.ts — sole owner of mirrorwell_db (docs/DATABASE.md §2).
 // Every read/write goes through StorageService; no other component touches Dexie directly
-// (docs/AGENTS.md non-negotiable). Contracts: docs/API.md §3. Validation matrix: DATABASE.md §3.
+// (AGENTS.md non-negotiable). Contracts: docs/API.md §3. Validation matrix: DATABASE.md §3.
 // Explicit .ts extensions: these files also run under plain Node (scripts/seed-dev.ts,
 // scripts/inspect-db.ts via `node --experimental-strip-types`), whose ESM loader requires
 // fully-specified relative import extensions (unlike Vite/Vitest's bundler resolution).
 import { db } from './schema.ts';
 import type {
+  AppSettings,
   CalibrationBaseline,
   ExerciseId,
   ExerciseResult,
@@ -191,6 +192,20 @@ export const StorageService = {
       assertDemoWritable();
       assertProfileShape(p);
       await db.user_profile.put(p);
+    });
+  },
+
+  async getSettings(): Promise<AppSettings | null> {
+    return withDbErrors(async () => {
+      const row = await db.app_settings.get('singleton');
+      return row ?? null;
+    });
+  },
+
+  async saveSettings(settings: AppSettings): Promise<void> {
+    return withDbErrors(async () => {
+      assertDemoWritable();
+      await db.app_settings.put(settings);
     });
   },
 

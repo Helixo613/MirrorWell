@@ -115,7 +115,7 @@ stop(reason: EndReason): Promise<SessionRecordFull> // always saves partials (ex
 on<E extends SessionEvent>(event: E, cb): () => void  // events: ARCHITECTURE §12, no others
 ```
 
-State machine per exercise: `DEMO → REPS → REST`; transitions: `advance()` (DEMO→REPS), rep count reached (REPS→REST), `restSeconds` elapsed or `advance()` (REST→next exercise DEMO or session end). Hot-path orchestration: on each frame, catch `INFERENCE_FAILED` → `evaluate(video, null)`; on `QualityResult` with `state === 'QUALITY_OK'`, pass `frame` (`ApprovedFrame`) to `normalize` / metrics; otherwise emit `qualityUpdate` and skip geometry. Quality problems persisting > 30 s in REPS → offer stop (`quality_abandoned`). Rep discard rule: < 60% `QUALITY_OK` frames within the rep window → not counted, `strings.ts` explanation emitted.
+State machine per exercise: `DEMO → REPS → REST`; transitions: `advance()` (DEMO→REPS), rep count reached (REPS→REST), `restSeconds` elapsed or `advance()` (REST→next exercise DEMO or session end). Hot-path orchestration: on each frame, catch `INFERENCE_FAILED` → `evaluate(video, null)`; on `QualityResult` with `state === 'QUALITY_OK'`, pass `frame` (`ApprovedFrame`) to `normalize` / metrics; otherwise emit `qualityUpdate` and skip geometry. Quality problems persisting > 30 s in REPS → offer stop (`quality_abandoned`). Rep discard rule: < 60% `QUALITY_OK` frames within the rep window → not counted, silently: no event is emitted for a discarded rep (the `repCompleted` emission sits inside the ≥ 60% branch), and none of the closed 7-event surface (ARCHITECTURE §12) carries a discard event.
 
 **Never:** start unattested (Demo Mode excepted, `SafetyGate` decides); write to storage when `SafetyGate.isDemoMode()` is true; auto-progress difficulty or dosing (dosing is fixed config — the app never prescribes); emit events not listed in ARCHITECTURE §12; pass a raw `LandmarkFrame` into `normalize` / `measureAbsolute`.
 
@@ -123,10 +123,10 @@ State machine per exercise: `DEMO → REPS → REST`; transitions: `advance()` (
 
 ```typescript
 captureNeutral(): Promise<NeutralCaptureResult>                 // 3×3 s, measureAbsolute + median; throws QUALITY_TOO_LOW
-captureComfortableMax(exerciseId: ExerciseId): Promise<number>  // 3 gentle reps, median peak max(mL,mR); throws QUALITY_TOO_LOW
-runNoiseFloorSelfTest(): Promise<{ noiseFloorSymmetry: number; noiseFloorDisplacement: number }>
-// Measured during held comfortable-max captures (SI noise) + neutral frames (displacement noise);
-// written onto calibration_baseline by saveBaseline — never into app_settings (DG-4)
+captureComfortableMax(exerciseId: ExerciseId): Promise<number>  // 3 gentle reps, median peak blendshape activation max(L,R), 0..1 units; throws QUALITY_TOO_LOW; no blendshapePair → VALIDATION_FAILED
+runNoiseFloorSelfTest(): Promise<number>                        // noiseFloorSymmetry (API §11): std of smoothed SI during held comfortable-max
+// noiseFloorDisplacement (activation std at neutral, B1a) is computed inside captureNeutral;
+// both floors are written onto calibration_baseline by saveBaseline — never into app_settings (DG-4)
 checkBaselineDrift(): Promise<'ok' | 'recalibrate'>             // 3 s silent re-check; see drift statistic below
 ```
 

@@ -99,6 +99,14 @@ Enters DEMO (in-memory flag). Full rule set in ARCHITECTURE §11 — watermark, 
 
 **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (any DATABASE §3 rule; e.g. empty `assignedExercises`, invalid `affectedSide`)
 
+### `getSettings(): Promise<AppSettings | null>`
+
+Gets the `app_settings` row with singleton key `"singleton"`. **Errors:** `DB_UNAVAILABLE`
+
+### `saveSettings(settings: AppSettings): Promise<void>`
+
+Persists the `app_settings` singleton. **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (Demo Mode is read-only)
+
 ### `saveBaseline(b: CalibrationBaseline): Promise<string>`
 
 Persists a new calibration and atomically deactivates the previous active baseline.
@@ -115,7 +123,7 @@ Persists a new calibration and atomically deactivates the previous active baseli
     "REGION_MOUTH_CORNER": { "left": { "u": 0.0, "v": 0.507 }, "right": { "u": 0.0, "v": 0.503 } },
     "REGION_LIP":          { "left": { "u": 0.0, "v": 0.231 }, "right": { "u": 0.0, "v": 0.229 } }
   },
-  "comfortableMax": { "EX_SMILE": 0.092, "EX_BROW_RAISE": 0.064 },
+  "comfortableMax": { "EX_SMILE": 0.62, "EX_BROW_RAISE": 0.41 },
   "qualityScore": 0.91,
   "noiseFloorSymmetry": 0.041,
   "noiseFloorDisplacement": 0.008,
@@ -357,7 +365,7 @@ Thresholds (`repStartThreshold` 0.15, `repMinDurationMs` 800, `repEndThreshold` 
 
 Preconditions checked in order: gate (ATTESTED or DEMO) → active baseline exists → baseline drift re-check passes (else recalibration prompt) → camera starts.
 
-**Errors:** `NOT_ATTESTED`, `NO_BASELINE`, `CAMERA_DENIED`, `CAMERA_UNAVAILABLE`, `VALIDATION_FAILED` (empty list or non-assigned exercise)
+**Errors:** `NOT_ATTESTED`, `NO_BASELINE`, `RECALIBRATION_REQUIRED`, `CAMERA_DENIED`, `CAMERA_UNAVAILABLE`, `VALIDATION_FAILED` (empty list or non-assigned exercise)
 
 ### `advance(): void` · `extendRest(seconds: number): void`
 
@@ -369,6 +377,8 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 
 **Response:** the saved `SessionRecordFull` (exact shape: ARCHITECTURE §13; nested results + reps as in §3 `saveSession` request).
 
+**Errors:** `VALIDATION_FAILED` (no active session — `stop()` called before any `start()`; the rejection is not cached, so a subsequent real session still resolves normally). `stop()` is otherwise idempotent: repeated calls within one session return the same settled promise.
+
 ### `on(event, cb): () => void` — the event surface (complete)
 
 | Event | Payload example |
@@ -379,6 +389,7 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 | `repCompleted` | `{ "event": { "repIndex": 4, "peakSymmetryIndex": 0.71, "peakEffortIndex": 0.47, "durationMs": 1900, "easeOffTriggered": false } }` |
 | `easeOff` | `{ "active": true }` |
 | `sessionEnded` | `{ "record": { "sessionId": "…", "endReason": "completed", "results": ["…"] } }` |
+| `qualityOfferStop` | `{ "visible": true }` |
 
 > **Rule:** no other events exist. The UI must not reach into pipeline internals; if a screen needs data not carried by these events, the event surface is amended here first.
 
@@ -391,7 +402,7 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 | Method | Signature / output | Errors |
 |---|---|---|
 | `captureNeutral()` | `Promise<NeutralCaptureResult>` — `{ neutralStats, qualityScore }` (exact shape: ARCHITECTURE §13). Example: `{"neutralStats": {"REGION_BROW": {"left": {"u": 0.0, "v": 0.418}, "right": {"u": 0.0, "v": 0.421}}, "…": "…"}, "qualityScore": 0.91}` | `QUALITY_TOO_LOW` (coaching UI, retry), `CAMERA_*`, `NOT_ATTESTED` |
-| `captureComfortableMax("EX_SMILE")` | `Promise<number>` — e.g. `0.092` | same |
+| `captureComfortableMax("EX_SMILE")` | `Promise<number>` — e.g. `0.62` (0..1 blendshape-activation units, DATABASE §2) | same |
 | `runNoiseFloorSelfTest()` | `Promise<number>` — e.g. `0.041` (persisted with the active baseline; field ownership: ARCHITECTURE §12) | same + `DB_UNAVAILABLE` |
 | `checkBaselineDrift()` | `Promise<'ok' \| 'recalibrate'>` | `NO_BASELINE`, `CAMERA_*` |
 
@@ -457,7 +468,7 @@ JSON validates against `tests/schemas/export.schema.json`. **Full example:**
 }
 ```
 
-`noiseFloorSymmetry` in the export is sourced from the **active `calibration_baseline`** row (not `app_settings`). The HTML blob is a printable one-page A4 summary with the same content and the same non-diagnostic header. **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (bad range)
+`noiseFloorSymmetry` in the export is sourced from the **active `calibration_baseline`** row (not `app_settings`). The HTML blob is a printable one-page A4 summary carrying the same non-diagnostic header and the same underlying data (trend series, adherence, sessions); it may present that data more compactly than the JSON to stay one page. **Errors:** `NOT_ATTESTED` (unattested **or** in Demo Mode — an attested user can `enterDemoMode()`, and export is ❌ in DEMO per §17), `NO_BASELINE` (attested but never calibrated — reachable, since §17 gates `ExportScreen` on attestation alone), `DB_UNAVAILABLE`, `VALIDATION_FAILED` (bad range, or no profile row)
 
 > **Rules:** download only — no Web Share API, no clipboard auto-copy; no fields beyond the schema; `nonDiagnosticNotice` is mandatory and its text lives in `strings.ts` (audited, SAFETY §8).
 ---
@@ -496,7 +507,7 @@ All four `EX_*` entries follow this shape; `EX_EYE_CLOSURE.repsPerSet = 5` (eye-
 
 ### `src/config/thresholds.ts`
 
-Every tunable, exported as a single frozen object, each with a comment naming its owning doc section: `landmarker {minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5}` (FaceLandmarker option thresholds — the only confidence controls that exist), `qualityGates {lumaMin: 60, interOcularMinFrac: 0.09, poseMaxDeg: 15, jitterMaxPct: 0.005}` (`interOcularMinFrac` replaces the retired `interOcularMinPx` — distance gate is a fraction of video width so the same face scale passes at 640×480 and 1280×720; `lumaMin` is face-region mean luma on the 64×64 downsample; `jitterMaxPct` is RMS second-difference / IOD), `metrics {movementFloorPct: 0.008, effortTargetZone: [0.30, 0.50], easeOffThreshold: 0.60, easeOffSustainMs: 300, smoothingWindow: 5, gapResetMs: 250}`, `blendshapes {activationFloor: 0.05}` (SI undefined below this max per-side blendshape score — candidate blendshape-si-v1, probe-derived initial value), `reps {startThreshold: 0.15, endThreshold: 0.10, minDurationMs: 800, minQualityFramePct: 0.60}`, `calibration {minQualityScore: 0.7, neutralCaptures: 3, captureSeconds: 3, driftMaxPct: 0.08, staleDays: 14}`, `session {qualityProblemOfferStopMs: 30000}`.
+Every tunable, exported as a single frozen object, each with a comment naming its owning doc section: `landmarker {minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5}` (FaceLandmarker option thresholds — the only confidence controls that exist), `qualityGates {lumaMin: 60, interOcularMinFrac: 0.09, poseMaxDeg: 15, jitterMaxPct: 0.005}` (`interOcularMinFrac` replaces the retired `interOcularMinPx` — distance gate is a fraction of video width so the same face scale passes at 640×480 and 1280×720; `lumaMin` is face-region mean luma on the 64×64 downsample; `jitterMaxPct` is RMS second-difference / IOD), `metrics {movementFloorPct: 0.008, effortTargetZone: [0.30, 0.50], easeOffThreshold: 0.60, easeOffSustainMs: 300, smoothingWindow: 5, gapResetMs: 250}`, `blendshapes {activationFloor: 0.05}` (SI undefined below this max per-side blendshape score — candidate blendshape-si-v1, probe-derived initial value), `reps {startThreshold: 0.15, endThreshold: 0.10, minDurationMs: 800, minQualityFramePct: 0.60}`, `calibration {minQualityScore: 0.7, neutralCaptures: 3, captureSeconds: 3, driftMaxPct: 0.08, staleDays: 14}`, `session {qualityProblemOfferStopMs: 30000, metricEventMinIntervalMs: 66}` (`metricEventMinIntervalMs` throttles `SessionController`'s `metricUpdate` event to the ~15 Hz text-update rate `ARCHITECTURE.md` §3 specifies for `FeedbackRenderer`; the rep-close OK-frame fraction reuses `reps.minQualityFramePct` rather than a second `session`-scoped copy), `v1Protocol {neutralMs: 10000, smileHoldMs: 8000, prepMs: 3000, yawTargetMinDeg: 7, yawTargetMaxDeg: 13, trials: 2, minOkFramePct: 0.7, qualityOkRecentMs: 2000}` (dev-only live capture harness for the `MODEL_AND_DATA.md` §7 V1 statistical protocol — phase durations, trial count, yaw target band, and per-phase OK-frame bar for the B1a/B1b/B2/B3 kill-gate run; `qualityOkRecentMs` is the start-protocol enable window: last `QUALITY_OK` frame must be within this many ms).
 
 > **Rule:** a numeric literal used by any service that does not come from this file is a review-blocking defect.
 
@@ -513,6 +524,7 @@ Every tunable, exported as a single frozen object, each with a comment naming it
 | `NOT_INITIALIZED` | LandmarkEngine.detect | true | Internal ordering bug; screens show generic error |
 | `INFERENCE_FAILED` | LandmarkEngine.detect | true | Orchestrator converts to `FACE_LOST` before `evaluate` (passes `null`); never user-visible as an error |
 | `NO_BASELINE` | NormalizationLayer, SessionController | true | Route to `CalibrationScreen` |
+| `RECALIBRATION_REQUIRED` | SessionController.start | true | Route to recalibration |
 | `POSE_OUT_OF_RANGE` | QualityMonitor only (`QualityResult` state; not thrown by `normalize`) | true | Quality UX ("face the camera straight on") |
 | `NOT_ATTESTED` | SafetyGate-gated methods | true | Redirect to `OnboardingScreen` |
 | `CAMERA_DENIED` | CaptureService.start | true | Permission guidance screen with retry |

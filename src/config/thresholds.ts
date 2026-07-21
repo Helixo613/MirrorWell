@@ -4,7 +4,7 @@
  */
 export const thresholds = Object.freeze({
   // FaceLandmarker option thresholds — the only confidence controls that exist.
-  // MediaPipe FaceLandmarkerResult has NO per-frame confidence field (docs/AGENTS.md
+  // MediaPipe FaceLandmarkerResult has NO per-frame confidence field (AGENTS.md
   // verified fact #1). Owning section: docs/API.md §15.
   landmarker: Object.freeze({
     minFaceDetectionConfidence: 0.5,
@@ -60,6 +60,7 @@ export const thresholds = Object.freeze({
   // SessionController tunables. Owning section: docs/API.md §15 / docs/BACKEND.md (SessionController).
   session: Object.freeze({
     qualityProblemOfferStopMs: 30000,
+    metricEventMinIntervalMs: 66,
   }),
 
   // Live V1 protocol harness (dev-only). Owning section: docs/MODEL_AND_DATA.md §7
