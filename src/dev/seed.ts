@@ -11,9 +11,9 @@
 // effect that defeats tree-shaking (esbuild must keep it even when seedDev() itself is never
 // called), which is exactly what Task 8's "no HUD code in the prod bundle" grep test catches.
 import { db } from '../data/schema.ts';
-import type { CalibrationBaseline, EndReason, ExerciseId, UserProfile } from '../data/schema.ts';
+import type { CalibrationBaseline, EndReason, UserProfile } from '../data/schema.ts';
 import { StorageService, type SessionRecordInput } from '../data/storage.ts';
-import { exercises } from '../config/exercises.ts';
+import { exercises, assignableExercises } from '../config/exercises.ts';
 
 function mulberry32(seed: number): () => number {
   let t = seed;
@@ -33,8 +33,6 @@ function pseudoUuidV4(rng: () => number): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-const ALL_EXERCISES = Object.keys(exercises) as ExerciseId[];
-
 export async function seedDev(): Promise<void> {
   // Vite injects import.meta.env; plain `node` execution (the scripts/seed-dev.ts CLI
   // wrapper) leaves it undefined — guard both.
@@ -51,7 +49,7 @@ export async function seedDev(): Promise<void> {
     profileId,
     createdAt: new Date(Date.now() - 45 * 86_400_000).toISOString(),
     affectedSide: 'left',
-    assignedExercises: ALL_EXERCISES,
+    assignedExercises: [...assignableExercises],
     attestedAt: new Date(Date.now() - 45 * 86_400_000).toISOString(),
     consentVersion: '1',
   };
@@ -64,7 +62,7 @@ export async function seedDev(): Promise<void> {
     REGION_LIP: { left: { u: 0.231, v: 0.08 }, right: { u: -0.229, v: 0.08 } },
   };
   const comfortableMax: CalibrationBaseline['comfortableMax'] = Object.fromEntries(
-    ALL_EXERCISES.map((ex) => [ex, 0.05 + rng() * 0.05]),
+    assignableExercises.map((ex) => [ex, 0.05 + rng() * 0.05]),
   );
 
   // Two baselines deliberately: old (inactive) and current (active), so "trends never mix
@@ -117,7 +115,7 @@ export async function seedDev(): Promise<void> {
         endReason = 'user_stopped';
       }
 
-      const results: SessionRecordInput['results'] = ALL_EXERCISES.map((exerciseId) => {
+      const results: SessionRecordInput['results'] = assignableExercises.map((exerciseId) => {
         const config = exercises[exerciseId]!;
         const meanSymmetryIndex = clamp01(symmetryTrend + (rng() * 0.08 - 0.04));
         const meanEffortIndex = 0.35 + rng() * 0.15;
