@@ -6,12 +6,9 @@ import { StorageService } from '../data/storage.ts';
 import { aggregateNeutral, measureAbsolute, type NeutralStats } from '../metrics/geometry.ts';
 import { MetricEngine } from '../metrics/metrics.ts';
 import { NormalizationLayer } from '../metrics/normalize.ts';
-import { CaptureService } from '../sensing/capture.ts';
-import { LandmarkEngine, type LandmarkFrame } from '../sensing/landmarks.ts';
 import { QualityMonitor, type ApprovedFrame } from '../sensing/quality.ts';
+import { openFrameSource, type FrameHandler } from './frames.ts';
 import { SafetyGate } from './safety.ts';
-
-type FrameSource = (onFrame: (video: HTMLVideoElement, lf: LandmarkFrame | null) => void) => () => void;
 
 type Capture = { total: number; approved: ApprovedFrame[] };
 
@@ -20,25 +17,6 @@ let neutralQualityScore: number | null = null;
 let noiseFloorDisplacement = 0;
 let comfortableMax: Partial<Record<ExerciseId, number>> = {};
 let comfortableExercise: ExerciseId | null = null;
-
-const frameSource: FrameSource = (onFrame) => {
-  const unsubscribe = CaptureService.onFrame((video, timestampMs) => {
-    // Narrow: only LandmarkEngine.detect is caught (INFERENCE_FAILED -> null). onFrame is
-    // called exactly once, outside the try, so a downstream exception isn't swallowed and
-    // re-dispatched as a second, phantom null frame (mirrors src/session/controller.ts).
-    let lf: LandmarkFrame | null;
-    try {
-      lf = LandmarkEngine.detect(video, timestampMs);
-    } catch {
-      lf = null;
-    }
-    onFrame(video, lf);
-  });
-  return () => {
-    unsubscribe();
-    CaptureService.stop();
-  };
-};
 
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -58,21 +36,38 @@ async function assertGated(): Promise<void> {
   }
 }
 
-function captureFor(durationMs: number): Promise<Capture> {
-  return new Promise((resolve) => {
-    const capture: Capture = { total: 0, approved: [] };
-    let windowStartMs: number | null = null;
-    const stop = frameSource((video, lf) => {
-      if (windowStartMs === null && lf) windowStartMs = lf.timestampMs;
-      capture.total++;
-      const result = QualityMonitor.evaluate(video, lf);
-      if (result.state === 'QUALITY_OK') capture.approved.push(result.frame);
-      if (windowStartMs !== null && lf && lf.timestampMs - windowStartMs >= durationMs) {
-        stop();
-        resolve(capture);
-      }
-    });
+async function captureFor(durationMs: number): Promise<Capture> {
+  const capture: Capture = { total: 0, approved: [] };
+  let windowStartMs: number | null = null;
+  let closed = false;
+  let teardown: (() => void) | null = null;
+  let closeWindow!: () => void;
+  const windowClosed = new Promise<void>((resolve) => {
+    closeWindow = resolve;
   });
+
+  // The window opens and closes on the raw CaptureService timestamp, never on lf.timestampMs:
+  // under persistent INFERENCE_FAILED (lf === null on every frame) a window guarded by `lf`
+  // would never open and never close, hanging the capture. A capture that ends with zero
+  // approved frames is already handled downstream (QUALITY_TOO_LOW / minQualityScore).
+  const handler: FrameHandler = (video, timestampMs, lf) => {
+    if (closed) return;
+    if (windowStartMs === null) windowStartMs = timestampMs;
+    capture.total++;
+    const result = QualityMonitor.evaluate(video, lf);
+    if (result.state === 'QUALITY_OK') capture.approved.push(result.frame);
+    if (timestampMs - windowStartMs >= durationMs) {
+      // Tear down synchronously, inside the closing frame, so no later frame is counted.
+      closed = true;
+      teardown?.();
+      closeWindow();
+    }
+  };
+
+  teardown = await openFrameSource(handler);
+  if (closed) teardown(); // window closed while the camera was still starting up
+  await windowClosed;
+  return capture;
 }
 
 async function captureWindows(count: number): Promise<Capture[]> {

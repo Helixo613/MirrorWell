@@ -1,23 +1,38 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SessionController } from '../../src/session/controller.ts';
-import { SafetyGate } from '../../src/session/safety.ts';
-import { StorageService } from '../../src/data/storage.ts';
-import { CalibrationFlow } from '../../src/session/calibration.ts';
-import { MetricEngine } from '../../src/metrics/metrics.ts';
-import { NormalizationLayer } from '../../src/metrics/normalize.ts';
-import { RepDetector } from '../../src/metrics/reps.ts';
-import { db } from '../../src/data/schema.ts';
 import type { CalibrationBaseline, ExerciseId, UserProfile } from '../../src/data/schema.ts';
 import { MirrorWellError } from '../../src/data/errors.ts';
+import { aggregateNeutral, measureAbsolute, type NeutralStats } from '../../src/metrics/geometry.ts';
 import type { LandmarkFrame } from '../../src/sensing/landmarks.ts';
 import { thresholds } from '../../src/config/thresholds.ts';
 import { exercises } from '../../src/config/exercises.ts';
+
+// Test isolation: SessionController, CalibrationFlow, MetricEngine, RepDetector,
+// NormalizationLayer and QualityMonitor all hold module-level state with no public reset, so
+// it bled between tests. Each test gets a fresh module graph via vi.resetModules() + dynamic
+// import in beforeEach — no test-only reset() is added to the production contract. Every
+// stateful collaborator that is spied on or mutated here must come from the SAME fresh graph
+// (a spy on a stale instance would target a module the unit under test no longer uses), hence
+// the re-imports below. Pure config/value modules (thresholds, exercises, geometry,
+// MirrorWellError) stay statically imported — nothing compares their identity.
+let SessionController: typeof import('../../src/session/controller.ts').SessionController;
+let SafetyGate: typeof import('../../src/session/safety.ts').SafetyGate;
+let StorageService: typeof import('../../src/data/storage.ts').StorageService;
+let CalibrationFlow: typeof import('../../src/session/calibration.ts').CalibrationFlow;
+let MetricEngine: typeof import('../../src/metrics/metrics.ts').MetricEngine;
+let NormalizationLayer: typeof import('../../src/metrics/normalize.ts').NormalizationLayer;
+let RepDetector: typeof import('../../src/metrics/reps.ts').RepDetector;
+let QualityMonitor: typeof import('../../src/sensing/quality.ts').QualityMonitor;
+let db: typeof import('../../src/data/schema.ts').db;
 
 // Mocks mirror src/session/calibration.ts's own test pattern (tests/unit/calibration.test.ts):
 // production wires CaptureService + LandmarkEngine; tests replace both modules so frames are
 // driven synthetically by frame-timestamp only (no wall-clock timers).
 const capture = vi.hoisted(() => ({
   subscribers: new Set<(video: HTMLVideoElement, timestampMs: number) => void>(),
+  running: false,
+  /** Fired synchronously by a successful start() — the only way frames reach a subscriber in
+   * these tests, mirroring production where CaptureService.tick() fans out only while running. */
+  onStart: null as (() => void) | null,
   start: vi.fn(),
   stop: vi.fn(),
 }));
@@ -29,8 +44,19 @@ vi.mock('../../src/sensing/capture.ts', () => ({
       capture.subscribers.add(cb);
       return () => capture.subscribers.delete(cb);
     },
-    start: (...args: unknown[]) => capture.start(...args),
-    stop: (...args: unknown[]) => capture.stop(...args),
+    // Models the real service's ownership flag: start() sets `running` (on success only),
+    // stop() clears it, isRunning() reports it — so src/session/frames.ts's
+    // start-if-not-running / stop-only-if-I-started logic is genuinely exercised.
+    start: async (...args: unknown[]) => {
+      await capture.start(...args);
+      capture.running = true;
+      capture.onStart?.();
+    },
+    stop: (...args: unknown[]) => {
+      capture.running = false;
+      capture.stop(...args);
+    },
+    isRunning: () => capture.running,
   },
 }));
 vi.mock('../../src/sensing/landmarks.ts', () => ({
@@ -95,13 +121,21 @@ function makeProfile(assignedExercises: ExerciseId[]): UserProfile {
   };
 }
 
-function makeBaseline(comfortableMax: Partial<Record<ExerciseId, number>>): CalibrationBaseline {
+/** The neutral stats the synthetic `landmarkFrame()` geometry actually measures — a baseline
+ * carrying these makes the REAL drift check report 'ok' (zero displacement). */
+function syntheticNeutralStats(): NeutralStats {
+  const result = QualityMonitor.evaluate(VIDEO, landmarkFrame({}, 0));
+  if (result.state !== 'QUALITY_OK') throw new Error(`synthetic frame is ${result.state}`);
+  return aggregateNeutral([measureAbsolute(result.frame)]);
+}
+
+function makeBaseline(comfortableMax: Partial<Record<ExerciseId, number>>, neutralStats?: NeutralStats): CalibrationBaseline {
   const zero = { left: { u: 0, v: 0 }, right: { u: 0, v: 0 } };
   return {
     baselineId: BASELINE_ID,
     profileId: PROFILE_ID,
     capturedAt: '2026-07-01T09:05:00.000Z',
-    neutralStats: {
+    neutralStats: neutralStats ?? {
       REGION_BROW: zero,
       REGION_EYELID: zero,
       REGION_MOUTH_CORNER: zero,
@@ -118,13 +152,18 @@ function makeBaseline(comfortableMax: Partial<Record<ExerciseId, number>>): Cali
 /** Seeds a real (fake-indexeddb) profile + active baseline (comfortableMax = 1 for each
  * assigned exercise, so effortIndex === raw blendshape activation) and stubs the gate to
  * ATTESTED with a passing drift check. */
-async function seedAttested(assignedExercises: ExerciseId[] = ['EX_SMILE', 'EX_EYE_CLOSURE']): Promise<void> {
+async function seedAttested(
+  assignedExercises: ExerciseId[] = ['EX_SMILE', 'EX_EYE_CLOSURE'],
+  stubDrift = true,
+): Promise<void> {
   await StorageService.saveProfile(makeProfile(assignedExercises));
   const comfortableMax = Object.fromEntries(assignedExercises.map((id) => [id, 1])) as Partial<Record<ExerciseId, number>>;
-  await StorageService.saveBaseline(makeBaseline(comfortableMax));
+  // When the drift check is NOT stubbed it runs for real against this baseline, so seed the
+  // stats the synthetic frames actually measure (zero drift -> 'ok').
+  await StorageService.saveBaseline(makeBaseline(comfortableMax, stubDrift ? undefined : syntheticNeutralStats()));
   vi.spyOn(SafetyGate, 'isAttested').mockResolvedValue(true);
   vi.spyOn(SafetyGate, 'isDemoMode').mockReturnValue(false);
-  vi.spyOn(CalibrationFlow, 'checkBaselineDrift').mockResolvedValue('ok');
+  if (stubDrift) vi.spyOn(CalibrationFlow, 'checkBaselineDrift').mockResolvedValue('ok');
 }
 
 /**
@@ -169,7 +208,19 @@ function on<E extends Parameters<typeof SessionController.on>[0]>(
 beforeEach(async () => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.resetModules();
+  ({ SessionController } = await import('../../src/session/controller.ts'));
+  ({ SafetyGate } = await import('../../src/session/safety.ts'));
+  ({ StorageService } = await import('../../src/data/storage.ts'));
+  ({ CalibrationFlow } = await import('../../src/session/calibration.ts'));
+  ({ MetricEngine } = await import('../../src/metrics/metrics.ts'));
+  ({ NormalizationLayer } = await import('../../src/metrics/normalize.ts'));
+  ({ RepDetector } = await import('../../src/metrics/reps.ts'));
+  ({ QualityMonitor } = await import('../../src/sensing/quality.ts'));
+  ({ db } = await import('../../src/data/schema.ts'));
   capture.subscribers.clear();
+  capture.running = false;
+  capture.onStart = null;
   capture.start.mockReset().mockResolvedValue(undefined);
   capture.stop.mockReset();
   landmarkState.current = null;
@@ -243,6 +294,35 @@ describe('SessionController preconditions', () => {
     expect(driftSpy).not.toHaveBeenCalled();
     await SessionController.stop('user_stopped');
   });
+
+  // C1 regression. The real (unstubbed) drift path: CalibrationFlow.checkBaselineDrift()
+  // awaits a frame window, and nothing before it ever started the camera — so on every
+  // attested session start() used to hang forever. Frames here only flow from a successful
+  // CaptureService.start() (capture.onStart), exactly like production, so the deadlock is
+  // reproducible; the per-test timeout turns a regression into a failure, not a hung suite.
+  it(
+    'completes start() on the real drift path — the drift check owns and releases the camera',
+    async () => {
+      await seedAttested(['EX_SMILE'], false);
+      capture.onStart = () => {
+        capture.onStart = null; // bounded: one window's worth of frames, fired once
+        emitOk({}, 0);
+        emitOk({}, thresholds.calibration.captureSeconds * 1000);
+      };
+      const seen: Array<{ exerciseId: string; state: string }> = [];
+      on('stateChanged', (p) => seen.push(p));
+
+      await SessionController.start(['EX_SMILE']);
+
+      expect(seen.at(-1)).toEqual({ exerciseId: 'EX_SMILE', state: 'DEMO' });
+      // Drift started the camera and stopped it (it owned it); the session then started it
+      // again for itself.
+      expect(capture.start).toHaveBeenCalledTimes(2);
+      expect(capture.stop).toHaveBeenCalledTimes(1);
+      await SessionController.stop('user_stopped');
+    },
+    2000,
+  );
 
   it('propagates CAMERA_DENIED from camera start and unsubscribes the frame source', async () => {
     await seedAttested(['EX_SMILE']);

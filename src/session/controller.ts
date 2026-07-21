@@ -12,8 +12,8 @@ import { RepDetector, type RepEvent } from '../metrics/reps.ts';
 import { CalibrationFlow } from './calibration.ts';
 import { Emitter } from './emitter.ts';
 import { SafetyGate } from './safety.ts';
-import { CaptureService } from '../sensing/capture.ts';
-import { LandmarkEngine, type LandmarkFrame } from '../sensing/landmarks.ts';
+import { openFrameSource } from './frames.ts';
+import { type LandmarkFrame } from '../sensing/landmarks.ts';
 import { QualityMonitor, type QualityResult, type QualityState } from '../sensing/quality.ts';
 
 type State = 'DEMO' | 'REPS' | 'REST';
@@ -26,33 +26,6 @@ type Events = {
   easeOff: { active: boolean };
   sessionEnded: { record: SessionRecordFull };
   qualityOfferStop: { visible: boolean };
-};
-
-// Local frame-source seam mirroring src/session/calibration.ts's frameSource, extended to
-// carry the raw CaptureService timestamp alongside `lf` — calibration.ts's 2-arg shape loses
-// the timestamp on the INFERENCE_FAILED catch branch, but SessionController's REST deadline,
-// offer-stop window, and metricUpdate throttle all derive from frame timestamps (fixed design
-// decision) and must keep ticking through a non-OK/inference-failed frame too.
-type FrameSource = (onFrame: (video: HTMLVideoElement, timestampMs: number, lf: LandmarkFrame | null) => void) => () => void;
-
-const frameSource: FrameSource = (onFrame) => {
-  const unsubscribe = CaptureService.onFrame((video, timestampMs) => {
-    // Narrow: only LandmarkEngine.detect is caught (INFERENCE_FAILED -> null). onFrame is
-    // called exactly once, outside the try, so a downstream pipeline exception (e.g.
-    // NO_BASELINE from compute) propagates instead of being swallowed and re-dispatched as a
-    // second, phantom FACE_LOST frame (double frame counting).
-    let lf: LandmarkFrame | null;
-    try {
-      lf = LandmarkEngine.detect(video, timestampMs);
-    } catch {
-      lf = null;
-    }
-    onFrame(video, timestampMs, lf);
-  });
-  return () => {
-    unsubscribe();
-    CaptureService.stop();
-  };
 };
 
 const emitter = new Emitter<Events>();
@@ -337,14 +310,9 @@ export const SessionController = {
       baselineId = baseline.baselineId;
     }
 
-    stopFrameSource = frameSource(handleFrame);
-    try {
-      await CaptureService.start();
-    } catch (err) {
-      stopFrameSource();
-      stopFrameSource = null;
-      throw err;
-    }
+    // Idempotent seam: the drift check above already started and released the camera, so this
+    // starts it again for the session and owns it until stop().
+    stopFrameSource = await openFrameSource(handleFrame);
 
     exercisesInSession = exerciseIds;
     index = 0;

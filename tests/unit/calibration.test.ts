@@ -1,12 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { thresholds } from '../../src/config/thresholds.ts';
-import { StorageService } from '../../src/data/storage.ts';
 import type { UserProfile } from '../../src/data/schema.ts';
-import { CalibrationFlow } from '../../src/session/calibration.ts';
 import type { LandmarkFrame } from '../../src/sensing/landmarks.ts';
-import { QualityMonitor } from '../../src/sensing/quality.ts';
 
-const capture = vi.hoisted(() => ({ subscribers: new Set<(video: HTMLVideoElement, timestampMs: number) => void>() }));
+// Test isolation: CalibrationFlow (and QualityMonitor's jitter history) keep module-level
+// state that is never reset by a public API, so state bled between tests and could mask
+// ordering-dependent bugs. Each test gets a fresh module graph via vi.resetModules() + dynamic
+// import — no test-only reset() is added to the production contract. Every stateful
+// collaborator the tests spy on or read must come from the SAME fresh graph, hence the
+// re-imports below.
+let StorageService: typeof import('../../src/data/storage.ts').StorageService;
+let CalibrationFlow: typeof import('../../src/session/calibration.ts').CalibrationFlow;
+let QualityMonitor: typeof import('../../src/sensing/quality.ts').QualityMonitor;
+
+const capture = vi.hoisted(() => ({
+  subscribers: new Set<(video: HTMLVideoElement, timestampMs: number) => void>(),
+  running: false,
+  start: vi.fn(),
+  stop: vi.fn(),
+}));
 const safety = vi.hoisted(() => ({ isAttested: vi.fn(), isDemoMode: vi.fn() }));
 const frames = vi.hoisted(() => [] as (LandmarkFrame | null)[]);
 
@@ -16,7 +28,17 @@ vi.mock('../../src/sensing/capture.ts', () => ({
       capture.subscribers.add(cb);
       return () => capture.subscribers.delete(cb);
     },
-    stop: vi.fn(),
+    // Models the real service's ownership flag so src/session/frames.ts's
+    // start-if-not-running / stop-only-if-I-started logic is genuinely exercised.
+    start: async (...args: unknown[]) => {
+      await capture.start(...args);
+      capture.running = true;
+    },
+    stop: (...args: unknown[]) => {
+      capture.running = false;
+      capture.stop(...args);
+    },
+    isRunning: () => capture.running,
   },
 }));
 vi.mock('../../src/sensing/landmarks.ts', () => ({ LandmarkEngine: { detect: () => frames.shift() ?? null } }));
@@ -52,46 +74,43 @@ function emit(lf: LandmarkFrame | null, timestampMs: number): void {
   for (const callback of capture.subscribers) callback(video, timestampMs);
 }
 
-async function captureThree(result: Promise<unknown>, values: (LandmarkFrame | null)[]): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await Promise.resolve();
-  await Promise.resolve();
-  await Promise.resolve();
-  for (let attempt = 0; capture.subscribers.size === 0 && attempt < 10; attempt++) {
-    await Promise.resolve();
+/**
+ * Waits until a capture window is subscribed. captureFor() now awaits
+ * CaptureService.start() before its window is live (src/session/frames.ts), so the number of
+ * microtasks between windows is an implementation detail — poll for the subscriber instead of
+ * counting ticks. Each window tears its subscriber down synchronously on its closing frame,
+ * so `size === 0` reliably means "the next window has not opened yet".
+ */
+async function waitForSubscriber(): Promise<void> {
+  for (let attempt = 0; capture.subscribers.size === 0 && attempt < 200; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }
+}
+
+async function captureThree(result: Promise<unknown>, values: (LandmarkFrame | null)[]): Promise<void> {
   const durationMs = thresholds.calibration.captureSeconds * 1000;
   for (let i = 0; i < thresholds.calibration.neutralCaptures; i++) {
-    await Promise.resolve();
-    await Promise.resolve();
+    await waitForSubscriber();
     emit(values[i]!, i * durationMs * 2);
     emit(values[i]!, i * durationMs * 2 + durationMs);
-    await Promise.resolve();
   }
   await result;
 }
 
 async function captureThreeWithFrames(result: Promise<unknown>, windows: LandmarkFrame[][]): Promise<void> {
-  await Promise.resolve();
-  await Promise.resolve();
-  await Promise.resolve();
-  for (let attempt = 0; capture.subscribers.size === 0 && attempt < 10; attempt++) await Promise.resolve();
   const durationMs = thresholds.calibration.captureSeconds * 1000;
   for (let index = 0; index < windows.length; index++) {
+    await waitForSubscriber();
     const start = index * durationMs * 3;
     for (let offset = 0; offset < windows[index]!.length; offset++) {
       emit(windows[index]![offset]!, start + (offset === windows[index]!.length - 1 ? durationMs : offset));
     }
-    await Promise.resolve();
   }
   await result;
 }
 
 async function captureOne(result: Promise<unknown>, framesForWindow: LandmarkFrame[]): Promise<void> {
-  await Promise.resolve();
-  await Promise.resolve();
-  await Promise.resolve();
-  for (let attempt = 0; capture.subscribers.size === 0 && attempt < 10; attempt++) await Promise.resolve();
+  await waitForSubscriber();
   const durationMs = thresholds.calibration.captureSeconds * 1000;
   for (let index = 0; index < framesForWindow.length; index++) {
     emit(framesForWindow[index]!, index === framesForWindow.length - 1 ? durationMs : index);
@@ -115,7 +134,14 @@ async function persistBaseline(): Promise<void> {
 beforeEach(async () => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.resetModules();
+  ({ StorageService } = await import('../../src/data/storage.ts'));
+  ({ CalibrationFlow } = await import('../../src/session/calibration.ts'));
+  ({ QualityMonitor } = await import('../../src/sensing/quality.ts'));
   capture.subscribers.clear();
+  capture.running = false;
+  capture.start.mockReset().mockResolvedValue(undefined);
+  capture.stop.mockReset();
   frames.length = 0;
   safety.isAttested.mockResolvedValue(true);
   safety.isDemoMode.mockReturnValue(false);
@@ -193,10 +219,7 @@ describe('CalibrationFlow', () => {
     ]);
 
     const noise = CalibrationFlow.runNoiseFloorSelfTest();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    await waitForSubscriber();
     emit(frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }), 0);
     emit(frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }), thresholds.calibration.captureSeconds * 1000);
 
@@ -259,6 +282,25 @@ describe('CalibrationFlow', () => {
 
     expect((await StorageService.getActiveBaseline())?.qualityScore).toBeCloseTo(0.9);
   });
+
+  // I2 regression. The capture window used to open and close off lf.timestampMs behind an
+  // `lf &&` guard, so a stream where every frame fails inference (lf === null) never opened
+  // and never closed the window — captureFor hung forever. The window now runs off the raw
+  // CaptureService timestamp, so the capture always terminates on schedule.
+  it(
+    'terminates a drift capture in which every frame fails inference',
+    async () => {
+      await persistBaseline();
+      QualityMonitor.evaluate(video, null);
+      const drift = CalibrationFlow.checkBaselineDrift();
+      await waitForSubscriber();
+      emit(null, 0);
+      emit(null, thresholds.calibration.captureSeconds * 1000);
+
+      await expect(drift).rejects.toMatchObject({ code: 'QUALITY_TOO_LOW' });
+    },
+    2000,
+  );
 
   it('reports NO_BASELINE for drift checks without an active baseline', async () => {
     await expect(CalibrationFlow.checkBaselineDrift()).rejects.toMatchObject({ code: 'NO_BASELINE' });
