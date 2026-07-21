@@ -1,12 +1,17 @@
 // src/dev/liveDemoState.ts — pure display logic for the dev-only live demo view.
 // Dev-only, React-free, tested directly (same pattern as liveV1HarnessState.ts).
 //
-// The symmetric/asymmetric boundary is NOT a new tunable: it is the ephemeral baseline's own
-// measured `noiseFloorSymmetry` (standard deviation of raw SI over the gentle-hold window, the
-// same quantity CalibrationFlow.runNoiseFloorSelfTest computes). A symmetry index within one
-// noise floor of a perfect 1.0 is inside what this camera/user/light measurably resolves, so it
-// reads as symmetric; anything further out is a difference the pipeline can actually see.
+// The symmetric/asymmetric boundary is an explicit tunable, `thresholds.liveDemo.symmetryBoundary`.
+// It is NOT derived from the measured noise floor: a real symmetric smile centres at SI ≈ 0.96–0.98,
+// never a perfect 1.0, so a boundary anchored at 1.0 minus a noise floor of a few hundredths reads a
+// genuinely symmetric smile as "Uneven". The tunable sits in the gap the demo arc names (symmetric
+// ≈ 0.98; one side restrained ≈ 0.4–0.7) and is tuned on real hardware.
+//
+// The measured noise floor is still computed (`stdDev`) — it is a field of the ephemeral baseline
+// and is shown in the readout — but it no longer moves the boundary. `isNoiseFloorUsable` survives
+// as the quick-setup validity gate only (see its doc comment).
 import { strings } from '../config/strings.ts';
+import { thresholds } from '../config/thresholds.ts';
 
 const copy = strings.liveDemo;
 
@@ -34,30 +39,22 @@ export function stdDev(xs: readonly number[]): number {
 }
 
 /**
- * A noise floor of exactly 0 means the hold window was too short (or SI never became
- * measurable) — the boundary would then be an unreachable SI of exactly 1.0. That is a
- * "redo the quick setup" condition, never something to paper over with a constant.
+ * Quick-setup validity gate (no longer a boundary input). A noise floor of exactly 0 over a
+ * hold window that produced samples means the raw SI never varied by a single ulp — a frozen
+ * or degenerate capture, not a steady human hold. That is a "redo the quick setup" condition,
+ * never something to paper over with a constant.
  */
 export function isNoiseFloorUsable(noiseFloorSymmetry: number): boolean {
   return Number.isFinite(noiseFloorSymmetry) && noiseFloorSymmetry > 0;
 }
 
-export function classifySymmetry(
-  symmetryIndex: number | null,
-  noiseFloorSymmetry: number,
-): DemoReadout {
+export function classifySymmetry(symmetryIndex: number | null): DemoReadout {
   if (symmetryIndex === null || !Number.isFinite(symmetryIndex)) return 'no_reading';
-  const tolerance = Number.isFinite(noiseFloorSymmetry) && noiseFloorSymmetry > 0
-    ? noiseFloorSymmetry
-    : 0;
-  return 1 - symmetryIndex <= tolerance ? 'symmetric' : 'asymmetric';
+  return symmetryIndex >= thresholds.liveDemo.symmetryBoundary ? 'symmetric' : 'asymmetric';
 }
 
-export function describeSymmetry(
-  symmetryIndex: number | null,
-  noiseFloorSymmetry: number,
-): DemoDisplay {
-  const readout = classifySymmetry(symmetryIndex, noiseFloorSymmetry);
+export function describeSymmetry(symmetryIndex: number | null): DemoDisplay {
+  const readout = classifySymmetry(symmetryIndex);
   if (readout === 'no_reading') {
     return {
       readout,
@@ -77,6 +74,36 @@ export function describeSymmetry(
     barPct: Math.max(0, Math.min(100, si * 100)),
     siText: si.toFixed(2),
   };
+}
+
+/** One usable neutral frame is the minimum an aggregate can be built from. */
+export const MIN_NEUTRAL_SAMPLES = 1;
+/** stdDev needs a pair, so a hold window under two SI samples has no measurable floor. */
+export const MIN_HOLD_SI_SAMPLES = 2;
+
+export type CaptureDecision = 'keep_waiting' | 'finalize' | 'error';
+
+/**
+ * Deadline decision for one quick-setup capture window.
+ *
+ * Deliberately independent of the current frame's quality state: making `finalize` conditional
+ * on a QUALITY_OK frame is precisely the bug this replaces — a window that collected enough
+ * samples and then degraded at the deadline would hang in "Capturing…" forever waiting for an
+ * OK frame that may never return. The "evaluated on every frame regardless of quality or
+ * inference success" requirement is met by the caller invoking this unconditionally, outside
+ * any quality branch and outside the inference `try`.
+ *
+ * `elapsedMs` is a delta between two carried frame timestamps (frames.ts), so it keeps ticking
+ * through non-OK and inference-failed frames.
+ */
+export function decideCaptureWindow(
+  elapsedMs: number,
+  windowMs: number,
+  samples: number,
+  minSamples: number,
+): CaptureDecision {
+  if (elapsedMs < windowMs) return 'keep_waiting';
+  return samples >= minSamples ? 'finalize' : 'error';
 }
 
 /** Per-side activation readout; null (no measurable frame) is explicit, never 0. */

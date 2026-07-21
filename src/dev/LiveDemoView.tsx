@@ -18,10 +18,13 @@ import { exercises } from '../config/exercises.ts';
 import { thresholds } from '../config/thresholds.ts';
 import { strings } from '../config/strings.ts';
 import {
+  decideCaptureWindow,
   describeSymmetry,
   formatActivation,
   isNoiseFloorUsable,
   stdDev,
+  MIN_HOLD_SI_SAMPLES,
+  MIN_NEUTRAL_SAMPLES,
 } from './liveDemoState.ts';
 
 const copy = strings.liveDemo;
@@ -31,6 +34,9 @@ const copy = strings.liveDemo;
 const DEMO_EXERCISE = 'EX_SMILE' as const;
 const PAIR = exercises[DEMO_EXERCISE]!.blendshapePair!;
 const CAPTURE_MS = thresholds.calibration.captureSeconds * 1000;
+// Provisional comfortableMax: one activation unit, so compute() can run during the hold before
+// the real peak is known. Structural, not a tunable.
+const PROVISIONAL_MAX = 1;
 
 type Step = 'idle' | 'neutral' | 'holdPrompt' | 'hold' | 'live';
 
@@ -57,8 +63,12 @@ export function LiveDemoView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mountedVideoRef = useRef<HTMLVideoElement | null>(null);
   const teardownRef = useRef<(() => void) | null>(null);
+  const mountedRef = useRef(true);
   const stepRef = useRef<Step>('idle');
-  const deadlineRef = useRef(0);
+  // Start of the current capture window, on the frame seam's carried clock (null until the
+  // window's first frame arrives). Deltas only: rAF and requestVideoFrameCallback timestamps
+  // have different epochs, so an absolute deadline mixed with performance.now() is not valid.
+  const windowStartRef = useRef<number | null>(null);
   const neutralAbsRef = useRef<AbsoluteFeatures[]>([]);
   const holdActsRef = useRef<number[]>([]);
   const holdSiRef = useRef<number[]>([]);
@@ -84,7 +94,7 @@ export function LiveDemoView() {
   }, []);
 
   const handleFrame = useCallback<FrameHandler>(
-    (video, _timestampMs, lf) => {
+    (video, timestampMs, lf) => {
       if (containerRef.current && mountedVideoRef.current !== video) {
         containerRef.current.replaceChildren(video);
         mountedVideoRef.current = video;
@@ -92,87 +102,89 @@ export function LiveDemoView() {
 
       const qr = QualityMonitor.evaluate(video, lf);
       setQuality(qr.state);
-      const now = performance.now();
       const current = stepRef.current;
+      const ok = qr.state === 'QUALITY_OK';
+      if (!ok) clearReadings();
 
-      if (qr.state !== 'QUALITY_OK') {
+      if (current === 'idle' || current === 'holdPrompt') {
         clearReadings();
-        // A capture window that elapses without enough usable frames must end with a message,
-        // never hang in "Capturing…" waiting for a QUALITY_OK frame that may not come.
-        if (now >= deadlineRef.current) {
-          if (current === 'neutral' && neutralAbsRef.current.length === 0) {
-            setError(copy.noNeutralFrames);
-            setStep('idle');
-          } else if (current === 'hold' && holdSiRef.current.length < 2) {
-            setError(copy.setupTooShort);
-            setStep('holdPrompt');
-          }
-        }
         return;
       }
+
+      // Phase 1 — collect. Only a QUALITY_OK frame can contribute a sample, and an inference
+      // failure costs this frame's sample, nothing more.
+      if (ok) {
+        if (current === 'neutral') {
+          neutralAbsRef.current.push(measureAbsolute(qr.frame));
+        } else {
+          try {
+            const nf = NormalizationLayer.normalize(qr.frame);
+            const l = nf.blendshapes[PAIR.left] ?? 0;
+            const r = nf.blendshapes[PAIR.right] ?? 0;
+            setLeftAct(l);
+            setRightAct(r);
+            const sample = MetricEngine.compute(nf, DEMO_EXERCISE);
+            setSymmetryIndex(sample.symmetryIndex);
+            if (current === 'hold') {
+              holdActsRef.current.push(Math.max(l, r));
+              const raw = MetricEngine.getLastRaw();
+              if (raw?.symmetryIndex != null) holdSiRef.current.push(raw.symmetryIndex);
+            }
+          } catch {
+            // NO_BASELINE / transient — no reading for this frame, never a substituted guess.
+            clearReadings();
+          }
+        }
+      }
+
+      if (current === 'live') return;
+
+      // Phase 2 — deadline. Evaluated on EVERY frame: outside the quality branch and outside
+      // the inference try, so a window that collected data and then went bad still finalizes
+      // instead of hanging in "Capturing…".
+      windowStartRef.current ??= timestampMs;
+      const decision = decideCaptureWindow(
+        timestampMs - windowStartRef.current,
+        CAPTURE_MS,
+        current === 'neutral' ? neutralAbsRef.current.length : holdSiRef.current.length,
+        current === 'neutral' ? MIN_NEUTRAL_SAMPLES : MIN_HOLD_SI_SAMPLES,
+      );
+      if (decision === 'keep_waiting') return;
 
       if (current === 'neutral') {
-        neutralAbsRef.current.push(measureAbsolute(qr.frame));
-        if (now >= deadlineRef.current) {
-          // Provisional baseline: comfortableMax = 1 activation unit so compute() runs during
-          // the hold; the measured peak replaces it when the hold finishes.
-          const provisional = buildEphemeralBaseline(neutralAbsRef.current, 1, 0);
-          NormalizationLayer.setBaseline(provisional);
-          MetricEngine.setBaseline(provisional);
-          MetricEngine.reset();
-          setStep('holdPrompt');
+        if (decision === 'error') {
+          setError(copy.noNeutralFrames);
+          setStep('idle');
+          return;
         }
+        // The provisional baseline is built by beginHold, so every hold attempt starts from
+        // the same normalization state.
+        setStep('holdPrompt');
         return;
       }
 
-      if (current !== 'hold' && current !== 'live') {
-        clearReadings();
+      const floor = stdDev(holdSiRef.current);
+      if (decision === 'error' || !isNoiseFloorUsable(floor)) {
+        setError(copy.setupTooShort);
+        setStep('holdPrompt');
         return;
       }
-
-      try {
-        const nf = NormalizationLayer.normalize(qr.frame);
-        const l = nf.blendshapes[PAIR.left] ?? 0;
-        const r = nf.blendshapes[PAIR.right] ?? 0;
-        setLeftAct(l);
-        setRightAct(r);
-        const sample = MetricEngine.compute(nf, DEMO_EXERCISE);
-        setSymmetryIndex(sample.symmetryIndex);
-
-        if (current === 'hold') {
-          holdActsRef.current.push(Math.max(l, r));
-          const raw = MetricEngine.getLastRaw();
-          if (raw?.symmetryIndex != null) holdSiRef.current.push(raw.symmetryIndex);
-          if (now >= deadlineRef.current) {
-            const floor = stdDev(holdSiRef.current);
-            if (holdSiRef.current.length < 2 || !isNoiseFloorUsable(floor)) {
-              setError(copy.setupTooShort);
-              setStep('holdPrompt');
-              return;
-            }
-            const peak = Math.max(
-              ...holdActsRef.current,
-              thresholds.blendshapes.activationFloor,
-            );
-            const baseline = buildEphemeralBaseline(neutralAbsRef.current, peak, floor);
-            NormalizationLayer.setBaseline(baseline);
-            MetricEngine.setBaseline(baseline);
-            MetricEngine.reset();
-            setNoiseFloor(floor);
-            setStep('live');
-          }
-        }
-      } catch {
-        // NO_BASELINE / transient — no reading for this frame, never a substituted guess.
-        clearReadings();
-      }
+      const peak = Math.max(...holdActsRef.current, thresholds.blendshapes.activationFloor);
+      const baseline = buildEphemeralBaseline(neutralAbsRef.current, peak, floor);
+      NormalizationLayer.setBaseline(baseline);
+      MetricEngine.setBaseline(baseline);
+      MetricEngine.reset();
+      setNoiseFloor(floor);
+      setStep('live');
     },
     [clearReadings, setStep],
   );
 
   // Camera may be open only while this view is mounted (CLAUDE.md non-negotiable).
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       teardownRef.current?.();
       teardownRef.current = null;
       // ponytail: unconditional stop — the safety rule outranks openFrameSource's
@@ -187,11 +199,24 @@ export function LiveDemoView() {
     setError(null);
     try {
       if (!LandmarkEngine.isReady()) await LandmarkEngine.init();
+      // Unmount can land inside either await. The stream may be open only while this view is
+      // mounted, so bail after both — never pin a teardown (or state) on a dead component.
+      if (!mountedRef.current) {
+        CaptureService.stop();
+        return;
+      }
       if (!teardownRef.current) {
-        teardownRef.current = await openFrameSource(handleFrame);
+        const teardown = await openFrameSource(handleFrame);
+        if (!mountedRef.current) {
+          teardown();
+          CaptureService.stop();
+          return;
+        }
+        teardownRef.current = teardown;
       }
       setCameraOn(true);
     } catch (e) {
+      if (!mountedRef.current) return;
       setError(e instanceof MirrorWellError ? `${e.code}: ${e.message}` : String(e));
     }
   }
@@ -214,7 +239,7 @@ export function LiveDemoView() {
     NormalizationLayer.clearBaseline();
     MetricEngine.reset();
     clearReadings();
-    deadlineRef.current = performance.now() + CAPTURE_MS;
+    windowStartRef.current = null;
     setStep('neutral');
   }
 
@@ -222,12 +247,19 @@ export function LiveDemoView() {
     setError(null);
     holdActsRef.current = [];
     holdSiRef.current = [];
+    setNoiseFloor(0);
+    // Provisional baseline, rebuilt per attempt: comfortableMax = 1 activation unit so
+    // compute() runs during the hold. Rebuilding here also clears a previous attempt's
+    // finished baseline instead of leaving it pinned.
+    const provisional = buildEphemeralBaseline(neutralAbsRef.current, PROVISIONAL_MAX, 0);
+    NormalizationLayer.setBaseline(provisional);
+    MetricEngine.setBaseline(provisional);
     MetricEngine.reset();
-    deadlineRef.current = performance.now() + CAPTURE_MS;
+    windowStartRef.current = null;
     setStep('hold');
   }
 
-  const display = describeSymmetry(step === 'live' ? symmetryIndex : null, noiseFloor);
+  const display = describeSymmetry(step === 'live' ? symmetryIndex : null);
 
   const shell: CSSProperties = {
     border: '2px solid #333',

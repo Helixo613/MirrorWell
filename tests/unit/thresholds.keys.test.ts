@@ -6,7 +6,7 @@ import { thresholds } from '../../src/config/thresholds';
 describe('thresholds', () => {
   it('exports the full key list from API.md §15', () => {
     expect(Object.keys(thresholds).sort()).toEqual(
-      ['blendshapes', 'calibration', 'landmarker', 'metrics', 'qualityGates', 'reps', 'session', 'v1Protocol'].sort(),
+      ['blendshapes', 'calibration', 'landmarker', 'liveDemo', 'metrics', 'qualityGates', 'reps', 'session', 'v1Protocol'].sort(),
     );
   });
 
@@ -75,6 +75,11 @@ describe('thresholds', () => {
     expect(thresholds.v1Protocol.yawTargetMinDeg).toBe(7);
     expect(thresholds.v1Protocol.yawTargetMaxDeg).toBe(13);
     expect(thresholds.v1Protocol.minOkFramePct).toBe(0.7);
+  });
+
+  it('liveDemo exposes the dev-only demo readout band', () => {
+    expect(Object.keys(thresholds.liveDemo)).toEqual(['symmetryBoundary']);
+    expect(thresholds.liveDemo.symmetryBoundary).toBe(0.85);
   });
 
   it('is frozen (cannot be mutated at runtime)', () => {
