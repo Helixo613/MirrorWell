@@ -112,6 +112,40 @@ export const strings = Object.freeze({
     trial2Short: 'T2',
     floorLabel: 'floor',
   }),
+  // Dev-only live demo view (src/dev/LiveDemoView.tsx). §8-audited: symmetry/movement/gentle
+  // register only; no diagnosis, severity, normal/abnormal, prediction, or pressure language.
+  liveDemo: Object.freeze({
+    title: 'Live symmetry demo',
+    intro:
+      'A live readout of movement symmetry for the gentle smile. Nothing is recorded or saved. Quick setup measures your own neutral and one gentle hold first.',
+    startCamera: 'Start camera',
+    stopCamera: 'Stop camera',
+    captureNeutral: 'Step 1 — capture neutral',
+    captureHold: 'Step 2 — capture gentle hold',
+    restartSetup: 'Redo quick setup',
+    neutralInstruction: 'Face the camera and relax completely. Hold still.',
+    holdInstruction: 'Let a small, gentle smile come and hold it steady.',
+    capturing: 'Capturing…',
+    setupReadyLabel: 'Quick setup',
+    setupReady: 'ready',
+    setupPending: 'not done yet',
+    setupTooShort: 'The hold was too short or too still to measure. Redo the quick setup.',
+    noNeutralFrames: 'No clear frames in the neutral capture. Adjust light or framing and retry.',
+    symmetryLabel: 'Symmetry index',
+    leftLabel: 'Left activation',
+    rightLabel: 'Right activation',
+    qualityLabel: 'Quality',
+    noiseFloorLabel: 'Measured noise floor',
+    stateLabel: 'State',
+    stateSymmetric: 'Even on both sides',
+    stateAsymmetric: 'Uneven between sides',
+    stateNoReading: 'No reading',
+    glyphSymmetric: '=',
+    glyphAsymmetric: '≠',
+    glyphNoReading: '—',
+    noReading: 'no reading',
+    errorPrefix: 'Error',
+  }),
 });
 
 export type Strings = typeof strings;
