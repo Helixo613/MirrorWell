@@ -50,3 +50,16 @@ Follow Track B refined, not a raw SI dump:
 4. Formal V2 PASS still requires MEEI later; do not rewrite Track B into PASS.
 
 Stream D does not implement this.
+
+
+## Settled decision (2026-07-21) — for Stream C ledger
+
+**Now:** palsynet Track B refined (`track-b-palsynet-v1`, exploratory only).  
+**Future:** MEEI formal V2 (bars frozen, not cancelled).  
+**Product:** backend/demo can proceed PROVISIONAL; do not block on MEEI.
+
+One-liner:
+```
+Near-term evidence: palsynet Track B exploratory only; MEEI/formal V2 deferred to future (bars unchanged, still owed).
+```
+

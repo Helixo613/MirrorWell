@@ -26,7 +26,7 @@
 
 | Track | Material | Purpose | When |
 |---|---|---|---|
-| **Formal (Tasks 0, 2–5)** | MEEI via author email and/or SCBS membership | Frozen bars → PASS / FAIL / UNDERPOWERED | **Deferred for schedule** (still owed; not cancelled) |
+| **Formal (Tasks 0, 2–5)** | MEEI via author email and/or SCBS membership | Frozen bars → PASS / FAIL / UNDERPOWERED | **Future work** (deferred for schedule; still owed; not cancelled) |
 | **Exploratory (ACTIVE near-term)** | `jasir/palsynet-data` + **Track B refined protocol** | Predeclared E1–E4 exploratory verdict; never formal PASS | **Now** — see `docs/superpowers/reports/external-evidence/2026-07-21-track-b-refined.md` |
 | **Dry-run only** | Existing S01 masters | Task 4 regression (smile/smirk) before any external clips | Now (before palsynet scores) |
 

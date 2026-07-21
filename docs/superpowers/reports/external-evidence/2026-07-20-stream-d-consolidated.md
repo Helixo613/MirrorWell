@@ -151,3 +151,19 @@ Protocol id: **`track-b-palsynet-v1`**. Always `isGateEvidence: false`. Formal V
 | D merge to main | Last, after A/B/C |
 
 *End consolidated Stream D note.*
+
+
+---
+
+## 8. Settled schedule decision (2026-07-21)
+
+**Owner decision:** Use the **available free set now** (HF `jasir/palsynet-data` + refined Track B protocol). Treat **MEEI / formal V2 as future work** — still required for a formal PASS, not on the critical path for current product completion.
+
+| Horizon | What |
+|---|---|
+| **Now** | Track B: palsynet exploratory (`track-b-palsynet-v1`, `isGateEvidence: false`) |
+| **Future** | Track A: MEEI author/SCBS acquisition → formal V2 bars (unchanged) |
+| **Never** | Call Track B a V2 PASS; use unauthorized MEEI copies |
+
+Formal V2 bars and MEEI-as-primary remain in the plan; they are **deferred**, not cancelled.
+
