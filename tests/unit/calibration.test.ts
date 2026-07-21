@@ -12,6 +12,7 @@ import type { LandmarkFrame } from '../../src/sensing/landmarks.ts';
 let StorageService: typeof import('../../src/data/storage.ts').StorageService;
 let CalibrationFlow: typeof import('../../src/session/calibration.ts').CalibrationFlow;
 let QualityMonitor: typeof import('../../src/sensing/quality.ts').QualityMonitor;
+let NormalizationLayer: typeof import('../../src/metrics/normalize.ts').NormalizationLayer;
 
 const capture = vi.hoisted(() => ({
   subscribers: new Set<(video: HTMLVideoElement, timestampMs: number) => void>(),
@@ -138,6 +139,7 @@ beforeEach(async () => {
   ({ StorageService } = await import('../../src/data/storage.ts'));
   ({ CalibrationFlow } = await import('../../src/session/calibration.ts'));
   ({ QualityMonitor } = await import('../../src/sensing/quality.ts'));
+  ({ NormalizationLayer } = await import('../../src/metrics/normalize.ts'));
   capture.subscribers.clear();
   capture.running = false;
   capture.start.mockReset().mockResolvedValue(undefined);
@@ -256,6 +258,22 @@ describe('CalibrationFlow', () => {
     // The 3 s sample gap resets MetricEngine's 250 ms smoothing window: SI values are 1 and 0.5,
     // whose population std is 0.25.
     await expect(noise).resolves.toBeCloseTo(0.25);
+  });
+
+  // M5 (Gate 0 T7): runNoiseFloorSelfTest pins NormalizationLayer/MetricEngine to a throwaway
+  // makeBaseline(0) baseline to measure the noise floor, then saves the corrected baseline —
+  // but used to leave both engines pinned to the throwaway. Assert on observable behaviour
+  // (NormalizationLayer.normalize throwing NO_BASELINE), not on internals: MetricEngine has no
+  // clearBaseline (none is added), so this only proves NormalizationLayer is actually cleared.
+  it('clears NormalizationLayer after a successful self-test (does not leave it pinned to the throwaway baseline)', async () => {
+    await persistBaseline();
+
+    const approved = QualityMonitor.evaluate(video, frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }, 0));
+    if (approved.state !== 'QUALITY_OK') throw new Error('test setup: expected QUALITY_OK frame');
+
+    expect(() => NormalizationLayer.normalize(approved.frame)).toThrow(
+      expect.objectContaining({ code: 'NO_BASELINE' }),
+    );
   });
 
   it('reports ok for identical drift frames and recalibrate for shifted features', async () => {

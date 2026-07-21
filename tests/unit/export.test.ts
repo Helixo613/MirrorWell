@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '../../src/data/schema';
 import { StorageService } from '../../src/data/storage';
 import { ExportService } from '../../src/data/export';
@@ -294,6 +294,53 @@ describe('ExportService.generateSummary — gating and validation errors', () =>
       ExportService.generateSummary({ from: 'not-a-date', to: '2026-05-01' }),
     ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
   });
+});
+
+describe('ExportService.generateSummary — M3: UTC export range vs. local trend bucket (toStorageRange boundary)', () => {
+  // toStorageRange (export.ts) widens a calendar-date export range to a UTC timestamp range;
+  // TrendsService buckets sessions inside that range in the reader's LOCAL time (ARCHITECTURE
+  // §13, src/data/trends.ts bucketStart — not touched by this task). Pin the boundary with a
+  // fixed, non-DST timezone (Asia/Karachi, UTC+05:00, no DST transitions) so the assertion is
+  // timezone-deterministic regardless of the machine running the test. Node re-reads
+  // process.env.TZ on every new Date() call, so reassigning it mid-test is sufficient.
+  const ORIGINAL_TZ = process.env.TZ;
+
+  afterEach(() => {
+    if (ORIGINAL_TZ === undefined) delete process.env.TZ;
+    else process.env.TZ = ORIGINAL_TZ;
+  });
+
+  it(
+    'a session at 2026-06-07T23:50:00.000Z (UTC Sunday) is included by a UTC-widened ' +
+      '2026-06-01..2026-06-14 range but buckets into the following LOCAL Monday-start week, ' +
+      'not the week its UTC date would suggest (TZ=Asia/Karachi, UTC+05:00)',
+    async () => {
+      process.env.TZ = 'Asia/Karachi';
+
+      await StorageService.saveProfile(makeProfile());
+      await StorageService.saveBaseline(makeBaseline());
+      vi.spyOn(SafetyGate, 'isAttested').mockResolvedValue(true);
+      await StorageService.saveSession(
+        makeSession({ baselineId: BASELINE_ID_NEW, startedAt: '2026-06-07T23:50:00.000Z', meanSymmetryIndex: 0.6 }),
+      );
+
+      const { json } = await ExportService.generateSummary({ from: '2026-06-01', to: '2026-06-14' });
+      const parsed = JSON.parse(await json.text());
+
+      // Three Monday-start weekly buckets fall inside the UTC-widened storage range
+      // (2026-06-01T00:00:00.000Z..2026-06-14T23:59:59.999Z) once read in Asia/Karachi local
+      // time: index 0 = week of 2026-06-01, index 1 = week of 2026-06-08, index 2 = week of
+      // 2026-06-15 (2026-06-14T23:59:59.999Z UTC is already 2026-06-15T04:59:59 local). In
+      // Asia/Karachi (UTC+05:00, no DST), 2026-06-07T23:50:00.000Z is already 2026-06-08T04:50
+      // local — a Monday — so the session counts toward the MIDDLE bucket, despite its UTC
+      // calendar date (Sunday 2026-06-07) falling inside the first week's UTC span.
+      expect(parsed.adherence.sessionsPerWeek).toEqual([0, 1, 0]);
+      // Still counted for completionRate: it IS inside the UTC-widened storage range, whatever
+      // local week it lands in — the two facts (range membership, bucket placement) are
+      // independently correct, just computed in different clocks.
+      expect(parsed.adherence.completionRate).toBe(1);
+    },
+  );
 });
 
 describe('ExportService.generateSummary — DB_UNAVAILABLE propagation', () => {

@@ -59,7 +59,27 @@ function assertValidRange(range: { from: string; to: string }): void {
 
 // Export range is a calendar date, but StorageService.getSessions / TrendsService.getAdherence
 // require full UTC ISO 8601 timestamps (isValidIsoUtc in storage.ts) — widen to the full day,
-// in UTC (no local-timezone dependency, since none is documented for export ranges).
+// in UTC: `${from}T00:00:00.000Z` … `${to}T23:59:59.999Z`.
+//
+// This IS a local-timezone boundary, unlike the comment this replaces claimed: ARCHITECTURE
+// §13 mandates local-time trend periods (calendar months / Monday-start ISO weeks), and
+// TrendsService buckets every session it sees in the reader's local time (src/data/trends.ts
+// bucketStart, deliberately not touched by this file). Because the range here is widened in
+// UTC, not local time, a session near midnight UTC can be included by a UTC day boundary yet
+// bucket into a different local day/week than that UTC day would suggest — e.g. a session at
+// 23:50 UTC on a UTC Sunday can be past local midnight already, landing in the following
+// Monday-start week's bucket. That is a real mismatch between "which day the range widening
+// thinks a session belongs to" and "which local bucket TrendsService puts it in."
+//
+// Accepted as-is, not changed here: `range.from`/`range.to` are plain YYYY-MM-DD calendar
+// dates with no timezone of their own (API.md §13's example echoes them back verbatim), so
+// there is no local offset available at this layer to widen by instead — inventing one would
+// mean guessing the reader's timezone for a value that must stay a portable calendar string.
+// UTC widening is therefore the only unambiguous choice for turning a bare date into a range
+// boundary; the residual mismatch is an inherent property of "export by UTC calendar date,
+// trend by local calendar period," not a bug in this function. A reader exporting near
+// midnight in their own timezone should expect the trend bucket to follow their local clock,
+// not the UTC date printed in `range`.
 function toStorageRange(range: { from: string; to: string }): { from: string; to: string } {
   return { from: `${range.from}T00:00:00.000Z`, to: `${range.to}T23:59:59.999Z` };
 }
@@ -95,13 +115,13 @@ function renderHtml(summary: ExportSummary): string {
     .map((s) => `<tr><td>${s.startedAt}</td><td>${s.endedAt}</td><td>${s.endReason}</td></tr>`)
     .join('');
 
-  const t = strings.exportSummary;
+  const copy = strings.exportSummary;
 
   return `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>${t.htmlTitle}</title>
+<title>${copy.htmlTitle}</title>
 <style>
   @page { size: A4; margin: 16mm; }
   body { font-family: sans-serif; }
@@ -110,16 +130,16 @@ function renderHtml(summary: ExportSummary): string {
 </style>
 </head>
 <body>
-<h1>${t.htmlTitle}</h1>
+<h1>${copy.htmlTitle}</h1>
 <p>${summary.nonDiagnosticNotice}</p>
-<p>${t.rangeLabel} ${summary.range.from} to ${summary.range.to}</p>
-<p>${t.affectedSideLabel} ${summary.profile.affectedSide}</p>
-<p>${t.noiseFloorLabel} ${summary.noiseFloorSymmetry}</p>
-<p>${t.completionRateLabel} ${summary.adherence.completionRate}</p>
-<h2>${t.trendsHeading}</h2>
-<table><thead><tr><th>${t.exerciseColumn}</th><th>${t.granularityColumn}</th><th>${t.pointsColumn}</th></tr></thead><tbody>${trendRows}</tbody></table>
-<h2>${t.sessionsHeading}</h2>
-<table><thead><tr><th>${t.startedColumn}</th><th>${t.endedColumn}</th><th>${t.endReasonColumn}</th></tr></thead><tbody>${sessionRows}</tbody></table>
+<p>${copy.rangeLabel} ${summary.range.from} to ${summary.range.to}</p>
+<p>${copy.affectedSideLabel} ${summary.profile.affectedSide}</p>
+<p>${copy.noiseFloorLabel} ${summary.noiseFloorSymmetry}</p>
+<p>${copy.completionRateLabel} ${summary.adherence.completionRate}</p>
+<h2>${copy.trendsHeading}</h2>
+<table><thead><tr><th>${copy.exerciseColumn}</th><th>${copy.granularityColumn}</th><th>${copy.pointsColumn}</th></tr></thead><tbody>${trendRows}</tbody></table>
+<h2>${copy.sessionsHeading}</h2>
+<table><thead><tr><th>${copy.startedColumn}</th><th>${copy.endedColumn}</th><th>${copy.endReasonColumn}</th></tr></thead><tbody>${sessionRows}</tbody></table>
 </body>
 </html>`;
 }

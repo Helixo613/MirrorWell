@@ -155,13 +155,29 @@ async function runNoiseFloorSelfTest(): Promise<number> {
   NormalizationLayer.setBaseline(baseline);
   MetricEngine.setBaseline(baseline);
   MetricEngine.reset();
-  const capture = await captureFor(thresholds.calibration.captureSeconds * 1000);
-  const symmetry = capture.approved
-    .map((frame) => MetricEngine.compute(NormalizationLayer.normalize(frame), exerciseId).symmetryIndex)
-    .filter((value): value is number => value !== null);
-  const noiseFloorSymmetry = standardDeviation(symmetry);
-  await StorageService.saveBaseline({ ...baseline, noiseFloorSymmetry });
-  return noiseFloorSymmetry;
+  try {
+    const capture = await captureFor(thresholds.calibration.captureSeconds * 1000);
+    const symmetry = capture.approved
+      .map((frame) => MetricEngine.compute(NormalizationLayer.normalize(frame), exerciseId).symmetryIndex)
+      .filter((value): value is number => value !== null);
+    const noiseFloorSymmetry = standardDeviation(symmetry);
+    await StorageService.saveBaseline({ ...baseline, noiseFloorSymmetry });
+    return noiseFloorSymmetry;
+  } finally {
+    // Tidy-up (M5, Gate 0 T7): don't leave the engines pinned to the throwaway makeBaseline(0)
+    // used only to measure the noise floor. Only existing API — NormalizationLayer has
+    // clearBaseline(); MetricEngine does not (adding one would be new API §8 surface for a
+    // tidy-up), so its own activeBaseline stays pinned to the throwaway, which is harmless:
+    // SessionController.start() re-setBaseline()s both engines before any real use
+    // (controller.ts), and MetricEngine only reads comfortableMax, identical on both baselines.
+    // reset() still clears MetricEngine's smoothing/ease-off state so a later caller (e.g. a
+    // stray compute() before the next setBaseline()) doesn't see leftover self-test samples.
+    // In `finally` rather than only after the save: a capture/compute/save failure mid-self-test
+    // would otherwise leave the engines pinned to the throwaway with no baseline saved at all —
+    // worse than the success-path leak this task was filed for.
+    NormalizationLayer.clearBaseline();
+    MetricEngine.reset();
+  }
 }
 
 async function checkBaselineDrift(): Promise<'ok' | 'recalibrate'> {
