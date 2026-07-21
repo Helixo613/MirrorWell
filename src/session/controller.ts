@@ -15,6 +15,7 @@ import { SafetyGate } from './safety.ts';
 import { openFrameSource } from './frames.ts';
 import { type LandmarkFrame } from '../sensing/landmarks.ts';
 import { QualityMonitor, type QualityResult, type QualityState } from '../sensing/quality.ts';
+import { log } from '../log.ts';
 
 type State = 'DEMO' | 'REPS' | 'REST';
 
@@ -206,6 +207,14 @@ function endRestPeriod(): void {
     if (stopPromise) return;
     stopping = true;
     stopPromise = stopSession('completed');
+    // handleFrame is synchronous, so this auto-stop is never awaited here. Attach a handler so a
+    // failed persist surfaces in the console instead of becoming an unhandled rejection; the
+    // rejection is still delivered to any explicit stop() caller, which returns this same promise.
+    void stopPromise.catch((err: unknown) => {
+      log.error('SessionController', 'auto-stop failed to persist the session', {
+        code: err instanceof MirrorWellError ? err.code : 'UNKNOWN',
+      });
+    });
     return;
   }
   index += 1;
