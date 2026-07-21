@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db, MirrorWellDB } from '../../src/data/schema';
 import { MirrorWellError } from '../../src/data/errors';
 import { StorageService } from '../../src/data/storage';
+import { SettingsService } from '../../src/data/settings';
 import { SafetyGate } from '../../src/session/safety';
 import { seedDev } from '../../src/dev/seed';
 import type { CalibrationBaseline, UserProfile } from '../../src/data/schema';
@@ -301,7 +302,6 @@ describe('Demo Mode isolation', () => {
 
     for (const read of [
       () => StorageService.getProfile(),
-      () => StorageService.getSettings(),
       () => StorageService.getActiveBaseline(),
       () => StorageService.getSessions({ from: '1970-01-01T00:00:00.000Z', to: new Date().toISOString() }),
     ]) {
@@ -331,6 +331,29 @@ describe('Demo Mode isolation', () => {
     expect(await Promise.all(db.tables.map((table) => table.count()))).toEqual(countsBefore);
 
     await SafetyGate.recordAttestation('1');
+  });
+
+  it('keeps non-sensitive accessibility settings readable in demo mode', async () => {
+    import.meta.env.VITE_CONSENT_VERSION = '1';
+    await StorageService.saveSettings({
+      settingsId: 'singleton',
+      highContrast: true,
+      textScale: 1.5,
+      hapticsEnabled: false,
+      audioCuesEnabled: false,
+      reducedFacePreview: true,
+      trendGranularity: 'weekly',
+      showAffectedSideMarker: false,
+      caregiverViewEnabled: false,
+    });
+    SafetyGate.enterDemoMode();
+
+    await expect(StorageService.getSettings()).resolves.toMatchObject({ textScale: 1.5 });
+    await expect(SettingsService.get()).resolves.toMatchObject({ textScale: 1.5 });
+
+    await expect(SafetyGate.recordAttestation('1')).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+    });
   });
 
   it('treats demo as unattested, then recordAttestation exits demo and persists attestation', async () => {

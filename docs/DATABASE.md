@@ -137,6 +137,7 @@ export const db = new MirrorWellDB();
 | `exercise_result.*Index` fields | `meanSymmetryIndex` null or `[0..1]`; `lowQualityFramePct` `[0..1]`; counts non-negative integers |
 | `rep_metric.durationMs` | Integer `> 0` |
 | `app_settings.textScale` | `[1.0..2.0]` |
+| Demo read access to `app_settings` | Allowed as API §17's non-sensitive static-config exception so Demo Mode retains accessibility settings; writes remain blocked. |
 | All string PKs/FKs | Non-empty uuid v4 format |
 
 ## 4. Per-table ownership & retention

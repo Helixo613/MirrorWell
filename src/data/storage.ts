@@ -210,7 +210,6 @@ export const StorageService = {
 
   async getSettings(): Promise<AppSettings | null> {
     return withDbErrors(async () => {
-      assertDemoReadable();
       const row = await db.app_settings.get('singleton');
       return row ?? null;
     });
