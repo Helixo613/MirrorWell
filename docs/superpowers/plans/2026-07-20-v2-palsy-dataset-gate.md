@@ -32,6 +32,18 @@
 
 Product/backend merge does **not** wait on formal V2. Metric claims stay **PROVISIONAL**. Track B can only yield EXPLORATORY_SUPPORTIVE / CONCERNING / INCONCLUSIVE.
 
+### D1 focused re-evaluation (2026-07-21) — track-b-palsynet-v1 as V2 substitute?
+
+| Item | Result |
+|---|---|
+| **Verdict** | **EXPLORATORY-ONLY** (not QUALIFIES-AS-V2-SOURCE; not CANNOT-USE) |
+| **Bars** | **Frozen — not modified** |
+| **Source substitution** | **Rejected.** Do not replace MEEI with palsynet/track-b for formal V2. |
+| **V2 status** | **DEFERRED** until a qualifying clinical source (MEEI or equivalent) is available |
+| **Why** | No flaccid+synkinetic composition; B7 not measurable (no dataset `affectedSide`); frozen ordering subset protocol unsupported. Full table: `docs/superpowers/reports/external-evidence/2026-07-21-d1-track-b-v2-substitution.md` + `stream-d-requests.md`. |
+| **Palsynet role** | Optional supporting exploratory evidence only (`isGateEvidence: false`) |
+
+
 ---
 
 ## Global Constraints
