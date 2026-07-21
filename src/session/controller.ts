@@ -178,7 +178,7 @@ function handleRepsFrame(quality: QualityResult, timestampMs: number): void {
     // Rep span just closed (event emitted, or silently discarded inside RepDetector for
     // being too short / a gap-abort with no restart — either way nothing to count).
     const okFraction = repFrameTotal === 0 ? 1 : repFrameOk / repFrameTotal;
-    if (event && okFraction >= thresholds.session.repMinOkFraction) {
+    if (event && okFraction >= thresholds.reps.minQualityFramePct) {
       currentReps.push({
         repId: crypto.randomUUID(),
         repIndex: event.repIndex,

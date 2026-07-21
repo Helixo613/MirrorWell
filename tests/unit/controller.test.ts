@@ -407,8 +407,8 @@ describe('SessionController hot path', () => {
     expect(completed).toHaveBeenCalledTimes(1);
   });
 
-  it('holds the discard threshold exactly at session.repMinOkFraction (59% discarded, 60% kept)', async () => {
-    expect(thresholds.session.repMinOkFraction).toBe(0.6);
+  it('holds the discard threshold exactly at reps.minQualityFramePct (59% discarded, 60% kept)', async () => {
+    expect(thresholds.reps.minQualityFramePct).toBe(0.6);
     await seedAttested(['EX_SMILE']);
     await SessionController.start(['EX_SMILE']);
     SessionController.advance();

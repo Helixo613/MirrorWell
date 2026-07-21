@@ -61,7 +61,6 @@ export const thresholds = Object.freeze({
   session: Object.freeze({
     qualityProblemOfferStopMs: 30000,
     metricEventMinIntervalMs: 66,
-    repMinOkFraction: 0.6,
   }),
 
   // Live V1 protocol harness (dev-only). Owning section: docs/MODEL_AND_DATA.md §7
