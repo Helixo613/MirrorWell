@@ -172,7 +172,9 @@ SettingsService.get(): Promise<AppSettings>
 SettingsService.update(partial: Partial<AppSettings>): Promise<AppSettings>
 ```
 
-`TrendsService` **never** mixes `baselineId`s in one series; marks points `aboveNoiseFloor: false` when period-over-period change < the **active baseline's** `noiseFloorSymmetry` (baseline-paired source — not `app_settings`); excludes `quality_abandoned` and `red_flag_stopped` sessions from aggregates. `ExportService` **never** adds fields beyond `tests/schemas/export.schema.json`, never auto-shares (download only), and always embeds the non-diagnostic header (SAFETY §5); export `noiseFloorSymmetry` is read from the active `calibration_baseline`.
+`TrendsService` buckets stored UTC timestamps into **local-time** periods: Monday-start ISO weeks and local calendar months. It **never** mixes `baselineId`s in one series; excludes `quality_abandoned` and `red_flag_stopped` sessions, null `meanSymmetryIndex` values, and empty periods from the returned points; and marks the first point `aboveNoiseFloor: true`. Later points compare with the nearest preceding non-empty period, even across empty calendar periods, and are `aboveNoiseFloor: false` only when the absolute change is below the **active baseline's** `noiseFloorSymmetry` (baseline-paired source — never `app_settings`).
+
+`ExportService` widens calendar-date ranges to UTC day boundaries before reading sessions, while `TrendsService` still assigns those sessions to local-time buckets. A session near a UTC midnight can therefore be inside the export range but belong to a different local day or week; range membership and trend bucketing intentionally use those different boundaries. `ExportService` **never** adds fields beyond `tests/schemas/export.schema.json`, never auto-shares (download only), and always embeds the non-diagnostic header (SAFETY §5); export `noiseFloorSymmetry` is read from the active `calibration_baseline`.
 
 ## 2. Internal call graph
 
