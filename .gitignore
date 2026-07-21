@@ -25,3 +25,4 @@ tests/fixtures/replay/
 
 # Windows Explorer download metadata
 *:Zone.Identifier
+.claude/worktrees/
