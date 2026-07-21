@@ -295,6 +295,31 @@ describe('SessionController preconditions', () => {
     await SessionController.stop('user_stopped');
   });
 
+  // start() initialises session state BEFORE opening the frame source, so a camera failure would
+  // otherwise leave a half-started session (state 'DEMO', no frames) that advance()/stop() would
+  // still act on. The rollback restores "no session running": advance() is inert and stop() does
+  // not assemble or persist a record.
+  it('rolls session state back when the camera fails to open', async () => {
+    await seedAttested(['EX_SMILE']);
+    const seen: Array<{ exerciseId: string; state: string }> = [];
+    on('stateChanged', (p) => seen.push(p));
+    const saveSpy = vi.spyOn(StorageService, 'saveSession');
+    capture.start.mockReset().mockRejectedValue(new MirrorWellError('CAMERA_DENIED', 'denied'));
+
+    await expect(SessionController.start(['EX_SMILE'])).rejects.toMatchObject({ code: 'CAMERA_DENIED' });
+
+    // No session was ever announced, and the state machine is inert afterwards: advance() is a
+    // no-op and stop() reports "no active session" rather than assembling/persisting a record
+    // from the half-started state.
+    expect(seen).toHaveLength(0);
+    SessionController.advance();
+    expect(seen).toHaveLength(0);
+    await expect(SessionController.stop('user_stopped')).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+    });
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+
   // C1 regression. The real (unstubbed) drift path: CalibrationFlow.checkBaselineDrift()
   // awaits a frame window, and nothing before it ever started the camera — so on every
   // attested session start() used to hang forever. Frames here only flow from a successful
