@@ -1,4 +1,4 @@
-import { exercises } from '../config/exercises.ts';
+import { exercises, assignableExercises } from '../config/exercises.ts';
 import { thresholds } from '../config/thresholds.ts';
 import type { CalibrationBaseline, ExerciseId } from '../data/schema.ts';
 import { MirrorWellError } from '../data/errors.ts';
@@ -87,7 +87,7 @@ function activation(frame: ApprovedFrame, exerciseId: ExerciseId): number {
 function neutralActivations(frames: ApprovedFrame[], assigned: ExerciseId[]): number[] {
   return frames.map((frame) => {
     const values = assigned
-      .filter((exerciseId) => exercises[exerciseId]!.blendshapePair)
+      .filter((exerciseId) => assignableExercises.includes(exerciseId))
       .map((exerciseId) => activation(frame, exerciseId));
     return values.length === 0 ? 0 : Math.max(...values);
   });

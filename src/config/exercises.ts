@@ -22,6 +22,8 @@
  *
  * Dosing fixed in v1, needs verification with mentor (docs/ARCHITECTURE.md §12).
  */
+import type { ExerciseId } from '../data/schema.ts';
+
 export interface ExerciseConfig {
   exerciseId: string;
   regionId: string;
@@ -91,3 +93,16 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
     restSeconds: 20,
   }),
 });
+
+/**
+ * Exercises assignable in v1 = those with a validated per-side blendshapePair (blendshape-si-v1).
+ * Derived filter over `exercises`, never a hand-written list — EX_PUCKER has no validated pair
+ * yet (see the ExerciseConfig.blendshapePair doc comment above), so it is excluded here while
+ * remaining a valid ExerciseId/`exercises` entry (reversibility). Reversal path: once EX_PUCKER
+ * gets a blendshapePair, it reappears in this set automatically (docs/MODEL_AND_DATA.md §7).
+ * Cast mirrors the existing `seed.ts` `ALL_EXERCISES` pattern — keys of `exercises` are always
+ * valid ExerciseIds by construction.
+ */
+export const assignableExercises: readonly ExerciseId[] = Object.freeze(
+  (Object.keys(exercises) as ExerciseId[]).filter((id) => exercises[id]!.blendshapePair),
+);

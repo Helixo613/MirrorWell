@@ -4,7 +4,7 @@
 import type { EndReason, ExerciseId } from '../data/schema.ts';
 import { MirrorWellError } from '../data/errors.ts';
 import { StorageService, type ExerciseResultInput, type RepMetricInput, type SessionRecordFull, type SessionRecordInput } from '../data/storage.ts';
-import { exercises } from '../config/exercises.ts';
+import { exercises, assignableExercises } from '../config/exercises.ts';
 import { thresholds } from '../config/thresholds.ts';
 import { MetricEngine, type MetricSample } from '../metrics/metrics.ts';
 import { NormalizationLayer } from '../metrics/normalize.ts';
@@ -281,7 +281,7 @@ export const SessionController = {
     if (!(await SafetyGate.isAttested()) && !SafetyGate.isDemoMode()) {
       throw new MirrorWellError('NOT_ATTESTED', 'attestation required');
     }
-    if (exerciseIds.length === 0 || exerciseIds.some((id) => !exercises[id]?.blendshapePair)) {
+    if (exerciseIds.length === 0 || exerciseIds.some((id) => !assignableExercises.includes(id))) {
       throw new MirrorWellError('VALIDATION_FAILED', 'invalid exercises');
     }
 

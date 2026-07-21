@@ -76,6 +76,13 @@ export const thresholds = Object.freeze({
     /** Start-protocol enable window: last QUALITY_OK must be within this many ms. */
     qualityOkRecentMs: 2_000,
   }),
+
+  // Dev-only live demo readout band. symmetryBoundary is the SI at or above which the demo
+  // reads "even on both sides": it sits in the gap the demo arc names (a real symmetric smile
+  // ≈ 0.98; one side deliberately restrained ≈ 0.4–0.7). Tune on real hardware.
+  liveDemo: Object.freeze({
+    symmetryBoundary: 0.85,
+  }),
 });
 
 export type Thresholds = typeof thresholds;

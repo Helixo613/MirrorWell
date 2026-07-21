@@ -381,6 +381,38 @@ describe('SessionController hot path', () => {
     expect(record.results[1]!.repsCompleted).toBe(exercises.EX_SMILE.repsPerSet);
   });
 
+  // Task A2 — EX_BROW_RAISE previously appeared in no controller test at all. This walks the
+  // same DEMO->REPS->REST->auto-stop arc as the test above but for EX_BROW_RAISE alone, reading
+  // repsPerSet/restSeconds/blendshapePair from exercises.EX_BROW_RAISE (never as literals) so the
+  // test actually proves config-drivenness rather than passing by coincidence.
+  it('EX_BROW_RAISE completes stateChanged DEMO->REPS->REST->auto-stop completed, driven purely by config', async () => {
+    await seedAttested(['EX_BROW_RAISE']);
+    const seen: Array<{ exerciseId: string; state: string }> = [];
+    on('stateChanged', (p) => seen.push(p));
+    const ended = vi.fn();
+    on('sessionEnded', ended);
+
+    await SessionController.start(['EX_BROW_RAISE']);
+    expect(seen.at(-1)).toEqual({ exerciseId: 'EX_BROW_RAISE', state: 'DEMO' });
+
+    SessionController.advance();
+    expect(seen.at(-1)).toEqual({ exerciseId: 'EX_BROW_RAISE', state: 'REPS' });
+
+    let ts = 1000;
+    for (let i = 0; i < exercises.EX_BROW_RAISE.repsPerSet; i++) {
+      ts = driveOkRepFrames(exercises.EX_BROW_RAISE.blendshapePair!, ts + 2000, 6, 0);
+    }
+    expect(seen.at(-1)).toEqual({ exerciseId: 'EX_BROW_RAISE', state: 'REST' });
+
+    emitOk({}, ts + exercises.EX_BROW_RAISE.restSeconds * 1000 + 10);
+    await vi.waitFor(() => expect(ended).toHaveBeenCalledTimes(1));
+    const record = ended.mock.calls[0]![0].record;
+    expect(record.endReason).toBe('completed');
+    expect(record.results).toHaveLength(1);
+    expect(record.results[0]!.exerciseId).toBe('EX_BROW_RAISE');
+    expect(record.results[0]!.repsCompleted).toBe(exercises.EX_BROW_RAISE.repsPerSet);
+  });
+
   it('throttles metricUpdate to <= 15 events under a 30Hz synthetic frame stream', async () => {
     await seedAttested(['EX_SMILE']);
     await SessionController.start(['EX_SMILE']);
@@ -467,36 +499,69 @@ describe('SessionController hot path', () => {
     expect(seen).toEqual([true, false]);
   });
 
-  it('resets MetricEngine/RepDetector on exercise transition; no metric state leaks between exercises', async () => {
-    await seedAttested(['EX_EYE_CLOSURE', 'EX_SMILE']);
-    await SessionController.start(['EX_EYE_CLOSURE', 'EX_SMILE']);
-    SessionController.advance();
+  // Task A2: parameterized over exercise pairs (was EX_EYE_CLOSURE->EX_SMILE only) so
+  // EX_BROW_RAISE gets the same reset/no-leak coverage, and so repsPerSet/blendshapePair are
+  // read from each pair's own config (EX_BROW_RAISE.repsPerSet=10 vs EX_EYE_CLOSURE.repsPerSet=5)
+  // instead of the test only passing because two exercises happen to share a value.
+  it.each([
+    ['EX_EYE_CLOSURE', 'EX_SMILE'],
+    ['EX_BROW_RAISE', 'EX_SMILE'],
+  ] as const)(
+    'resets MetricEngine/RepDetector on %s->%s transition; no metric state leaks between exercises',
+    async (fromId, toId) => {
+      await seedAttested([fromId, toId]);
+      await SessionController.start([fromId, toId]);
+      SessionController.advance();
 
-    // Asymmetric leak probe: sub-startThreshold (no rep triggered) but leaves a distinctly
-    // asymmetric entry in MetricEngine's smoothing window.
-    emitOk({ eyeBlinkLeft: 0.14, eyeBlinkRight: 0.02 }, 0);
+      const fromPair = exercises[fromId]!.blendshapePair!;
+      const toPair = exercises[toId]!.blendshapePair!;
+      const repsPerSet = exercises[fromId]!.repsPerSet;
 
-    let ts = 2000;
-    for (let i = 0; i < exercises.EX_EYE_CLOSURE.repsPerSet; i++) {
-      ts = driveOkRepFrames(exercises.EX_EYE_CLOSURE.blendshapePair!, ts, 6, 0) + 2000;
-    }
-    const lastComputedTs = ts - 2000;
+      let ts = 2000;
+      for (let i = 0; i < repsPerSet - 1; i++) {
+        ts = driveOkRepFrames(fromPair, ts, 6, 0) + 2000;
+      }
 
-    const metricResetSpy = vi.spyOn(MetricEngine, 'reset');
-    const repResetSpy = vi.spyOn(RepDetector, 'reset');
+      // Final rep of fromId, driven by hand instead of via driveOkRepFrames: 3 high frames
+      // (matching driveOkRepFrames' holdCount=3) followed by 3 low-effort ASYMMETRIC closing
+      // frames instead of driveOkRepFrames' low-SYMMETRIC tail. Closing the last rep and
+      // leaving REPS(fromId) for REST happen inside the SAME handleRepsFrame call
+      // (src/session/controller.ts ~line 196-201), and no frame is ever computed again while
+      // in REST/DEMO (handleFrame returns early for both) — so whatever sits in MetricEngine's
+      // smoothing window right when this closing frame is processed is exactly what's still
+      // there the instant toId's first REPS frame computes. act=max(0.06,0.01)=0.06 is low
+      // enough that 3 of them reliably close the rep (same "3 lows outvote the window"
+      // trailing-median mechanics driveOkRepFrames relies on — verified numerically against
+      // MetricEngine's 5-entry window) while symmetryIndex=0.01/0.06≈0.167 is clearly
+      // asymmetric. Because 3 of the resulting 5 window entries are asymmetric (not 1-of-5),
+      // the leak survives the trailing median at the switch instead of being outvoted by it.
+      emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
+      ts += 200;
+      emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
+      ts += 200;
+      emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
+      for (let i = 0; i < 3; i++) {
+        ts += 200;
+        emitOk({ [fromPair.left]: 0.06, [fromPair.right]: 0.01 }, ts);
+      }
+      const lastComputedTs = ts;
 
-    SessionController.advance(); // REST -> DEMO(EX_SMILE): must call both resets
-    expect(metricResetSpy).toHaveBeenCalledTimes(1);
-    expect(repResetSpy).toHaveBeenCalledTimes(1);
+      const metricResetSpy = vi.spyOn(MetricEngine, 'reset');
+      const repResetSpy = vi.spyOn(RepDetector, 'reset');
 
-    SessionController.advance(); // DEMO -> REPS(EX_SMILE)
-    const samples: Array<{ symmetryIndex: number | null }> = [];
-    on('metricUpdate', (p) => samples.push(p.sample));
-    // Small gap (<= metrics.gapResetMs) from the last EX_EYE_CLOSURE compute — if reset()
-    // were skipped, the leaked asymmetric window entry would still be live here.
-    emitOk({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }, lastComputedTs + 50);
-    expect(samples[0]!.symmetryIndex).toBe(1);
-  });
+      SessionController.advance(); // REST -> DEMO(toId): must call both resets
+      expect(metricResetSpy).toHaveBeenCalledTimes(1);
+      expect(repResetSpy).toHaveBeenCalledTimes(1);
+
+      SessionController.advance(); // DEMO -> REPS(toId)
+      const samples: Array<{ symmetryIndex: number | null }> = [];
+      on('metricUpdate', (p) => samples.push(p.sample));
+      // Small gap (<= metrics.gapResetMs) from the last `fromId` compute — if reset() were
+      // skipped, the leaked asymmetric window entries would still be live here.
+      emitOk({ [toPair.left]: 0.3, [toPair.right]: 0.3 }, lastComputedTs + 50);
+      expect(samples[0]!.symmetryIndex).toBe(1);
+    },
+  );
 
   it('treats a thrown detect() (INFERENCE_FAILED) as a non-crashing FACE_LOST frame', async () => {
     await seedAttested(['EX_SMILE']);
@@ -685,5 +750,201 @@ describe('SessionController session assembly', () => {
     expect(record.endReason).toBe('user_stopped');
     expect(record.results).toHaveLength(1);
     expect(record.sessionId).not.toBe('');
+  });
+});
+
+// Task A4 — frontend seam (SessionApi) conformance. SessionController is the surface the
+// frontend plan names SessionApi; these lock its shape against docs/API.md §10 so a future
+// change cannot silently add, drop, or rename an event or method.
+describe('SessionController event surface (docs/API.md §10)', () => {
+  // The 7-event closed set. `Events` is a TS type erased at runtime, so this is derived from
+  // what a real session actually EMITS: we drive one session that provably fires every event
+  // and assert the exact set of observed names equals these 7. Falsifiable — a renamed/dropped
+  // event breaks the set-equality. Known gap (documented in the A4 report): an 8th event that
+  // never fires during this session cannot be detected without runtime reflection the emitter
+  // does not expose.
+  const EXPECTED_EVENTS = [
+    'stateChanged', 'metricUpdate', 'qualityUpdate', 'repCompleted',
+    'easeOff', 'sessionEnded', 'qualityOfferStop',
+  ] as const;
+
+  it('emits exactly the closed 7-event set, each with its documented payload shape', async () => {
+    await seedAttested(['EX_SMILE']);
+    const firstPayload = new Map<string, Record<string, unknown>>();
+    for (const name of EXPECTED_EVENTS) {
+      on(name, (p: Record<string, unknown>) => { if (!firstPayload.has(name)) firstPayload.set(name, p); });
+    }
+
+    await SessionController.start(['EX_SMILE']);       // stateChanged: DEMO
+    SessionController.advance();                        // stateChanged: REPS
+
+    // easeOff FIRST, from the fresh (empty) REPS smoothing window — 0.8/0.8 sustained >=300ms
+    // (mirrors the easeOff transition test). Driving a rep first would leave low frames in the
+    // trailing-median window and stop 4 highs from re-crossing the ease-off threshold.
+    emitOk({ mouthSmileLeft: 0.8, mouthSmileRight: 0.8 }, 0);   // metricUpdate + qualityUpdate(OK)
+    emitOk({ mouthSmileLeft: 0.8, mouthSmileRight: 0.8 }, 100);
+    emitOk({ mouthSmileLeft: 0.8, mouthSmileRight: 0.8 }, 200);
+    emitOk({ mouthSmileLeft: 0.8, mouthSmileRight: 0.8 }, 300); // easeOff(true)
+
+    // A clean rep after a gap (> gapResetMs) that resets the window and aborts the stale span.
+    const repEnd = driveOkRepFrames(exercises.EX_SMILE.blendshapePair!, 2300, 6, 0); // repCompleted
+
+    // Contiguous non-OK block (any OK frame would reset the offer-stop streak).
+    emitNonOk(repEnd + 2000);                                             // qualityUpdate(FACE_LOST)
+    emitNonOk(repEnd + 2000 + thresholds.session.qualityProblemOfferStopMs); // qualityOfferStop(true)
+
+    await SessionController.stop('user_stopped');       // sessionEnded
+
+    expect(new Set(firstPayload.keys())).toEqual(new Set(EXPECTED_EVENTS));
+    // Documented top-level payload keys (docs/API.md §10 event table).
+    const keys = (n: string) => Object.keys(firstPayload.get(n)!).sort();
+    expect(keys('stateChanged')).toEqual(['exerciseId', 'state']);
+    expect(keys('metricUpdate')).toEqual(['sample']);
+    expect(keys('qualityUpdate')).toEqual(['state']);
+    expect(keys('repCompleted')).toEqual(['event']);
+    expect(keys('easeOff')).toEqual(['active']);
+    expect(keys('sessionEnded')).toEqual(['record']);
+    expect(keys('qualityOfferStop')).toEqual(['visible']);
+  });
+
+  it('exposes exactly the documented method surface and on() returns an unsubscribe fn', () => {
+    expect(Object.keys(SessionController).sort()).toEqual(['advance', 'extendRest', 'on', 'start', 'stop']);
+    for (const m of ['start', 'advance', 'extendRest', 'stop', 'on'] as const) {
+      expect(typeof SessionController[m]).toBe('function');
+    }
+    const unsub = SessionController.on('stateChanged', () => undefined);
+    expect(typeof unsub).toBe('function');
+    unsub();
+  });
+});
+
+// Task A4 — Demo Mode quick-setup contract (docs/ARCHITECTURE.md §11). Demo start() skips the
+// persisted-baseline load (controller.ts), so the ephemeral quick-calibration overlay (a later
+// frontend plan) MUST seed BOTH NormalizationLayer and MetricEngine before the first REPS frame,
+// with a valid comfortableMax for the demo exercise. These lock that contract.
+describe('SessionController demo quick-setup contract (docs/API.md §10, ARCHITECTURE §11)', () => {
+  function enterDemo(): void {
+    vi.spyOn(SafetyGate, 'isAttested').mockResolvedValue(false);
+    vi.spyOn(SafetyGate, 'isDemoMode').mockReturnValue(true);
+  }
+
+  it('both engines seeded with comfortableMax → runs to REPS, emits a non-null reading, stop returns without persisting', async () => {
+    enterDemo();
+    NormalizationLayer.setBaseline(makeBaseline({ EX_SMILE: 1 }));
+    MetricEngine.setBaseline(makeBaseline({ EX_SMILE: 1 }));
+    const saveSpy = vi.spyOn(StorageService, 'saveSession');
+    const states: string[] = [];
+    on('stateChanged', (p) => states.push(p.state));
+    const samples: Array<{ symmetryIndex: number | null }> = [];
+    on('metricUpdate', (p) => samples.push(p.sample));
+
+    await SessionController.start(['EX_SMILE']);
+    SessionController.advance();
+    expect(states).toContain('REPS');
+
+    driveOkRepFrames(exercises.EX_SMILE.blendshapePair!, 0, 7, 0);
+    expect(samples.length).toBeGreaterThan(0);
+    expect(samples[0]!.symmetryIndex).not.toBeNull(); // demo actually reads, not "runs blind"
+
+    const record = await SessionController.stop('user_stopped');
+    expect(record.results[0]!.repsCompleted).toBe(1);
+    expect(saveSpy).not.toHaveBeenCalled(); // demo never persists
+  });
+
+  // Negative: the hazard the A4 plan pointed at ("a demo that appears to run while detecting
+  // nothing") does NOT manifest as a phantom FACE_LOST. Gate 0 made frames.ts call onFrame
+  // outside its narrow detect-only catch, so a missing comfortableMax throws NO_BASELINE
+  // (metrics.ts compute) straight out of the frame callback — a loud, diagnosable failure. This
+  // is the demo-mode analogue of the existing "propagates a downstream pipeline error" test.
+  it('missing comfortableMax for the demo exercise throws NO_BASELINE out of the first REPS frame (never a phantom FACE_LOST)', async () => {
+    enterDemo();
+    NormalizationLayer.setBaseline(makeBaseline({ EX_SMILE: 1 })); // normalize is fine
+    MetricEngine.setBaseline(makeBaseline({}));                    // no comfortableMax[EX_SMILE]
+    const quality: string[] = [];
+    on('qualityUpdate', (p) => quality.push(p.state));
+
+    await SessionController.start(['EX_SMILE']);
+    SessionController.advance();
+
+    let caught: unknown;
+    try {
+      emitOk({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }, 0);
+    } catch (e) {
+      caught = e;
+    }
+    // vi.resetModules() gives the fresh controller graph its own MirrorWellError class identity,
+    // so `instanceof` the statically-imported class fails across realms — assert structurally
+    // (matches the existing suite's toMatchObject({ code }) pattern).
+    expect((caught as MirrorWellError).name).toBe('MirrorWellError');
+    expect((caught as MirrorWellError).code).toBe('NO_BASELINE');
+    // Loud throw, not swallowed and re-dispatched as a phantom FACE_LOST frame.
+    expect(quality).not.toContain('FACE_LOST');
+  });
+
+  it('comfortableMax <= 0 for the demo exercise throws NO_BASELINE the same way', async () => {
+    enterDemo();
+    NormalizationLayer.setBaseline(makeBaseline({ EX_SMILE: 0 }));
+    MetricEngine.setBaseline(makeBaseline({ EX_SMILE: 0 }));
+
+    await SessionController.start(['EX_SMILE']);
+    SessionController.advance();
+
+    let caught: unknown;
+    try {
+      emitOk({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }, 0);
+    } catch (e) {
+      caught = e;
+    }
+    // vi.resetModules() gives the fresh controller graph its own MirrorWellError class identity,
+    // so `instanceof` the statically-imported class fails across realms — assert structurally
+    // (matches the existing suite's toMatchObject({ code }) pattern).
+    expect((caught as MirrorWellError).name).toBe('MirrorWellError');
+    expect((caught as MirrorWellError).code).toBe('NO_BASELINE');
+  });
+
+  // Seeding only ONE engine is not sufficient — same NO_BASELINE code, but the message pins
+  // WHICH omission broke WHAT: normalize runs first, compute second.
+  it('MetricEngine seeded but NormalizationLayer not → normalize throws NO_BASELINE first', async () => {
+    enterDemo();
+    MetricEngine.setBaseline(makeBaseline({ EX_SMILE: 1 }));
+    // NormalizationLayer.setBaseline deliberately NOT called.
+
+    await SessionController.start(['EX_SMILE']);
+    SessionController.advance();
+
+    let caught: unknown;
+    try {
+      emitOk({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }, 0);
+    } catch (e) {
+      caught = e;
+    }
+    // vi.resetModules() gives the fresh controller graph its own MirrorWellError class identity,
+    // so `instanceof` the statically-imported class fails across realms — assert structurally
+    // (matches the existing suite's toMatchObject({ code }) pattern).
+    expect((caught as MirrorWellError).name).toBe('MirrorWellError');
+    expect((caught as MirrorWellError).code).toBe('NO_BASELINE');
+    expect((caught as MirrorWellError).message).toContain('normalize');
+  });
+
+  it('NormalizationLayer seeded but MetricEngine not → compute throws NO_BASELINE', async () => {
+    enterDemo();
+    NormalizationLayer.setBaseline(makeBaseline({ EX_SMILE: 1 }));
+    // MetricEngine.setBaseline deliberately NOT called.
+
+    await SessionController.start(['EX_SMILE']);
+    SessionController.advance();
+
+    let caught: unknown;
+    try {
+      emitOk({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }, 0);
+    } catch (e) {
+      caught = e;
+    }
+    // vi.resetModules() gives the fresh controller graph its own MirrorWellError class identity,
+    // so `instanceof` the statically-imported class fails across realms — assert structurally
+    // (matches the existing suite's toMatchObject({ code }) pattern).
+    expect((caught as MirrorWellError).name).toBe('MirrorWellError');
+    expect((caught as MirrorWellError).code).toBe('NO_BASELINE');
+    expect((caught as MirrorWellError).message).toContain('compute');
   });
 });
