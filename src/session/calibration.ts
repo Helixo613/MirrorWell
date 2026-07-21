@@ -113,6 +113,8 @@ async function makeBaseline(noiseFloorSymmetry: number): Promise<CalibrationBase
 }
 
 async function captureNeutral(): Promise<{ neutralStats: NeutralStats; qualityScore: number }> {
+  comfortableMax = {};
+  comfortableExercise = null;
   await assertGated();
   const profile = await StorageService.getProfile();
   const captures = await captureWindows(thresholds.calibration.neutralCaptures);

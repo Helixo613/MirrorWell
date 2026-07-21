@@ -202,6 +202,19 @@ describe('CalibrationFlow', () => {
     await expect(result).resolves.toBe(0.7);
   });
 
+  it("discards the previous run's comfortable-max when captureNeutral restarts (I1 regression)", async () => {
+    await captureThree(CalibrationFlow.captureNeutral(), [frame(), frame(), frame()]);
+    await captureThree(CalibrationFlow.captureComfortableMax('EX_SMILE'), [
+      frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }),
+      frame({ mouthSmileLeft: 0.7, mouthSmileRight: 0.7 }),
+      frame({ mouthSmileLeft: 0.9, mouthSmileRight: 0.9 }),
+    ]);
+
+    await captureThree(CalibrationFlow.captureNeutral(), [frame(), frame(), frame()]);
+
+    await expect(CalibrationFlow.runNoiseFloorSelfTest()).rejects.toMatchObject({ code: 'NO_BASELINE' });
+  });
+
   it('rejects EX_PUCKER without a blendshape pair', async () => {
     await expect(CalibrationFlow.captureComfortableMax('EX_PUCKER')).rejects.toMatchObject({
       code: 'VALIDATION_FAILED',
