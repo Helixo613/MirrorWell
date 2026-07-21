@@ -92,22 +92,28 @@ export function LiveDemoView() {
 
       const qr = QualityMonitor.evaluate(video, lf);
       setQuality(qr.state);
-      if (qr.state !== 'QUALITY_OK') {
-        clearReadings();
-        return;
-      }
-
       const now = performance.now();
       const current = stepRef.current;
+
+      if (qr.state !== 'QUALITY_OK') {
+        clearReadings();
+        // A capture window that elapses without enough usable frames must end with a message,
+        // never hang in "Capturing…" waiting for a QUALITY_OK frame that may not come.
+        if (now >= deadlineRef.current) {
+          if (current === 'neutral' && neutralAbsRef.current.length === 0) {
+            setError(copy.noNeutralFrames);
+            setStep('idle');
+          } else if (current === 'hold' && holdSiRef.current.length < 2) {
+            setError(copy.setupTooShort);
+            setStep('holdPrompt');
+          }
+        }
+        return;
+      }
 
       if (current === 'neutral') {
         neutralAbsRef.current.push(measureAbsolute(qr.frame));
         if (now >= deadlineRef.current) {
-          if (neutralAbsRef.current.length === 0) {
-            setError(copy.noNeutralFrames);
-            setStep('idle');
-            return;
-          }
           // Provisional baseline: comfortableMax = 1 activation unit so compute() runs during
           // the hold; the measured peak replaces it when the hold finishes.
           const provisional = buildEphemeralBaseline(neutralAbsRef.current, 1, 0);
