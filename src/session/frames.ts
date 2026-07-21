@@ -16,6 +16,13 @@ import { LandmarkEngine, type LandmarkFrame } from '../sensing/landmarks.ts';
 // window and metricUpdate throttle) must keep ticking through a non-OK / inference-failed frame.
 export type FrameHandler = (video: HTMLVideoElement, timestampMs: number, lf: LandmarkFrame | null) => void;
 
+// Memoizes an in-flight CaptureService.start() so concurrent openFrameSource() calls share ONE
+// start and exactly one caller becomes the owner. Without this, two overlapping opens both see
+// isRunning() === false (it only flips true after start()'s internal await resolves), both call
+// start() -> getUserMedia twice, and the second acquired MediaStream overwrites the first's in
+// capture.ts -- leaking the first stream's tracks and leaving the camera light on after stop().
+let startInFlight: Promise<void> | null = null;
+
 /**
  * Subscribes `onFrame` to CaptureService and starts the camera if it is not already running.
  * Resolves to a teardown that unsubscribes and stops the camera **only if this call started
@@ -36,19 +43,23 @@ export async function openFrameSource(onFrame: FrameHandler): Promise<() => void
     onFrame(video, timestampMs, lf);
   });
 
-  const owned = !CaptureService.isRunning();
-  if (owned) {
+  let owned = false;
+  if (!CaptureService.isRunning()) {
+    if (!startInFlight) {
+      owned = true; // only the initiator owns the camera
+      startInFlight = CaptureService.start().finally(() => { startInFlight = null; });
+    }
     try {
-      await CaptureService.start();
+      await startInFlight; // both initiator and piggybackers await the same start
     } catch (err) {
-      unsubscribe();
-      CaptureService.stop();
+      unsubscribe(); // finding 1: no stop() here -- a rejected start acquired nothing, and
+      // stop() could tear down a DIFFERENT consumer's legitimately-owned camera.
       throw err;
     }
   }
 
   return () => {
     unsubscribe();
-    if (owned) CaptureService.stop();
+    if (owned) CaptureService.stop(); // stop-only-if-I-started, still exactly one owner
   };
 }

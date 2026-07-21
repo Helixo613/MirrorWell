@@ -90,13 +90,77 @@ describe('openFrameSource camera ownership', () => {
     expect(capture.running).toBe(false);
   });
 
-  it('leaves no subscriber behind when start() rejects', async () => {
+  it('leaves no subscriber behind when start() rejects, and never stops a camera it never started', async () => {
     capture.start.mockRejectedValueOnce(new MirrorWellError('CAMERA_DENIED', 'denied'));
 
     await expect(openFrameSource(() => undefined)).rejects.toMatchObject({ code: 'CAMERA_DENIED' });
 
     expect(capture.subscribers.size).toBe(0);
     expect(capture.running).toBe(false);
+    // Finding 1: a rejected start() acquired nothing, so stop() must not run — it could tear
+    // down a DIFFERENT consumer's legitimately-owned camera.
+    expect(capture.stop).not.toHaveBeenCalled();
+  });
+
+  it('shares one start() across overlapping opens; stops only after the owner tears down', async () => {
+    // Hold the mocked start() open so a second openFrameSource() can launch before the first
+    // resolves, exercising the overlap window.
+    const resolvers: Array<() => void> = [];
+    capture.start.mockReset().mockImplementation(
+      () => new Promise<void>((resolve) => { resolvers.push(resolve); }),
+    );
+
+    const p1 = openFrameSource(() => undefined);
+    const p2 = openFrameSource(() => undefined);
+
+    // Both opens have run to their first await synchronously by now: exactly one shared
+    // start() in flight, not two.
+    expect(capture.start).toHaveBeenCalledTimes(1);
+
+    resolvers.forEach((resolve) => resolve());
+    const [teardown1, teardown2] = await Promise.all([p1, p2]);
+
+    expect(capture.start).toHaveBeenCalledTimes(1);
+    expect(capture.subscribers.size).toBe(2);
+
+    // Non-owner tears down first: no stop, camera stays on for the owner.
+    teardown2();
+    expect(capture.stop).not.toHaveBeenCalled();
+    expect(capture.running).toBe(true);
+
+    // Owner tears down: stop runs exactly once, camera light goes off.
+    teardown1();
+    expect(capture.stop).toHaveBeenCalledTimes(1);
+    expect(capture.running).toBe(false);
+  });
+
+  it('rejects both callers on a shared start() rejection, leaves no subscriber, and clears startInFlight for a clean retry', async () => {
+    let rejectStart!: (err: unknown) => void;
+    capture.start.mockReset().mockImplementationOnce(
+      () => new Promise<void>((_resolve, reject) => { rejectStart = reject; }),
+    );
+
+    const p1 = openFrameSource(() => undefined);
+    const p2 = openFrameSource(() => undefined);
+
+    expect(capture.start).toHaveBeenCalledTimes(1);
+
+    rejectStart(new MirrorWellError('CAMERA_DENIED', 'denied'));
+
+    await expect(p1).rejects.toMatchObject({ code: 'CAMERA_DENIED' });
+    await expect(p2).rejects.toMatchObject({ code: 'CAMERA_DENIED' });
+
+    expect(capture.subscribers.size).toBe(0);
+    expect(capture.stop).not.toHaveBeenCalled();
+    expect(capture.running).toBe(false);
+
+    // startInFlight must have been cleared so a later open can retry cleanly.
+    capture.start.mockReset().mockResolvedValue(undefined);
+    const teardown3 = await openFrameSource(() => undefined);
+    expect(capture.start).toHaveBeenCalledTimes(1);
+
+    teardown3();
+    expect(capture.stop).toHaveBeenCalledTimes(1);
   });
 
   it('delivers the raw capture timestamp and a null lf when inference throws', async () => {
