@@ -1,0 +1,315 @@
+{
+  "kind": "exploratory-analysis",
+  "isGateEvidence": false,
+  "subject": "S01",
+  "generatedAt": "2026-07-21T10:53:05.288Z",
+  "activationFloor": 0.05,
+  "smoothingWindow": 5,
+  "note": "Exploratory pooled intensity analysis across 4 V1 trials (run-1 retired + run-2 current). NOT a V1 gate report; does not adjust any bar.",
+  "trials": {
+    "run1-t1": {
+      "frontalSmileMeanActivation": 0.7971,
+      "frontalSmileMeanSI": 0.9992,
+      "phases": {
+        "neutral": {
+          "meanActivation": 0.00042225941933334027,
+          "activationRatioVsFrontal": 0.000529750504591268,
+          "meanSI": 0,
+          "okFrames": 99
+        },
+        "smile": {
+          "meanActivation": 0.7970911130309105,
+          "activationRatioVsFrontal": 1,
+          "meanSI": 0.9991983458396391,
+          "okFrames": 80
+        },
+        "yaw_left": {
+          "meanActivation": 0.6363434074800226,
+          "activationRatioVsFrontal": 0.7983320815864444,
+          "meanSI": 0.9892084976066597,
+          "okFrames": 79,
+          "B3": 0.009989848232979326,
+          "yawValidity": {
+            "meanAbsYaw": 10.191765502273142,
+            "inBand": true
+          }
+        },
+        "yaw_right": {
+          "meanActivation": 0.708697327436545,
+          "activationRatioVsFrontal": 0.8891045400591016,
+          "meanSI": 0.9482238823474336,
+          "okFrames": 78,
+          "B3": 0.05097446349220547,
+          "yawValidity": {
+            "meanAbsYaw": 9.295578386555011,
+            "inBand": true
+          }
+        },
+        "low_light": {
+          "meanActivation": 0.75913566118711,
+          "activationRatioVsFrontal": 0.9523825429448382,
+          "meanSI": 0.9033193190552026,
+          "okFrames": 77,
+          "B2": 0.04761745705516187
+        },
+        "distance_2m": {
+          "meanActivation": 0.5190939707092092,
+          "activationRatioVsFrontal": 0.6512354261928387,
+          "meanSI": 0.8015593018748174,
+          "okFrames": 79,
+          "B2": 0.3487645738071613
+        }
+      }
+    },
+    "run1-t2": {
+      "frontalSmileMeanActivation": 0.9069,
+      "frontalSmileMeanSI": 0.9853,
+      "phases": {
+        "neutral": {
+          "meanActivation": 0.0001238125002359715,
+          "activationRatioVsFrontal": 0.00013651620982297162,
+          "meanSI": 0,
+          "okFrames": 98
+        },
+        "smile": {
+          "meanActivation": 0.9069435812532902,
+          "activationRatioVsFrontal": 1,
+          "meanSI": 0.9853161963744371,
+          "okFrames": 80
+        },
+        "yaw_left": {
+          "meanActivation": 0.8790335167538036,
+          "activationRatioVsFrontal": 0.9692262395628644,
+          "meanSI": 0.9797781818772946,
+          "okFrames": 77,
+          "B3": 0.005538014497142529,
+          "yawValidity": {
+            "meanAbsYaw": 12.583486276060244,
+            "inBand": true
+          }
+        },
+        "yaw_right": {
+          "meanActivation": 0.9268839527399112,
+          "activationRatioVsFrontal": 1.021986341707238,
+          "meanSI": 0.9925468973370218,
+          "okFrames": 78,
+          "B3": 0.007230700962584713,
+          "yawValidity": {
+            "meanAbsYaw": 11.72190916215884,
+            "inBand": true
+          }
+        },
+        "low_light": {
+          "meanActivation": 0.8799528357310172,
+          "activationRatioVsFrontal": 0.9702398847291307,
+          "meanSI": 0.9963914284249179,
+          "okFrames": 78,
+          "B2": 0.029760115270869355
+        },
+        "distance_2m": {
+          "meanActivation": 0.8743501803542995,
+          "activationRatioVsFrontal": 0.9640623721555529,
+          "meanSI": 0.9946045145891943,
+          "okFrames": 79,
+          "B2": 0.03593762784444705
+        }
+      }
+    },
+    "run2-t1": {
+      "frontalSmileMeanActivation": 0.6555,
+      "frontalSmileMeanSI": 0.9869,
+      "phases": {
+        "neutral": {
+          "meanActivation": 0.00022201169860746825,
+          "activationRatioVsFrontal": 0.0003386760461605453,
+          "meanSI": 0,
+          "okFrames": 99
+        },
+        "smile": {
+          "meanActivation": 0.6555281990691076,
+          "activationRatioVsFrontal": 1,
+          "meanSI": 0.9868915766655364,
+          "okFrames": 79
+        },
+        "yaw_left": {
+          "meanActivation": 0.5245503866219823,
+          "activationRatioVsFrontal": 0.8001949990357053,
+          "meanSI": 0.7296998130977075,
+          "okFrames": 79,
+          "B3": 0.2571917635678289,
+          "yawValidity": {
+            "meanAbsYaw": 9.889212885719418,
+            "inBand": true
+          }
+        },
+        "yaw_right": {
+          "meanActivation": 0.08724766205518673,
+          "activationRatioVsFrontal": 0.1330952080766076,
+          "meanSI": 0.7864765478355996,
+          "okFrames": 78,
+          "B3": 0.20041502882993678,
+          "yawValidity": {
+            "meanAbsYaw": 9.558898534583273,
+            "inBand": true
+          }
+        },
+        "low_light": {
+          "meanActivation": 0.27754036394449383,
+          "activationRatioVsFrontal": 0.42338432479124327,
+          "meanSI": 0.9198579164079478,
+          "okFrames": 78,
+          "B2": 0.5766156752087568
+        },
+        "distance_2m": {
+          "meanActivation": 0.1282037841274014,
+          "activationRatioVsFrontal": 0.19557325574927067,
+          "meanSI": 0.9200182216908991,
+          "okFrames": 79,
+          "B2": 0.8044267442507294
+        }
+      }
+    },
+    "run2-t2": {
+      "frontalSmileMeanActivation": 0.7908,
+      "frontalSmileMeanSI": 0.9829,
+      "phases": {
+        "neutral": {
+          "meanActivation": 0.0005224837922735723,
+          "activationRatioVsFrontal": 0.0006607356870442945,
+          "meanSI": 0,
+          "okFrames": 99
+        },
+        "smile": {
+          "meanActivation": 0.7907606665092178,
+          "activationRatioVsFrontal": 1,
+          "meanSI": 0.982937473742989,
+          "okFrames": 79
+        },
+        "yaw_left": {
+          "meanActivation": 0.7563826541105906,
+          "activationRatioVsFrontal": 0.9565253889645426,
+          "meanSI": 0.9155989788642837,
+          "okFrames": 78,
+          "B3": 0.06733849487870536,
+          "yawValidity": {
+            "meanAbsYaw": 10.13881725980486,
+            "inBand": true
+          }
+        },
+        "yaw_right": {
+          "meanActivation": 0.8315895772599554,
+          "activationRatioVsFrontal": 1.0516324502216015,
+          "meanSI": 0.9716920294413516,
+          "okFrames": 77,
+          "B3": 0.01124544430163743,
+          "yawValidity": {
+            "meanAbsYaw": 9.838520739722638,
+            "inBand": true
+          }
+        },
+        "low_light": {
+          "meanActivation": 0.7962382084284073,
+          "activationRatioVsFrontal": 1.0069269276421775,
+          "meanSI": 0.9864814990812746,
+          "okFrames": 78,
+          "B2": 0.006926927642177592
+        },
+        "distance_2m": {
+          "meanActivation": 0.6749975169316317,
+          "activationRatioVsFrontal": 0.8536053265160266,
+          "meanSI": 0.9769392649244478,
+          "okFrames": 78,
+          "B2": 0.14639467348397345
+        }
+      }
+    }
+  },
+  "finding": {
+    "intensityExplanationHolds": false,
+    "contradictions": [
+      {
+        "trial": "run1-t1",
+        "phase": "yaw_right",
+        "bar": "B3",
+        "value": 0.051,
+        "activationRatioVsFrontal": 0.8891,
+        "activationDrop": 0.1109,
+        "frontalSmileMeanActivation": 0.7971,
+        "classification": "contradicts-intensity (metric pose/lighting-sensitive)"
+      },
+      {
+        "trial": "run2-t2",
+        "phase": "yaw_left",
+        "bar": "B3",
+        "value": 0.0673,
+        "activationRatioVsFrontal": 0.9565,
+        "activationDrop": 0.0435,
+        "frontalSmileMeanActivation": 0.7908,
+        "classification": "contradicts-intensity (metric pose/lighting-sensitive)"
+      }
+    ],
+    "intensityLinked": [
+      {
+        "trial": "run1-t1",
+        "phase": "distance_2m",
+        "bar": "B2",
+        "value": 0.3488,
+        "activationRatioVsFrontal": 0.6512,
+        "activationDrop": 0.3488,
+        "frontalSmileMeanActivation": 0.7971,
+        "classification": "intensity-linked"
+      },
+      {
+        "trial": "run2-t1",
+        "phase": "yaw_left",
+        "bar": "B3",
+        "value": 0.2572,
+        "activationRatioVsFrontal": 0.8002,
+        "activationDrop": 0.1998,
+        "frontalSmileMeanActivation": 0.6555,
+        "classification": "intensity-linked"
+      },
+      {
+        "trial": "run2-t1",
+        "phase": "yaw_right",
+        "bar": "B3",
+        "value": 0.2004,
+        "activationRatioVsFrontal": 0.1331,
+        "activationDrop": 0.8669,
+        "frontalSmileMeanActivation": 0.6555,
+        "classification": "intensity-linked"
+      },
+      {
+        "trial": "run2-t1",
+        "phase": "low_light",
+        "bar": "B2",
+        "value": 0.5766,
+        "activationRatioVsFrontal": 0.4234,
+        "activationDrop": 0.5766,
+        "frontalSmileMeanActivation": 0.6555,
+        "classification": "intensity-linked"
+      },
+      {
+        "trial": "run2-t1",
+        "phase": "distance_2m",
+        "bar": "B2",
+        "value": 0.8044,
+        "activationRatioVsFrontal": 0.1956,
+        "activationDrop": 0.8044,
+        "frontalSmileMeanActivation": 0.6555,
+        "classification": "intensity-linked"
+      },
+      {
+        "trial": "run2-t2",
+        "phase": "distance_2m",
+        "bar": "B2",
+        "value": 0.1464,
+        "activationRatioVsFrontal": 0.8536,
+        "activationDrop": 0.1464,
+        "frontalSmileMeanActivation": 0.7908,
+        "classification": "intensity-linked"
+      }
+    ],
+    "summary": "The intensity hypothesis is PARTIAL / DOES NOT FULLY HOLD: 6 breach(es) were intensity-linked, but 2 breach(es) CONTRADICT it — the bar failed while smile activation was matched to frontal (activationRatioVsFrontal ≥ 0.85), indicating genuine pose/lighting sensitivity of the metric: run1-t1/yaw_right (B3=0.051, ratio=0.8891); run2-t2/yaw_left (B3=0.0673, ratio=0.9565)."
+  }
+}
