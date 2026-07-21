@@ -645,4 +645,42 @@ describe('SessionController session assembly', () => {
     expect(saveSpy).toHaveBeenCalledTimes(1);
     expect(ended).toHaveBeenCalledTimes(1);
   });
+
+  // T5/M1 regression: stop() before any start() must not run session assembly against
+  // empty state, must not persist, and — critically — must not poison stopPromise for a
+  // session that legitimately starts and stops afterward.
+  it('stop() before any start() is a no-op that touches neither storage nor the event surface', async () => {
+    const saveSpy = vi.spyOn(StorageService, 'saveSession');
+    const ended = vi.fn();
+    on('sessionEnded', ended);
+
+    await expect(SessionController.stop('user_stopped')).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+
+    expect(saveSpy).not.toHaveBeenCalled();
+    expect(ended).not.toHaveBeenCalled();
+  });
+
+  it('repeated premature stop() calls never cache a poisoned stopPromise', async () => {
+    const saveSpy = vi.spyOn(StorageService, 'saveSession');
+
+    // Pre-fix, call #1 ran assembly and cached the resulting rejection in stopPromise
+    // (saveSession count -> 1); call #2 returned that SAME cached rejection without running
+    // assembly again (count stays 1, but never 0). Post-fix, each call rejects independently
+    // without ever touching storage.
+    await expect(SessionController.stop('user_stopped')).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    await expect(SessionController.stop('quality_abandoned')).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    expect(saveSpy).not.toHaveBeenCalled();
+
+    // And nothing is left behind to interfere with a real session afterward.
+    await seedAttested(['EX_SMILE']);
+    await SessionController.start(['EX_SMILE']);
+    SessionController.advance();
+    driveOkRepFrames(exercises.EX_SMILE.blendshapePair!, 0, 7, 0);
+
+    const record = await SessionController.stop('user_stopped');
+
+    expect(record.endReason).toBe('user_stopped');
+    expect(record.results).toHaveLength(1);
+    expect(record.sessionId).not.toBe('');
+  });
 });

@@ -346,6 +346,19 @@ export const SessionController = {
 
   async stop(reason: EndReason): Promise<SessionRecordFull> {
     if (stopPromise) return stopPromise;
+    if (!state) {
+      // No session has ever started (state and stopPromise both still at their initial
+      // values — a legitimately-ended session always leaves stopPromise set, caught above).
+      // Session-scope state (sessionId, profileId, baselineId, startedAt) is still empty;
+      // running assembly/persistence against it is the M1 bug (a rejected saveSession got
+      // cached in stopPromise and poisoned every later stop()). docs/API.md §10 documents
+      // stop()'s response as "the saved SessionRecordFull" for a session that actually ran —
+      // there is none here, so there is nothing to save or return. VALIDATION_FAILED is
+      // already documented (API §16) as thrown by SessionController to mean "caller bug, not
+      // a user problem", which is exactly this case. Deliberately NOT cached in stopPromise:
+      // each premature call rejects independently and leaves no poison behind for start().
+      throw new MirrorWellError('VALIDATION_FAILED', 'stop() called with no active session');
+    }
     stopping = true;
     stopPromise = stopSession(reason);
     return stopPromise;
