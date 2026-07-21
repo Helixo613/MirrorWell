@@ -1,6 +1,6 @@
 # Stream D consolidated — learnings + next steps
 
-**Date:** 2026-07-20  
+**Date:** 2026-07-20 (Track B refined 2026-07-21; Track A deferred for schedule)  
 **Branch:** `stream-d-external`  
 **Plan ownership:** `docs/superpowers/plans/2026-07-20-v2-palsy-dataset-gate.md`  
 **Detail survey:** `docs/superpowers/reports/external-evidence/2026-07-20-d1-dataset-survey.md`  
@@ -93,15 +93,21 @@ V2 gate: RUN AS WRITTEN on MEEI (bars frozen); SCBS membership/author access not
 
 **Expected wait:** ~1–4 weeks after A1. Do not block product merge on A.
 
-### Track B — Implement now (owner: whoever runs analysis tooling; not Stream D source)
+### Track B — Near-term path (Track A deferred for schedule)
+
+**Refined protocol (authoritative):** `docs/superpowers/reports/external-evidence/2026-07-21-track-b-refined.md`  
+Protocol id: **`track-b-palsynet-v1`**. Always `isGateEvidence: false`. Formal V2 bars untouched.
 
 | # | Action | Notes |
 |---|---|---|
-| B1 | Download `jasir/palsynet-data` → gitignored `tests/fixtures/v2/palsynet/` (or equivalent). | Human download; outside app network rules |
-| B2 | Task 1: `.gitignore` + manifest scaffold (palsynet rows: `presentation: unknown_palsy \| control`; no invented affectedSide). | Same as v2 plan Task 1 |
-| B3 | Task 4 dry-run first on **S01** masters (smile/smirk regression). | Already in plan |
-| B4 | Run palsynet through v2-runner; emit exploratory report: SI dist, OK%, optional blinded ordering. Stamp `kind: exploratory-analysis`, `isGateEvidence: false`. | **Not** Task 5 formal verdict |
-| B5 | Keep MEEI path when it lands; swap manifest primary to MEEI for formal bars only. | No bar retuning from palsynet scores |
+| B0 | Download palsynet + LICENSE_NOTES + gitignore | CC-BY-4.0; clips never committed |
+| B1 | Human **inclusion screen** (predeclared exclude codes) | Need ≥15 affected + ≥10 control or INCONCLUSIVE |
+| B2 | Blind human **severity ranks** (+ optional side/window) **before** any SI | Commit `human_labels_palsynet.json` first |
+| B3 | S01 dry-run (smile/smirk) | Tooling gate |
+| B4 | Score palsynet; evaluate predeclared **E1–E4** → SUPPORTIVE / CONCERNING / INCONCLUSIVE | Prior-suppression E1 is primary for our use case |
+| B5 | Product language from templates in refined doc | Still PROVISIONAL; formal V2 open |
+
+**Why refined:** raw “mean SI dump” does not answer prior-suppression well. Predeclared QC + human ranks + S01 anchors + E1 gap vs 0.98 make Track B decision-grade *exploratory* evidence.
 
 ### Track C — Docs / other streams (not D files)
 

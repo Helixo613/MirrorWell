@@ -30,12 +30,23 @@ V2 gate: RUN AS WRITTEN on MEEI (bars frozen); SCBS membership/author access not
 
 ---
 
-## For whoever implements analysis tooling (A/C later; not D)
+## Schedule note (2026-07-21)
 
-Immediate implementable path is documented in the consolidated note Track B:
+Track A (MEEI) **deferred for time**. Near-term evidence path is **Track B refined**:
 
-1. Download `jasir/palsynet-data` → gitignored fixtures.  
-2. Manifest + v2-runner dry-run on S01, then palsynet exploratory report.  
-3. Formal Tasks 2–5 only after MEEI (or equivalent clinical) land.
+```
+Track A deferred for schedule; Track B refined protocol track-b-palsynet-v1 is the near-term path (exploratory bars E1–E4 predeclared; isGateEvidence:false; formal V2 bars untouched).
+```
+
+**Protocol:** `docs/superpowers/reports/external-evidence/2026-07-21-track-b-refined.md`
+
+## For whoever implements analysis tooling (not Stream D)
+
+Follow Track B refined, not a raw SI dump:
+
+1. Download palsynet → gitignored; LICENSE_NOTES.  
+2. Human inclusion screen + severity ranks **before** scoring.  
+3. S01 dry-run → score → evaluate E1–E4 → SUPPORTIVE/CONCERNING/INCONCLUSIVE.  
+4. Formal V2 PASS still requires MEEI later; do not rewrite Track B into PASS.
 
 Stream D does not implement this.

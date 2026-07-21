@@ -26,11 +26,11 @@
 
 | Track | Material | Purpose | When |
 |---|---|---|---|
-| **Formal (Tasks 0, 2–5)** | MEEI via author email and/or SCBS membership | Frozen bars → PASS / FAIL / UNDERPOWERED | Human start now; expect ~1–4 weeks |
-| **Exploratory (optional, parallel)** | `jasir/palsynet-data` → gitignored `tests/fixtures/v2/palsynet/` | Prior-suppression SI dist, OK%, optional blinded ordering; dry-run tooling | **Implementable immediately** |
-| **Dry-run only** | Existing S01 masters | Task 4 regression (smile/smirk) before any external clips | Now |
+| **Formal (Tasks 0, 2–5)** | MEEI via author email and/or SCBS membership | Frozen bars → PASS / FAIL / UNDERPOWERED | **Deferred for schedule** (still owed; not cancelled) |
+| **Exploratory (ACTIVE near-term)** | `jasir/palsynet-data` + **Track B refined protocol** | Predeclared E1–E4 exploratory verdict; never formal PASS | **Now** — see `docs/superpowers/reports/external-evidence/2026-07-21-track-b-refined.md` |
+| **Dry-run only** | Existing S01 masters | Task 4 regression (smile/smirk) before any external clips | Now (before palsynet scores) |
 
-Product/backend merge does **not** wait on formal V2. Metric claims stay **PROVISIONAL** until formal gate or an honest UNDERPOWERED/FAIL pivot.
+Product/backend merge does **not** wait on formal V2. Metric claims stay **PROVISIONAL**. Track B can only yield EXPLORATORY_SUPPORTIVE / CONCERNING / INCONCLUSIVE.
 
 ---
 
