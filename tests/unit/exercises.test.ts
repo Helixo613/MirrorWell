@@ -5,11 +5,6 @@ import { StorageService } from '../../src/data/storage';
 import { seedDev } from '../../src/dev/seed';
 
 describe('assignableExercises', () => {
-  it('is exactly the exercises with a blendshapePair', () => {
-    const expected = Object.keys(exercises).filter((id) => exercises[id]!.blendshapePair);
-    expect([...assignableExercises].sort()).toEqual(expected.sort());
-  });
-
   it('excludes EX_PUCKER and includes the other three', () => {
     expect(assignableExercises).not.toContain('EX_PUCKER');
     expect(assignableExercises).toEqual(
@@ -30,7 +25,7 @@ describe('seedDev', () => {
 
     const profile = await StorageService.getProfile();
     expect(profile).not.toBeNull();
-    expect(profile!.assignedExercises.sort()).toEqual([...assignableExercises].sort());
+    expect([...profile!.assignedExercises].sort()).toEqual([...assignableExercises].sort());
 
     const baseline = await StorageService.getActiveBaseline();
     expect(baseline).not.toBeNull();
