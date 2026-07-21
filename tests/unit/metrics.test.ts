@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NormalizedFrame } from '../../src/metrics/normalize.ts';
 import type { Vec2 } from '../../src/metrics/geometry.ts';
 import type { CalibrationBaseline, ExerciseId, RegionId } from '../../src/data/schema.ts';
@@ -52,6 +52,16 @@ function baseline(comfortableMax: Partial<Record<ExerciseId, number>>): Calibrat
     isActive: 1,
   };
 }
+
+// MetricEngine holds module-level state (activeBaseline, smoothing window, ease-off) with no
+// public reset for activeBaseline. The per-test `await import()` below returns the CACHED module
+// unless the registry is reset first, so without this every test shared one engine and the suite
+// was order-dependent: "throws NO_BASELINE before setBaseline() is ever called" passed only while
+// it happened to run before any test that called setBaseline(). Mirrors the isolation pattern in
+// tests/unit/controller.test.ts — no test-only reset is added to the production contract.
+beforeEach(() => {
+  vi.resetModules();
+});
 
 describe('MetricEngine — NO_BASELINE', () => {
   it('compute() throws NO_BASELINE before setBaseline() is ever called', async () => {
