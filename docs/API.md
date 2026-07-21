@@ -444,6 +444,8 @@ Exact shape: ARCHITECTURE §13.
 { "sessionsPerWeek": [4, 5, 3, 5, 4, 2], "completionRate": 0.86 }
 ```
 
+`completionRate` is completed sessions divided by **all sessions in the requested range**. Every `session_record` represents a user-started session; MirrorWell has no planned-session schedule, so non-completed sessions remain in the denominator and no missed or expected sessions are invented.
+
 ---
 
 ## 13. ExportService
