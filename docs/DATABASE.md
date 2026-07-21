@@ -125,6 +125,7 @@ export const db = new MirrorWellDB();
 |---|---|
 | `user_profile.assignedExercises` | Non-empty array; every entry a valid `ExerciseId`; no duplicates |
 | `user_profile.affectedSide` | One of `left`/`right`/`unknown` |
+| `user_profile.profileId` | At most one local profile row. `saveProfile` updates the existing row only when `profileId` matches; a different `profileId` is rejected with `VALIDATION_FAILED`. |
 | `calibration_baseline.qualityScore` | `[0..1]`; **`< 0.7` rejected with `QUALITY_TOO_LOW` (not VALIDATION_FAILED)** |
 | `calibration_baseline.neutralStats` | All four `RegionId` keys present; each side has `{u, v}`; **all components finite only — NOT required `> 0`** (signed face-local projections are legitimately negative) |
 | `calibration_baseline.comfortableMax` | Keys ⊆ profile's `assignedExercises`; values finite `> 0` |

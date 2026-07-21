@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { db } from '../../src/data/schema';
+import { db, MirrorWellDB } from '../../src/data/schema';
 import { MirrorWellError } from '../../src/data/errors';
 import { StorageService } from '../../src/data/storage';
 import { SafetyGate } from '../../src/session/safety';
@@ -8,6 +8,7 @@ import type { CalibrationBaseline, UserProfile } from '../../src/data/schema';
 import type { SessionRecordInput } from '../../src/data/storage';
 
 const PROFILE_ID = '11111111-1111-4111-8111-111111111111';
+const OTHER_PROFILE_ID = '44444444-4444-4444-8444-444444444444';
 const BASELINE_ID_OLD = '22222222-2222-4222-8222-222222222222';
 const BASELINE_ID_NEW = '33333333-3333-4333-8333-333333333333';
 
@@ -123,6 +124,19 @@ describe('StorageService — round-trip', () => {
   });
 });
 
+describe('StorageService.saveProfile', () => {
+  it('rejects a different profileId and preserves the single existing profile', async () => {
+    const original = makeProfile();
+    await StorageService.saveProfile(original);
+
+    await expect(
+      StorageService.saveProfile(makeProfile({ profileId: OTHER_PROFILE_ID })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+
+    expect(await db.user_profile.toArray()).toEqual([original]);
+  });
+});
+
 describe('StorageService.saveBaseline', () => {
   it('deactivates the previous active row', async () => {
     await StorageService.saveProfile(makeProfile());
@@ -226,6 +240,48 @@ describe('StorageService.deleteAllData', () => {
     for (const table of db.tables) {
       expect(await table.count()).toBe(0);
     }
+  });
+
+  it('clears data visible through another open connection', async () => {
+    await StorageService.saveProfile(makeProfile());
+    const otherConnection = new MirrorWellDB();
+    await otherConnection.open();
+
+    try {
+      expect(await otherConnection.user_profile.count()).toBe(1);
+
+      await StorageService.deleteAllData();
+
+      expect(await otherConnection.user_profile.count()).toBe(0);
+    } finally {
+      otherConnection.close();
+    }
+  });
+
+  it('rolls back a mid-transaction failure and can retry successfully', async () => {
+    await StorageService.saveProfile(makeProfile());
+    await StorageService.saveBaseline(makeBaseline());
+    await StorageService.saveSession(makeSessionInput());
+    const countsBefore = await Promise.all(db.tables.map((table) => table.count()));
+    const tablePrototype = Object.getPrototypeOf(db.exercise_result) as {
+      clear(): Promise<void>;
+    };
+    const originalClear = tablePrototype.clear;
+    const clear = vi.spyOn(tablePrototype, 'clear').mockImplementationOnce(async function (
+      this: typeof db.exercise_result,
+    ) {
+      await originalClear.call(this);
+      throw new Error('simulated delete failure');
+    });
+
+    await expect(StorageService.deleteAllData()).rejects.toMatchObject({ code: 'DB_UNAVAILABLE' });
+    expect(await Promise.all(db.tables.map((table) => table.count()))).toEqual(countsBefore);
+
+    clear.mockRestore();
+    await expect(StorageService.deleteAllData()).resolves.toBeUndefined();
+    expect(await Promise.all(db.tables.map((table) => table.count()))).toEqual(
+      db.tables.map(() => 0),
+    );
   });
 });
 

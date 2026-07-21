@@ -198,7 +198,13 @@ export const StorageService = {
     return withDbErrors(async () => {
       assertDemoWritable();
       assertProfileShape(p);
-      await db.user_profile.put(p);
+      await db.transaction('rw', db.user_profile, async () => {
+        const existing = await db.user_profile.toCollection().first();
+        if (existing && existing.profileId !== p.profileId) {
+          throw new MirrorWellError('VALIDATION_FAILED', 'a different local profile already exists');
+        }
+        await db.user_profile.put(p);
+      });
     });
   },
 
