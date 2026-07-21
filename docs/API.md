@@ -377,6 +377,8 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 
 **Response:** the saved `SessionRecordFull` (exact shape: ARCHITECTURE §13; nested results + reps as in §3 `saveSession` request).
 
+**Errors:** `VALIDATION_FAILED` (no active session — `stop()` called before any `start()`; the rejection is not cached, so a subsequent real session still resolves normally). `stop()` is otherwise idempotent: repeated calls within one session return the same settled promise.
+
 ### `on(event, cb): () => void` — the event surface (complete)
 
 | Event | Payload example |
