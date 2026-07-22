@@ -54,3 +54,24 @@ One file per stream = never conflicts.
 source module they import that uses the `@` alias (e.g. `src/lib/trendCaption.ts` importing
 `@/config/strings`) — fail with "Cannot find package '@/...'". The vitest `include` already lists
 `src/**/*.test.ts`; this makes those runnable. No runtime/build effect; all existing suites stay green.
+
+## S3-REQ-2 → integration owner (`src/data/export.ts`, `strings.exportSummary`) — enrich export HTML trend rows
+
+**Origin:** Task 15 (export half) / handoff "under-informative-export follow-up", Stream S3.
+
+**Requested change:** `data/export.ts` `renderHtml` now renders each trend row with the exercise
+display name + latest plain-language value + recent direction (was: exerciseId / granularity / point
+count only). Logic lives in the S3-owned `src/lib/exportTrendRow.ts` (unit-tested); `renderHtml`
+calls it. Two header keys added to `strings.exportSummary` (`latestColumn`, `directionColumn`) and a
+`direction` sub-object to `strings.trends`. Applied in this branch.
+
+**Why:** The plan/handoff assign S3 the printable-HTML enrichment; `data/export.ts` and
+`strings.exportSummary` are not in the S3 write glob but have no live owner (backend is merged),
+were cleared for a transparent cross-glob edit, and no coordination convention routes backend edits
+elsewhere. **No contract shape change:** the JSON payload/schema is untouched; API §13 explicitly
+allows the HTML to "present that data more compactly", so no DOCS-CHANGE is required. The
+`tests/unit/export.test.ts` "every exportSummary value appears in HTML" test auto-covers the new
+header keys (always rendered); conditional direction words come from `strings.trends` so they need
+not appear in every export. Note: the two orphaned salvage modules `src/lib/exportHtml.ts` +
+`src/lib/validateExport.ts` remain unused dead code (the canonical renderer is `data/export.ts`);
+left in place, flagged for the final whole-branch review to delete.

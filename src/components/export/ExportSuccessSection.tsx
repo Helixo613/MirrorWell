@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { DownloadCard } from '@/components/export/DownloadCard';
 import { SoftPanel } from '@/components/layout/SoftPanel';
 import { strings } from '@/config/strings';
 import type { ExportSummaryPreview } from '@/types/export';
@@ -7,12 +7,14 @@ import { cn } from '@/lib/utils';
 export interface ExportSuccessSectionProps {
   preview: ExportSummaryPreview;
   onDownloadJson: () => void;
+  onDownloadHtml: () => void;
   className?: string;
 }
 
 export function ExportSuccessSection({
   preview,
   onDownloadJson,
+  onDownloadHtml,
   className,
 }: ExportSuccessSectionProps) {
   const completionPct = Math.round(preview.completionRate * 100);
@@ -45,15 +47,23 @@ export function ExportSuccessSection({
         {strings.export.advisory}
       </p>
 
-      <Button
-        type="button"
-        variant="link"
-        className="h-auto min-h-touch w-full p-0 text-base text-muted-foreground underline-offset-4"
-        aria-label={strings.export.success.jsonDownloadAriaLabel}
-        onClick={onDownloadJson}
-      >
-        {strings.export.success.jsonDownload}
-      </Button>
+      {/* Two download cards (JSON / printable HTML) — download only, no share/clipboard. */}
+      <div className="space-y-3">
+        <DownloadCard
+          title={strings.export.success.jsonTitle}
+          description={strings.export.success.jsonDescription}
+          actionLabel={strings.export.success.jsonDownload}
+          actionAriaLabel={strings.export.success.jsonDownloadAriaLabel}
+          onDownload={onDownloadJson}
+        />
+        <DownloadCard
+          title={strings.export.success.htmlTitle}
+          description={strings.export.success.htmlDescription}
+          actionLabel={strings.export.success.htmlDownload}
+          actionAriaLabel={strings.export.success.htmlDownloadAriaLabel}
+          onDownload={onDownloadHtml}
+        />
+      </div>
     </section>
   );
 }

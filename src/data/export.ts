@@ -10,6 +10,8 @@ import type { Adherence, TrendSeries } from './trends.ts';
 import { MirrorWellError } from './errors.ts';
 import { SafetyGate } from '../session/safety.ts';
 import { strings } from '../config/strings.ts';
+import { exercises } from '../config/exercises.ts';
+import { exportTrendDirection, exportTrendLatestLabel } from '../lib/exportTrendRow.ts';
 
 const SCHEMA_VERSION = 1 as const;
 
@@ -103,12 +105,15 @@ function mapSessions(sessions: Awaited<ReturnType<typeof StorageService.getSessi
 }
 
 function renderHtml(summary: ExportSummary): string {
-  // Printable one-page A4 summary (API.md §13). No untrusted free-text anywhere in this
-  // payload (enums, UUIDs, ISO dates, numbers only) — nothing here needs HTML-escaping.
+  // Printable one-page A4 summary (API.md §13). Values are enums, UUIDs, ISO dates, numbers,
+  // and config-owned exercise display names / approved copy — no untrusted free-text, so
+  // nothing here needs HTML-escaping. Enriched trend rows (the under-informative-export
+  // follow-up): each exercise's latest plain-language value + recent direction, so the printed
+  // page says something a clinician can read at a glance, not just a bare point count.
   const trendRows = summary.trends
     .map(
       (t) =>
-        `<tr><td>${t.exerciseId}</td><td>${t.granularity}</td><td>${t.points.length}</td></tr>`,
+        `<tr><td>${exercises[t.exerciseId].displayName}</td><td>${t.granularity}</td><td>${t.points.length}</td><td>${exportTrendLatestLabel(t.points)}</td><td>${exportTrendDirection(t.points)}</td></tr>`,
     )
     .join('');
   const sessionRows = summary.sessions
@@ -137,7 +142,7 @@ function renderHtml(summary: ExportSummary): string {
 <p>${copy.noiseFloorLabel} ${summary.noiseFloorSymmetry}</p>
 <p>${copy.completionRateLabel} ${summary.adherence.completionRate}</p>
 <h2>${copy.trendsHeading}</h2>
-<table><thead><tr><th>${copy.exerciseColumn}</th><th>${copy.granularityColumn}</th><th>${copy.pointsColumn}</th></tr></thead><tbody>${trendRows}</tbody></table>
+<table><thead><tr><th>${copy.exerciseColumn}</th><th>${copy.granularityColumn}</th><th>${copy.pointsColumn}</th><th>${copy.latestColumn}</th><th>${copy.directionColumn}</th></tr></thead><tbody>${trendRows}</tbody></table>
 <h2>${copy.sessionsHeading}</h2>
 <table><thead><tr><th>${copy.startedColumn}</th><th>${copy.endedColumn}</th><th>${copy.endReasonColumn}</th></tr></thead><tbody>${sessionRows}</tbody></table>
 </body>

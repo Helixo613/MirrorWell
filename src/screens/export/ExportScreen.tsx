@@ -1,16 +1,128 @@
-import { PlaceholderScreen } from '@/screens/PlaceholderScreen';
+import { Button } from '@/components/ui/button';
+import { ExportGeneratingPlaceholder } from '@/components/export/ExportGeneratingPlaceholder';
+import { ExportSetupPanel } from '@/components/export/ExportSetupPanel';
+import { ExportSuccessSection } from '@/components/export/ExportSuccessSection';
+import { BlockingNotice } from '@/components/feedback/BlockingNotice';
+import { HomeHeader } from '@/components/home/HomeHeader';
+import { ScreenShell } from '@/components/layout/ScreenShell';
+import { SoftPanel } from '@/components/layout/SoftPanel';
+import { StaggerFadeIn } from '@/components/motion/StaggerFadeIn';
+import { QuietNavLink } from '@/components/navigation/QuietNavLink';
 import { strings } from '@/config/strings';
+import { useAppState } from '@/context/useAppState';
+import { useExportScreen } from '@/screens/export/useExportScreen';
+import { EXPORT_HEADING_ID } from '@/types/export';
 
-// Gate 0 placeholder: registers + compiles the /export route. The full salvage body
-// (ExportSetupPanel, DownloadCard, printable HTML enrichment) is preserved at
-// origin/sai-shanmukh-progress:src/screens/ExportScreen.tsx and its useExportScreen hook.
-// Stream S3 rebuilds it against main's ExportService.generateSummary(range) — see
-// docs/superpowers/coordination/frontend-s3-requests.md.
+const STAGGER_MS = 60;
+
+/**
+ * ExportScreen (FRONTEND §2.8): generate a clinician summary from ExportService.generateSummary.
+ * Download only — no Web Share API, no clipboard. Carries the mandatory non-diagnostic notice.
+ */
 export function ExportScreen() {
+  const { settings } = useAppState();
+  const exportScreen = useExportScreen();
+  const copy = strings.export;
+  const isGenerating = exportScreen.status === 'generating';
+
   return (
-    <PlaceholderScreen
-      title={strings.placeholders.export.title}
-      body={strings.placeholders.export.body}
-    />
+    <ScreenShell
+      textScale={settings.textScale}
+      ariaLabelledBy={EXPORT_HEADING_ID}
+      className="gap-6"
+    >
+      <p className="sr-only" role="status" aria-live="polite">
+        {exportScreen.liveAnnouncement}
+      </p>
+
+      <StaggerFadeIn animationKey="export-header">
+        <HomeHeader
+          title={copy.title}
+          subtitle={copy.subtitle}
+          headingId={EXPORT_HEADING_ID}
+        />
+      </StaggerFadeIn>
+
+      {/* Mandatory non-diagnostic notice (SAFETY §8) — always visible. */}
+      <StaggerFadeIn animationKey="export-notice" delayMs={STAGGER_MS}>
+        <SoftPanel aria-labelledby="export-notice-heading">
+          <h2
+            id="export-notice-heading"
+            className="text-base font-semibold text-foreground"
+          >
+            {copy.scopeNoticeHeading}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {copy.nonDiagnosticNotice}
+          </p>
+        </SoftPanel>
+      </StaggerFadeIn>
+
+      {exportScreen.status === 'success' && exportScreen.preview ? (
+        <StaggerFadeIn animationKey="export-success" delayMs={STAGGER_MS * 2}>
+          <ExportSuccessSection
+            preview={exportScreen.preview}
+            onDownloadJson={exportScreen.downloadJson}
+            onDownloadHtml={exportScreen.downloadHtml}
+          />
+        </StaggerFadeIn>
+      ) : (
+        <>
+          <StaggerFadeIn animationKey="export-setup" delayMs={STAGGER_MS * 2}>
+            <ExportSetupPanel
+              range={exportScreen.range}
+              disabled={isGenerating}
+              onFromChange={exportScreen.setFrom}
+              onToChange={exportScreen.setTo}
+            />
+          </StaggerFadeIn>
+
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            aria-label={copy.generateAriaLabel}
+            disabled={isGenerating}
+            onClick={() => void exportScreen.generate()}
+          >
+            {copy.generate}
+          </Button>
+
+          {isGenerating ? <ExportGeneratingPlaceholder /> : null}
+
+          {exportScreen.status === 'empty' ? (
+            <SoftPanel aria-labelledby="export-empty-heading">
+              <h2
+                id="export-empty-heading"
+                className="text-lg font-semibold text-foreground"
+              >
+                {copy.empty.title}
+              </h2>
+              <p className="mt-2 text-base leading-relaxed text-muted-foreground">
+                {copy.empty.body}
+              </p>
+            </SoftPanel>
+          ) : null}
+
+          {exportScreen.status === 'error' &&
+          exportScreen.errorTitle &&
+          exportScreen.errorBody ? (
+            <BlockingNotice
+              title={exportScreen.errorTitle}
+              body={exportScreen.errorBody}
+            />
+          ) : null}
+        </>
+      )}
+
+      <div className="mt-auto border-t border-border/60 pt-6">
+        <QuietNavLink
+          to="/home"
+          label={copy.nav.back}
+          ariaLabel={copy.nav.backAriaLabel}
+          className="w-full"
+        />
+      </div>
+    </ScreenShell>
   );
 }

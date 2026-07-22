@@ -19,6 +19,8 @@ export const strings = Object.freeze({
     exerciseColumn: 'Exercise',
     granularityColumn: 'Granularity',
     pointsColumn: 'Points',
+    latestColumn: 'Latest',
+    directionColumn: 'Direction',
     sessionsHeading: 'Sessions',
     startedColumn: 'Started',
     endedColumn: 'Ended',
@@ -484,6 +486,14 @@ export const strings = Object.freeze({
     },
     steadyPill: 'Steady',
     steadyPillForPeriod: (period: string) => `${period}: steady`,
+    // Recent-direction words for the printable export's enriched trend rows (export.ts
+    // renderHtml). Rendered conditionally, so — unlike the exportSummary column headers — they
+    // need not appear in every export; sub-noise-floor reads "Steady" (never up/down).
+    direction: {
+      steady: 'Steady',
+      moreEven: 'More even',
+      lessEven: 'Less even',
+    },
     caption: {
       holdingSteady: (exercise: string) =>
         `Your ${exercise} has been holding steady.`,
