@@ -1,5 +1,11 @@
 # MirrorWell — Full-App Completion Plan (backend ✅ → frontend → wired, shippable app)
 
+> **SUPERSEDED (2026-07-21)** by `2026-07-21-full-app-completion-parallel.md`, which re-casts this
+> same scope as **three parallel, subagent-driven streams** behind a blocking foundation bootstrap.
+> This document is retained for its Context, contract-deltas, and constraint rationale, all carried
+> forward verbatim into the successor. Execute from the successor; the sequential ownership section
+> below (Phases 0–6, one owner at a time) is the part that has been replaced.
+
 > Supersedes nothing. **Extends** `2026-07-20-parallel-completion.md` (backend, complete) and
 > **re-bases** `2026-07-20-frontend-integration.md` (still the detailed UI salvage procedure; its
 > Task 4 stub is now obsolete because the real backend exists). Read both before executing.
