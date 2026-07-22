@@ -1,5 +1,5 @@
 import { useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
-import { EXERCISE_IDS, EXERCISES } from '@/config/exercises';
+import { assignableExercises, exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
 import type { ExerciseId } from '@/data/schema';
 import {
@@ -25,9 +25,9 @@ export function useAttestationOptions(): CheckboxOption<AttestationKey>[] {
 export function useExerciseOptions(): CheckboxOption<ExerciseId>[] {
   return useMemo(
     () =>
-      EXERCISE_IDS.map((id) => ({
+      assignableExercises.map((id) => ({
         id,
-        label: EXERCISES[id].displayName,
+        label: exercises[id].displayName,
       })),
     [],
   );

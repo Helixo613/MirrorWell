@@ -9,7 +9,7 @@ import { OnboardingHeader } from '@/components/onboarding/OnboardingHeader';
 import { StepIndicator } from '@/components/onboarding/StepIndicator';
 import { strings } from '@/config/strings';
 import { useAppState } from '@/context/useAppState';
-import { isMirrorWellError } from '@/data/errors';
+import { MirrorWellError } from '@/data/errors';
 import type { ExerciseId } from '@/data/schema';
 import { StorageService } from '@/data/storage';
 import { SafetyGate } from '@/session/safety';
@@ -141,7 +141,7 @@ export function OnboardingScreen() {
       };
 
       await StorageService.saveProfile(profile);
-      await SafetyGate.recordAttestation(SafetyGate.getConsentVersion());
+      await SafetyGate.recordAttestation(import.meta.env.VITE_CONSENT_VERSION);
 
       const saved = await StorageService.getProfile();
       if (!saved) {
@@ -153,7 +153,7 @@ export function OnboardingScreen() {
       navigate('/calibration', { replace: true });
     } catch (error) {
       if (
-        isMirrorWellError(error) &&
+        error instanceof MirrorWellError &&
         (error.code === 'DB_UNAVAILABLE' || error.code === 'VALIDATION_FAILED')
       ) {
         setBlockingError(strings.errors[error.code]);

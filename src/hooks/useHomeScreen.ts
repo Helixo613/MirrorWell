@@ -6,7 +6,7 @@ import {
   sessionRangeFromProfileCreated,
 } from '@/lib/sessionRange';
 import { strings } from '@/config/strings';
-import { isMirrorWellError } from '@/data/errors';
+import { MirrorWellError } from '@/data/errors';
 import { StorageService } from '@/data/storage';
 import { SettingsService } from '@/data/settings';
 import type { AppSettings } from '@/types/app';
@@ -99,7 +99,7 @@ export function useHomeScreen(
         if (cancelled) {
           return;
         }
-        if (isMirrorWellError(error) && error.code === 'DB_UNAVAILABLE') {
+        if (error instanceof MirrorWellError && error.code === 'DB_UNAVAILABLE') {
           setErrorTitle(strings.errors.DB_UNAVAILABLE.title);
           setErrorBody(strings.errors.DB_UNAVAILABLE.body);
         } else {

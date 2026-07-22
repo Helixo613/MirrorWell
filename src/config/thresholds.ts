@@ -83,6 +83,34 @@ export const thresholds = Object.freeze({
   liveDemo: Object.freeze({
     symmetryBoundary: 0.85,
   }),
+
+  // --- UI presentation tunables (frontend salvage, Gate 0). API §15 documentation is a
+  // Reconvergence task; these are display-only and never touch the metric pipeline. ---
+  /** FRONTEND §2.3 — how far back HomeScreen looks for the "last session" line. */
+  home: Object.freeze({
+    sessionLookbackDays: 7,
+  }),
+  /** FRONTEND §2.5 — plain-language symmetry buckets (no numeric grades). */
+  summary: Object.freeze({
+    symmetryMostlyEvenMin: 0.85,
+    symmetryFairlyEvenMin: 0.7,
+    symmetrySomeDifferenceMin: 0.55,
+  }),
+  /** FRONTEND §2.6 — minimum periods before showing a trend chart. */
+  trends: Object.freeze({
+    minPeriodsForChart: 2,
+  }),
+  /** FRONTEND §2.8 — default export date window. */
+  export: Object.freeze({
+    defaultRangeWeeks: 8,
+  }),
+  /** FRONTEND §2.9 / §4 — text size control bounds. */
+  settings: Object.freeze({
+    textScaleMin: 1.0,
+    textScaleMax: 2.0,
+    textScaleStep: 0.1,
+    saveFeedbackDismissMs: 2500,
+  }),
 });
 
 export type Thresholds = typeof thresholds;

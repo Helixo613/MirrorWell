@@ -11,7 +11,7 @@ import { TrendsChartSkeleton } from '@/components/trends/TrendsChartSkeleton';
 import { TrendsControlsToolbar } from '@/components/trends/TrendsControlsToolbar';
 import { TrendsDataTable } from '@/components/trends/TrendsDataTable';
 import { TrendsEmptyState } from '@/components/trends/TrendsEmptyState';
-import { EXERCISES } from '@/config/exercises';
+import { exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
 import { useAppState } from '@/context/useAppState';
 import { useTrendsScreen } from '@/hooks/useTrendsScreen';
@@ -28,8 +28,8 @@ export function TrendsScreen() {
 
   const exerciseOptions = assignedExercises.map((exerciseId) => ({
     value: exerciseId,
-    label: EXERCISES[exerciseId].displayName,
-    ariaLabel: EXERCISES[exerciseId].displayName,
+    label: exercises[exerciseId].displayName,
+    ariaLabel: exercises[exerciseId].displayName,
   }));
 
   const granularityOptions = [
@@ -86,9 +86,9 @@ export function TrendsScreen() {
     trends.selectedExerciseId ?? assignedExercises[0] ?? 'EX_SMILE';
 
   const selectedExerciseName = trends.series
-    ? EXERCISES[trends.series.exerciseId].displayName
+    ? exercises[trends.series.exerciseId].displayName
     : trends.selectedExerciseId
-      ? EXERCISES[trends.selectedExerciseId].displayName
+      ? exercises[trends.selectedExerciseId].displayName
       : '';
 
   return (

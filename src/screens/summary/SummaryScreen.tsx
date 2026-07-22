@@ -6,7 +6,7 @@ import { ScreenShell } from '@/components/layout/ScreenShell';
 import { StickyScreenFooter } from '@/components/layout/StickyScreenFooter';
 import { StaggerFadeIn } from '@/components/motion/StaggerFadeIn';
 import { SummaryExerciseCard } from '@/components/summary/SummaryExerciseCard';
-import { EXERCISES } from '@/config/exercises';
+import { exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
 import { useSummaryScreen } from '@/hooks/useSummaryScreen';
 import { symmetryPlainLabel } from '@/lib/summaryMetrics';
@@ -23,7 +23,7 @@ export function SummaryScreen() {
     }
     const lines = record.results.map((result) =>
       strings.summary.a11y.exerciseLine(
-        EXERCISES[result.exerciseId].displayName,
+        exercises[result.exerciseId].displayName,
         result.repsCompleted,
         symmetryPlainLabel(result.meanSymmetryIndex),
       ),
@@ -72,7 +72,7 @@ export function SummaryScreen() {
               >
                 <SummaryExerciseCard
                   result={result}
-                  exerciseName={EXERCISES[result.exerciseId].displayName}
+                  exerciseName={exercises[result.exerciseId].displayName}
                   headingId={`summary-exercise-${index}`}
                   highContrast={highContrast}
                   animateReveal

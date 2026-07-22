@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { strings } from '@/config/strings';
 import { thresholds } from '@/config/thresholds';
 import { useAppState } from '@/context/useAppState';
-import { isMirrorWellError } from '@/data/errors';
+import { MirrorWellError } from '@/data/errors';
 import { SettingsService } from '@/data/settings';
 import { StorageService } from '@/data/storage';
 import { isHapticsAvailable } from '@/lib/deviceCapabilities';
@@ -130,12 +130,12 @@ export function useSettingsScreen(): UseSettingsScreenResult {
         const updated = await SettingsService.update({ [key]: value });
         setSettings(updated);
         setGlobalSettings(updated);
-        if (key !== 'settingsId' && key !== 'noiseFloorSymmetry') {
+        if (key !== 'settingsId') {
           showSaveFeedback(key);
         }
       } catch (error) {
         setSettings((current) => ({ ...current, [key]: previous }));
-        if (isMirrorWellError(error) && error.code === 'DB_UNAVAILABLE') {
+        if (error instanceof MirrorWellError && error.code === 'DB_UNAVAILABLE') {
           setErrorMessage(strings.errors.DB_UNAVAILABLE.body);
         } else {
           setErrorMessage(strings.settings.a11y.updateFailed);
@@ -172,7 +172,7 @@ export function useSettingsScreen(): UseSettingsScreenResult {
     } catch (error) {
       setDeletePhase('confirm');
       setDeleteAnnouncement('');
-      if (isMirrorWellError(error) && error.code === 'DB_UNAVAILABLE') {
+      if (error instanceof MirrorWellError && error.code === 'DB_UNAVAILABLE') {
         setErrorMessage(strings.errors.DB_UNAVAILABLE.body);
       } else {
         setErrorMessage(strings.settings.a11y.updateFailed);

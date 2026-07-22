@@ -704,6 +704,14 @@ export const strings = Object.freeze({
       title: 'Caregiver view',
       body: 'Read-only caregiver summary is coming next.',
     },
+    calibration: {
+      title: 'Calibration',
+      body: 'Guided calibration is coming next.',
+    },
+    session: {
+      title: 'Session',
+      body: 'The live exercise session is coming next.',
+    },
     backToHome: 'Back to home',
   },
 });

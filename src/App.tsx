@@ -1,8 +1,99 @@
-// Placeholder root component. Route wiring lands in Task 13 (HomeScreen + route completion).
-// Dev-only mounts use dynamic import() inside `import.meta.env.DEV` branches so production
-// builds drop the entire src/dev/ graph (static imports are hoisted and would ship harness
-// strings into the prod bundle — B8 verification forbids that).
 import { lazy, Suspense, type ComponentType } from 'react';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { ScreenShell } from '@/components/layout/ScreenShell';
+import { strings } from '@/config/strings';
+import { AppStateProvider } from '@/context/AppStateContext';
+import { CaregiverRoute } from '@/router/CaregiverRoute';
+import { GateRoute, RootRedirect } from '@/router/RouteGuard';
+import { OnboardingScreen } from '@/screens/onboarding/OnboardingScreen';
+import { CalibrationScreen } from '@/screens/calibration/CalibrationScreen';
+import { HomeScreen } from '@/screens/home/HomeScreen';
+import { SessionScreen } from '@/screens/session/SessionScreen';
+import { SummaryScreen } from '@/screens/summary/SummaryScreen';
+import { ExportScreen } from '@/screens/export/ExportScreen';
+import { SettingsScreen } from '@/screens/settings/SettingsScreen';
+import { CaregiverScreen } from '@/screens/caregiver/CaregiverScreen';
+import { DEFAULT_SETTINGS } from '@/types/app';
+
+// Trends pulls in Recharts; keep it out of the initial route chunk.
+const TrendsScreen = lazy(() =>
+  import('@/screens/trends/TrendsScreen').then((module) => ({
+    default: module.TrendsScreen,
+  })),
+);
+
+function TrendsRouteFallback() {
+  return (
+    <ScreenShell textScale={DEFAULT_SETTINGS.textScale}>
+      <p
+        className="flex flex-1 items-center justify-center text-muted-foreground"
+        role="status"
+        aria-live="polite"
+      >
+        {strings.trends.loading}
+      </p>
+    </ScreenShell>
+  );
+}
+
+// Product shell: AppStateProvider (hydrates from StorageService/SafetyGate) →
+// BrowserRouter → route guards → the nine screens. All nine routes are registered
+// here at Gate 0; the screen bodies are filled in by the S1/S2/S3 streams.
+//
+// Guard rules (FRONTEND §3, ARCH §12): every blocked route redirects to "/" and lets
+// RootRedirect send the user to the correct home for their gate — UNATTESTED →
+// /onboarding, ATTESTED → /home or /calibration, DEMO → /session. Redirecting through
+// root (rather than a fixed screen) is what keeps DEMO out of everything but
+// Session/Summary without a redirect loop. Caregiver additionally requires the
+// caregiverViewEnabled consent (CaregiverRoute).
+function ProductApp() {
+  return (
+    <AppStateProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<RootRedirect />} />
+          <Route
+            path="/onboarding"
+            element={
+              <GateRoute allowed={['UNATTESTED']} redirectTo="/">
+                <OnboardingScreen />
+              </GateRoute>
+            }
+          />
+          <Route element={<GateRoute allowed={['ATTESTED']} redirectTo="/" />}>
+            <Route path="/calibration" element={<CalibrationScreen />} />
+            <Route path="/home" element={<HomeScreen />} />
+            <Route
+              path="/trends"
+              element={
+                <Suspense fallback={<TrendsRouteFallback />}>
+                  <TrendsScreen />
+                </Suspense>
+              }
+            />
+            <Route path="/export" element={<ExportScreen />} />
+            <Route path="/settings" element={<SettingsScreen />} />
+            <Route
+              path="/caregiver"
+              element={
+                <CaregiverRoute>
+                  <CaregiverScreen />
+                </CaregiverRoute>
+              }
+            />
+          </Route>
+          <Route
+            element={<GateRoute allowed={['ATTESTED', 'DEMO']} redirectTo="/" />}
+          >
+            <Route path="/session" element={<SessionScreen />} />
+            <Route path="/summary" element={<SummaryScreen />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AppStateProvider>
+  );
+}
 
 function DevOnly({ loader }: { loader: () => Promise<{ default: ComponentType }> }) {
   const Comp = lazy(loader);
@@ -13,39 +104,42 @@ function DevOnly({ loader }: { loader: () => Promise<{ default: ComponentType }>
   );
 }
 
-export default function App() {
-  // Every dev harness re-parents CaptureService's single <video>, so the live demo and the V1
-  // protocol harness are mutually exclusive: VITE_ENABLE_LIVE_DEMO=true swaps the default
-  // harness for the demo readout rather than mounting both and leaving one preview black.
+export function App() {
+  // Dev-only harnesses are opt-in and DEV-gated; production (DEV=false) always renders
+  // the product app and tree-shakes the entire src/dev/ graph. When a harness flag IS
+  // set in dev, the product app is NOT mounted so the harness owns CaptureService's
+  // single <video> element alone (ARCH §11 camera rule; every harness re-parents that
+  // one element). The three camera harnesses are mutually exclusive by priority; the
+  // DebugHud is an additive overlay.
   const liveDemo = import.meta.env.VITE_ENABLE_LIVE_DEMO === 'true';
+  const liveV1 = import.meta.env.VITE_ENABLE_LIVE_V1_HARNESS === 'true';
+  const captureHarness = import.meta.env.VITE_ENABLE_CAPTURE_HARNESS === 'true';
+  const debugHud = import.meta.env.VITE_ENABLE_DEBUG_HUD === 'true';
+  const devHarness =
+    import.meta.env.DEV && (liveDemo || liveV1 || captureHarness || debugHud);
+
+  if (!devHarness) {
+    return <ProductApp />;
+  }
+
   return (
     <div>
-      MirrorWell
-      {import.meta.env.DEV && liveDemo && (
+      MirrorWell — dev harness
+      {liveDemo ? (
         <DevOnly
           loader={() => import('./dev/LiveDemoView').then((m) => ({ default: m.LiveDemoView }))}
         />
-      )}
-      {import.meta.env.DEV && !liveDemo && (
+      ) : liveV1 ? (
         <DevOnly
-          loader={() =>
-            import('./dev/LiveV1Harness').then((m) => ({ default: m.LiveV1Harness }))
-          }
+          loader={() => import('./dev/LiveV1Harness').then((m) => ({ default: m.LiveV1Harness }))}
         />
-      )}
-      {/* CaptureHarness and LiveV1Harness both re-parent CaptureService's single <video>
-          element — mounting both leaves one preview black. Opt-in via env flag. */}
-      {import.meta.env.DEV && import.meta.env.VITE_ENABLE_CAPTURE_HARNESS === 'true' && (
+      ) : captureHarness ? (
         <DevOnly
-          loader={() =>
-            import('./dev/CaptureHarness').then((m) => ({ default: m.CaptureHarness }))
-          }
+          loader={() => import('./dev/CaptureHarness').then((m) => ({ default: m.CaptureHarness }))}
         />
-      )}
-      {import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEBUG_HUD === 'true' && (
-        <DevOnly
-          loader={() => import('./dev/DebugHud').then((m) => ({ default: m.DebugHud }))}
-        />
+      ) : null}
+      {debugHud && (
+        <DevOnly loader={() => import('./dev/DebugHud').then((m) => ({ default: m.DebugHud }))} />
       )}
     </div>
   );

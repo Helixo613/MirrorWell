@@ -1,4 +1,4 @@
-import type { SessionRecordFull } from '@/data/schema';
+import type { SessionRecordFull } from '@/data/storage';
 
 export interface SummaryLocationState {
   record: SessionRecordFull;

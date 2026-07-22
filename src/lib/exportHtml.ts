@@ -1,4 +1,4 @@
-import { EXERCISES } from '@/config/exercises';
+import { exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
 import { formatPeriodLabel } from '@/lib/trendPeriods';
 import { symmetryPlainLabel } from '@/lib/summaryMetrics';
@@ -38,12 +38,12 @@ function affectedSideLabel(side: ExportSummaryDocument['profile']['affectedSide'
 /** Printable one-page A4 HTML summary — same content as JSON export. */
 export function renderExportHtml(doc: ExportSummaryDocument): string {
   const exerciseNames = doc.profile.assignedExercises
-    .map((id) => EXERCISES[id].displayName)
+    .map((id) => exercises[id].displayName)
     .join(', ');
 
   const trendSections = doc.trends
     .map((trend) => {
-      const name = EXERCISES[trend.exerciseId].displayName;
+      const name = exercises[trend.exerciseId].displayName;
       if (trend.points.length === 0) {
         return `<p><strong>${escapeHtml(name)}</strong>: ${escapeHtml(strings.export.html.noTrendPoints)}</p>`;
       }
@@ -73,7 +73,7 @@ export function renderExportHtml(doc: ExportSummaryDocument): string {
     .map((session) => {
       const resultCells = session.results
         .map((result) => {
-          const name = EXERCISES[result.exerciseId].displayName;
+          const name = exercises[result.exerciseId].displayName;
           return `${escapeHtml(name)}: ${result.repsCompleted} ${escapeHtml(strings.export.html.reps)}, ${escapeHtml(symmetryPlainLabel(result.meanSymmetryIndex))}, ${escapeHtml(strings.export.html.easeOff(result.easeOffCount))}, ${escapeHtml(strings.export.html.measurementQuality(formatPercent(result.lowQualityFramePct)))}`;
         })
         .join('<br/>');

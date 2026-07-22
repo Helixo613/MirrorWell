@@ -1,7 +1,7 @@
 import { SymmetryBar } from '@/components/feedback/SymmetryBar';
 import { SoftPanel } from '@/components/layout/SoftPanel';
 import { strings } from '@/config/strings';
-import type { ExerciseResultFull } from '@/data/schema';
+import type { ExerciseResultFull } from '@/data/storage';
 import { gentleRepCounts, symmetryPlainLabel } from '@/lib/summaryMetrics';
 import { cn } from '@/lib/utils';
 

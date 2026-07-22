@@ -1,5 +1,5 @@
 import { strings } from '@/config/strings';
-import type { QualityState } from '@/types/sensing';
+import type { QualityState } from '@/sensing/quality';
 
 export type SessionStatusVariant = 'safety' | 'muted';
 

@@ -1,5 +1,6 @@
 import { strings } from '@/config/strings';
-import type { EndReason, SessionRecordFull } from '@/data/schema';
+import type { EndReason } from '@/data/schema';
+import type { SessionRecordFull } from '@/data/storage';
 
 const WEEKDAY_FORMATTER = new Intl.DateTimeFormat(undefined, {
   weekday: 'long',

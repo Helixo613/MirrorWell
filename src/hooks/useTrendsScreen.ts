@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { EXERCISES } from '@/config/exercises';
+import { exercises } from '@/config/exercises';
 import { thresholds } from '@/config/thresholds';
 import { strings } from '@/config/strings';
-import { isMirrorWellError } from '@/data/errors';
+import { MirrorWellError } from '@/data/errors';
 import { SettingsService } from '@/data/settings';
 import { TrendsService } from '@/data/trends';
 import type { ExerciseId } from '@/data/schema';
@@ -91,7 +91,7 @@ export function useTrendsScreen(
         if (cancelled) {
           return;
         }
-        if (isMirrorWellError(error) && error.code === 'DB_UNAVAILABLE') {
+        if (error instanceof MirrorWellError && error.code === 'DB_UNAVAILABLE') {
           setErrorTitle(strings.errors.DB_UNAVAILABLE.title);
           setErrorBody(strings.errors.DB_UNAVAILABLE.body);
         } else {
@@ -150,7 +150,7 @@ export function useTrendsScreen(
         if (cancelled) {
           return;
         }
-        if (isMirrorWellError(error) && error.code === 'DB_UNAVAILABLE') {
+        if (error instanceof MirrorWellError && error.code === 'DB_UNAVAILABLE') {
           setErrorTitle(strings.errors.DB_UNAVAILABLE.title);
           setErrorBody(strings.errors.DB_UNAVAILABLE.body);
         } else {
@@ -192,7 +192,7 @@ export function useTrendsScreen(
         setGranularityState(nextGranularity);
       } catch (error) {
         setIsRefreshing(false);
-        if (isMirrorWellError(error) && error.code === 'DB_UNAVAILABLE') {
+        if (error instanceof MirrorWellError && error.code === 'DB_UNAVAILABLE') {
           setErrorTitle(strings.errors.DB_UNAVAILABLE.title);
           setErrorBody(strings.errors.DB_UNAVAILABLE.body);
         } else {
@@ -218,7 +218,7 @@ export function useTrendsScreen(
   }, []);
 
   const exerciseName = selectedExerciseId
-    ? EXERCISES[selectedExerciseId].displayName
+    ? exercises[selectedExerciseId].displayName
     : '';
 
   const seriesMatchesSelection =

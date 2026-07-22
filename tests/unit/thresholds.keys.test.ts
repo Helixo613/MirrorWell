@@ -6,7 +6,12 @@ import { thresholds } from '../../src/config/thresholds';
 describe('thresholds', () => {
   it('exports the full key list from API.md §15', () => {
     expect(Object.keys(thresholds).sort()).toEqual(
-      ['blendshapes', 'calibration', 'landmarker', 'liveDemo', 'metrics', 'qualityGates', 'reps', 'session', 'v1Protocol'].sort(),
+      [
+        'blendshapes', 'calibration', 'landmarker', 'liveDemo', 'metrics',
+        'qualityGates', 'reps', 'session', 'v1Protocol',
+        // UI presentation tunables (frontend salvage, Gate 0)
+        'home', 'summary', 'trends', 'export', 'settings',
+      ].sort(),
     );
   });
 
@@ -80,6 +85,18 @@ describe('thresholds', () => {
   it('liveDemo exposes the dev-only demo readout band', () => {
     expect(Object.keys(thresholds.liveDemo)).toEqual(['symmetryBoundary']);
     expect(thresholds.liveDemo.symmetryBoundary).toBe(0.85);
+  });
+
+  it('exposes the UI presentation namespaces (frontend salvage; API.md §15)', () => {
+    expect(Object.keys(thresholds.home)).toEqual(['sessionLookbackDays']);
+    expect(Object.keys(thresholds.summary).sort()).toEqual(
+      ['symmetryFairlyEvenMin', 'symmetryMostlyEvenMin', 'symmetrySomeDifferenceMin'].sort(),
+    );
+    expect(Object.keys(thresholds.trends)).toEqual(['minPeriodsForChart']);
+    expect(Object.keys(thresholds.export)).toEqual(['defaultRangeWeeks']);
+    expect(Object.keys(thresholds.settings).sort()).toEqual(
+      ['saveFeedbackDismissMs', 'textScaleMax', 'textScaleMin', 'textScaleStep'].sort(),
+    );
   });
 
   it('is frozen (cannot be mutated at runtime)', () => {
