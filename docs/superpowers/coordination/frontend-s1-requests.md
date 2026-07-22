@@ -34,6 +34,44 @@ is needed. One file per stream = never conflicts.
   `compute()` throws `NO_BASELINE` → the loop reports `FACE_LOST` (a demo that detects nothing).
 - Camera rule: the stream may be open only while Calibration/Session is mounted; release on unmount.
 
+---
+
+## S1-NOTE-1 → S2 and S3 (rebase instruction, no action needed from the integration owner)
+
+S1 merges first, so the shared e2e/test infra that S2 and S3 each wrote independently lands here as
+the **canonical** copy. On rebase, S2 and S3 drop their own copies of:
+
+- `tests/e2e/helpers/onboarding.ts` — adopted verbatim from `origin/frontend-s2-shell`.
+- `tests/e2e/helpers/seed.ts` — adopted verbatim from `origin/frontend-s3-data`.
+- `vitest.config.ts` `@` → `src/` alias (S3-REQ-1) — adopted verbatim from `origin/frontend-s3-data`.
+
+No behavioural change to any of the three; the files are byte-identical to the branch they came from.
+
+## S1-REQ-1 → integration owner (`playwright.config.ts`) — fake-camera Playwright project
+
+**Origin:** Tasks 10–11 (`CalibrationScreen`, `SessionScreen`), Stream S1.
+
+**Change (already applied on `frontend-s1-session`, flagged here per ownership rule 1):** split
+`playwright.config.ts` into two projects. `default` runs everything outside `tests/e2e/camera/**`
+with an unmodified browser (the no-network and shell-smoke gates keep the exact launch conditions
+they had). `camera` runs `tests/e2e/camera/**` with
+`--use-fake-device-for-media-stream --use-fake-ui-for-media-stream
+--autoplay-policy=no-user-gesture-required`.
+
+**Why:** the two camera screens are unreachable without a `getUserMedia` stream, and granting the
+fake device globally would change the browser the other streams' specs run in. No
+`--use-file-for-fake-video-capture`: the synthetic pattern carries no face, which is precisely the
+`FACE_LOST` / frozen-bar surface these per-screen specs assert. Fixture replay
+(`tests/fixtures/replay/*.mjpeg`; Chromium accepts only `.y4m`/`.mjpeg`, CLAUDE.md fact 3) belongs
+to the Reconvergence journeys (TESTS.md §5), not to per-screen specs.
+
+## S1-CLOSES-S3-REQ-4 → `strings.errors` — `NO_BASELINE` copy added
+
+S3 filed "no `NO_BASELINE` copy, so an attested-but-uncalibrated user sees generic
+'check your input'". `strings.errors.NO_BASELINE` and `strings.errors.RECALIBRATION_REQUIRED` are
+added on this branch (API §16: both route to `CalibrationScreen`). `useExportScreen` can branch on
+the code once S3 rebases. Closed.
+
 <!-- Append requests below. Template:
 
 ## S1-REQ-N → <owner or "integration owner (frozen shell)"> (`<path>`) — <one-line summary>

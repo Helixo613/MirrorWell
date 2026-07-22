@@ -16,6 +16,33 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: 'on-first-retry',
   },
+  // Two projects, deliberately split (S1-REQ-1): the default project must keep running
+  // with a real (absent) camera so the no-network and shell gates exercise the same
+  // browser the other streams' specs assume. Only tests/e2e/camera/** get the fake
+  // device — CalibrationScreen and SessionScreen are unreachable without a stream.
+  // No --use-file-for-fake-video-capture here: the synthetic pattern has no face, which
+  // is exactly the FACE_LOST / frozen-bar surface these specs assert. Fixture replay
+  // (tests/fixtures/replay/*.mjpeg — Chromium accepts only .y4m/.mjpeg, CLAUDE.md fact 3)
+  // belongs to the Reconvergence journeys, not to per-screen specs.
+  projects: [
+    {
+      name: 'default',
+      testIgnore: '**/camera/**',
+    },
+    {
+      name: 'camera',
+      testMatch: '**/camera/**',
+      use: {
+        launchOptions: {
+          args: [
+            '--use-fake-device-for-media-stream',
+            '--use-fake-ui-for-media-stream',
+            '--autoplay-policy=no-user-gesture-required',
+          ],
+        },
+      },
+    },
+  ],
   webServer: {
     // Bind explicitly to 127.0.0.1 so readiness checks match baseURL on CI runners
     // (default Vite preview may prefer localhost/IPv6 and miss the probe).

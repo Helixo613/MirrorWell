@@ -1,6 +1,13 @@
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // '@/' → src/ alias, mirroring vite.config.ts. Vitest does not merge the app's vite config,
+  // so co-located src/**/*.test.ts (and any source they import that uses the '@' alias) fail to
+  // resolve without this. Additive shared-infra change (S3-REQ-1); no runtime/build effect.
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
   test: {
     environment: 'node',
     // Only Vitest-native suites. tests/e2e/**/*.spec.ts use @playwright/test's own

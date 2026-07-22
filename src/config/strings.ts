@@ -249,6 +249,17 @@ export const strings = Object.freeze({
       title: 'That capture did not meet quality',
       body: 'Try again with more light, a steady position, and your face centered. There is no rush.',
     },
+    // API §16: NO_BASELINE and RECALIBRATION_REQUIRED both route to CalibrationScreen. Without
+    // their own copy they fell back to the VALIDATION_FAILED "something went wrong" text, which
+    // tells an attested-but-uncalibrated user nothing about what to do (S3-REQ-4).
+    NO_BASELINE: {
+      title: 'Calibration comes first',
+      body: 'MirrorWell measures movement against your own calibration, so we need to capture that before this can work. It takes about a minute.',
+    },
+    RECALIBRATION_REQUIRED: {
+      title: 'Time to calibrate again',
+      body: 'Your camera setup has shifted since last time. A fresh calibration keeps your measurements comparable.',
+    },
   },
   quality: {
     QUALITY_OK: '',
