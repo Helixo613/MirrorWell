@@ -72,6 +72,33 @@ S3 filed "no `NO_BASELINE` copy, so an attested-but-uncalibrated user sees gener
 added on this branch (API §16: both route to `CalibrationScreen`). `useExportScreen` can branch on
 the code once S3 rebases. Closed.
 
+## S1-REQ-2 → integration owner (frozen shell) (`src/App.tsx`, `src/router/RouteGuard.tsx`, `src/session/safety.ts`) — the DEMO exit path is unreachable
+
+**Origin:** Task 12 (`SummaryScreen`), Stream S1. Found empirically, not by reading — the demo
+Done button was probed in the production build and lands on `/home`.
+
+**Observation.** FRONTEND §2.5 and §1 both say the DEMO `SummaryScreen` "ends at
+`OnboardingScreen`", and API §17's gate matrix lists `OnboardingScreen` as **✅ in DEMO
+("exits demo")**. The shipped shell contradicts both: `/onboarding` is wrapped in
+`GateRoute allowed={['UNATTESTED']}` (`src/App.tsx`), so a DEMO user is bounced to `/`, and
+`RootRedirect` (`src/router/RouteGuard.tsx`) sends DEMO → `/session`, ATTESTED → `/home`. Nothing
+on that path clears `SafetyGate`'s in-memory `demoMode` either — `src/session/safety.ts` exposes no
+exit; only `recordAttestation` resets it. Net effect: **demo is a one-way door until reload**, and
+the documented demo close-out silently lands somewhere else.
+
+**Requested change (two parts, both outside S1's globs):**
+1. `src/App.tsx` — `/onboarding` should admit `['UNATTESTED', 'DEMO']`, matching API §17.
+2. `src/session/safety.ts` — an explicit way to leave demo when `OnboardingScreen` is entered from
+   a demo close-out. API §2 documents only `enterDemoMode`/`isDemoMode`, so **either** add
+   `SafetyGate.exitDemoMode()` with a `DOCS-CHANGE: API §2 — …` line and amend ARCH §12, **or**
+   have `OnboardingScreen` mount clear it. Adding it inside a screen stream would invent API
+   surface unilaterally, so it is filed rather than done.
+
+**Why it matters beyond Summary.** ARCH §11 makes demo's exit a safety property ("page reload exits
+completely"), and the demo `SessionScreen` → `SummaryScreen` → `OnboardingScreen` loop is the entire
+evaluator journey (FRONTEND §1). S1's specs assert only "left `/summary`" so they stay green both
+before and after the fix; a spec that pinned the destination would have to encode the bug.
+
 <!-- Append requests below. Template:
 
 ## S1-REQ-N → <owner or "integration owner (frozen shell)"> (`<path>`) — <one-line summary>
