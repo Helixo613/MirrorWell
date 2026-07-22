@@ -617,6 +617,38 @@ export const strings = Object.freeze({
           : `Plus ${count} more sessions in the JSON file.`,
     },
   },
+  caregiver: {
+    title: 'Practice summary',
+    subtitle: 'A read-only overview for a trusted person',
+    banner: 'Read-only view, enabled by the device owner',
+    loading: 'Loading summary…',
+    empty: {
+      title: 'No practice to show yet',
+      body: 'Once a few sessions are recorded they will appear here.',
+    },
+    adherence: {
+      heading: 'Practice adherence',
+      completionRate: (pct: number) => `${pct}% of sessions completed`,
+      sessionsPerWeek: (counts: string) => `Sessions per week: ${counts}`,
+    },
+    trendsHeading: 'Symmetry trends',
+    lastSessionHeading: 'Most recent session',
+    measurementQuality: {
+      heading: 'Measurement quality',
+      value: (pct: number) =>
+        `${pct}% of frames were clearly captured across recent sessions.`,
+      unavailable: 'Measurement quality will appear after a few sessions.',
+    },
+    exportLink: 'Open export',
+    exportLinkAriaLabel: 'Go to export to share a summary with your care team',
+    nav: {
+      back: 'Back to home',
+      backAriaLabel: 'Return to home',
+    },
+    a11y: {
+      announcement: 'Caregiver practice summary loaded.',
+    },
+  },
   settings: {
     title: 'Settings',
     subtitle: 'Choose what feels comfortable',
