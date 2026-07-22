@@ -5,6 +5,7 @@ import { SoftPanel } from '@/components/layout/SoftPanel';
 import { StaggerFadeIn } from '@/components/motion/StaggerFadeIn';
 import { QuietNavLink } from '@/components/navigation/QuietNavLink';
 import { TrendsChart } from '@/components/trends/TrendsChart';
+import { TrendsDataTable } from '@/components/trends/TrendsDataTable';
 import { exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
 import { useAppState } from '@/context/useAppState';
@@ -132,11 +133,21 @@ export function CaregiverScreen() {
                     <h3 className="mb-2 text-base font-medium text-foreground">
                       {exercises[trend.exerciseId].displayName}
                     </h3>
-                    <TrendsChart
-                      exerciseName={exercises[trend.exerciseId].displayName}
+                    {/* Visual chart for sighted users; the SVG carries no data a screen
+                        reader can read, so it is hidden and the same series is exposed as an
+                        sr-only data table (FRONTEND §4 — trend data must be AT-reachable). */}
+                    <div aria-hidden="true">
+                      <TrendsChart
+                        exerciseName={exercises[trend.exerciseId].displayName}
+                        points={trend.points}
+                        granularity={trend.granularity}
+                        highContrast={settings.highContrast}
+                      />
+                    </div>
+                    <TrendsDataTable
                       points={trend.points}
                       granularity={trend.granularity}
-                      highContrast={settings.highContrast}
+                      className="sr-only"
                     />
                   </SoftPanel>
                 ))}

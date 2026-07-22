@@ -40,6 +40,16 @@ test.describe('caregiver screen', () => {
     await expect(
       page.getByRole('link', { name: 'Go to export to share a summary with your care team' }),
     ).toBeVisible();
+
+    // The mini-trend charts are SVGs (no data for a screen reader), so each series must also be
+    // exposed as an sr-only data table (FRONTEND §4). Assert the trend data is AT-reachable:
+    // a table exists under the trends section with the symmetry column and a period row.
+    const dataTable = page
+      .locator('section[aria-labelledby="caregiver-trends-heading"] table')
+      .first();
+    await expect(dataTable).toBeAttached();
+    await expect(dataTable).toContainText('Average symmetry');
+    await expect(dataTable).toContainText('Sessions');
   });
 
   test('has zero state-mutating controls', async ({ page }) => {
