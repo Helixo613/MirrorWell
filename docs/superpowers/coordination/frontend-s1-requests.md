@@ -104,6 +104,28 @@ completely"), and the demo `SessionScreen` → `SummaryScreen` → `OnboardingSc
 evaluator journey (FRONTEND §1). S1's specs assert only "left `/summary`" so they stay green both
 before and after the fix; a spec that pinned the destination would have to encode the bug.
 
+## S1-NOTE-2 → Reconvergence / backend owner (`src/session/controller.ts`, `src/session/calibration.ts`) — drift re-check gates every session start on live quality
+
+**Origin:** Task 11 (`SessionScreen`), Stream S1. Not S1's to fix (frozen backend), filed for the
+integration owner.
+
+**Observation.** `SessionController.start()` (real, non-demo branch) calls
+`CalibrationFlow.checkBaselineDrift()` unconditionally, which runs a live `captureFor()` window and
+throws `QUALITY_TOO_LOW` when it approves zero frames (`calibration.ts`:
+`if (capture.approved.length === 0) throw QUALITY_TOO_LOW`). Consequence: a **legitimately
+calibrated** user who taps Start in momentarily poor light / off-frame cannot begin a session at all
+— `start()` rejects before any REPS state, and `SessionScreen` surfaces it as a blocking
+`QUALITY_TOO_LOW` notice with only a "Back" action. This is consistent with API §10's documented
+precondition order (drift re-check before camera/session), so it is likely intended fail-safe rather
+than a bug — but the UX is a dead-ish end for a transient condition, unlike the mid-session path
+(FRONTEND §2.4 "camera loss mid-session → pause, not session loss").
+
+**Why filed, not fixed.** Both files are frozen backend. A frontend-only palliative (retry affordance
+on the start-time `QUALITY_TOO_LOW` screen instead of only "Back") is possible inside
+`SessionScreen`, but the honest fix — distinguishing "baseline actually drifted" from "couldn't
+measure right now" at the `checkBaselineDrift` boundary — belongs to the backend/Reconvergence owner.
+Flagging so the real-hardware matrix (Task 17) exercises a calibrated-user start in marginal light.
+
 <!-- Append requests below. Template:
 
 ## S1-REQ-N → <owner or "integration owner (frozen shell)"> (`<path>`) — <one-line summary>
