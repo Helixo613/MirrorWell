@@ -220,6 +220,19 @@ test.describe('SummaryScreen — accessibility @a11y', () => {
     await bootSummaryWith(page, RECORD);
     await expect(page.getByRole('article').first()).toBeVisible();
 
+    // Wait for StaggerFadeIn to settle before scanning. The cards mount at opacity 0 and fade
+    // over 200 ms with a 60 ms per-card delay; axe samples *computed* colour, so mid-fade it
+    // reads the blend toward the background (observed: #808380 for text-foreground, 3.61:1)
+    // and reports a colour-contrast violation that does not exist in the settled state — the
+    // tokens are 14.13:1 (--foreground) and 5.17:1 (--muted-foreground) against --background,
+    // and a prefers-reduced-motion user never sees the transitional value at all.
+    // Under the full parallel suite CPU contention delayed the scan past the animation, so this
+    // passed there and failed in isolation: a real flake that would have masked a real
+    // regression later. getAnimations() is the deterministic wait; a timeout would not be.
+    await page.waitForFunction(() =>
+      document.getAnimations().every((animation) => animation.playState === 'finished'),
+    );
+
     const results = await new AxeBuilder({ page }).analyze();
     expect(
       results.violations.filter((v) => v.impact === 'critical' || v.impact === 'serious'),
