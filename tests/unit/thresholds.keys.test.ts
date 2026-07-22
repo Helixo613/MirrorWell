@@ -60,7 +60,7 @@ describe('thresholds', () => {
   });
 
   it('session exposes the quality-problem stop-offer and metric-throttle tunables', () => {
-    expect(Object.keys(thresholds.session).sort()).toEqual(['metricEventMinIntervalMs', 'qualityProblemOfferStopMs'].sort());
+    expect(Object.keys(thresholds.session).sort()).toEqual(['metricEventMinIntervalMs', 'qualityProblemOfferStopMs', 'restExtendSeconds'].sort());
   });
 
   it('v1Protocol exposes MODEL_AND_DATA §7 capture tunables', () => {

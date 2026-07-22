@@ -61,6 +61,11 @@ export const thresholds = Object.freeze({
   session: Object.freeze({
     qualityProblemOfferStopMs: 30000,
     metricEventMinIntervalMs: 66,
+    // Seconds added per "+30 s" rest extension (FRONTEND §2.4/§4 — extend only, never shorten;
+    // the caller of SessionController.extendRest supplies this amount). DOCS-CHANGE (S1 Task 11):
+    // API §15 amended to add session.restExtendSeconds — the pre-remediation frontend read this
+    // from thresholds and remediation dropped it, leaving SessionScreen with a bare literal.
+    restExtendSeconds: 30,
   }),
 
   // Live V1 protocol harness (dev-only). Owning section: docs/MODEL_AND_DATA.md §7

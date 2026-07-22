@@ -365,6 +365,7 @@ export const strings = Object.freeze({
   },
   session: {
     loading: 'Warming up the camera — about 3 seconds',
+    screenTitle: 'Exercise session',
     demoWatermark: 'DEMO — not for exercise use',
     quickSetup: {
       title: 'Quick setup',
@@ -415,6 +416,14 @@ export const strings = Object.freeze({
       end: 'End session',
     },
     repDiscarded: "That one didn't count — the light dipped. No worries.",
+    paused: {
+      title: 'Paused',
+      body: 'Ready to continue when you are.',
+      resume: 'Continue',
+      resumeAriaLabel: 'Resume the session',
+    },
+    errorBack: 'Back to home',
+    errorBackAriaLabel: 'Leave the session and return to home',
     a11y: {
       repCompleted: (done: number, total: number) =>
         `Rep ${done} of ${total} complete`,
