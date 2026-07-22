@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { strings } from '@/config/strings';
+import { thresholds } from '@/config/thresholds';
 import { MirrorWellError } from '@/data/errors';
 import { StorageService } from '@/data/storage';
 import type { SessionRecordFull } from '@/data/storage';
@@ -17,8 +18,9 @@ export const CAREGIVER_HEADING_ID = 'caregiver-heading';
 // quality are scoped to the last 8 weeks (matching ExportScreen's default window, FRONTEND §2.8);
 // per-exercise trends use TrendsService.getTrend, which reads full history scoped to the active
 // baseline (it takes no range). The range bounds are UTC ISO timestamps (StorageService requires
-// them); trend BUCKETS remain local-time inside getTrend (ARCHITECTURE §13).
-const RANGE_DAYS = 56;
+// them); trend BUCKETS remain local-time inside getTrend (ARCHITECTURE §13). The window reuses the
+// documented export default (thresholds.export.defaultRangeWeeks) rather than a second literal.
+const RANGE_DAYS = thresholds.export.defaultRangeWeeks * 7;
 
 export interface UseCaregiverScreenResult {
   status: CaregiverStatus;
