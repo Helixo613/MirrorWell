@@ -65,6 +65,11 @@ fake device globally would change the browser the other streams' specs run in. N
 (`tests/fixtures/replay/*.mjpeg`; Chromium accepts only `.y4m`/`.mjpeg`, CLAUDE.md fact 3) belongs
 to the Reconvergence journeys (TESTS.md §5), not to per-screen specs.
 
+**Update:** the `camera` project also carries `workers: 1`. Each camera spec runs MediaPipe WASM
+inference (10.6 MB runtime) over the fake device and waits real 3 s `captureFor` windows; parallel
+workers starve each other on CPU and manufacture timeouts that read as flakes. The `default` project
+keeps `fullyParallel`. Reconvergence may raise the camera worker count once fixtures pin the timing.
+
 ## S1-CLOSES-S3-REQ-4 → `strings.errors` — `NO_BASELINE` copy added
 
 S3 filed "no `NO_BASELINE` copy, so an attested-but-uncalibrated user sees generic

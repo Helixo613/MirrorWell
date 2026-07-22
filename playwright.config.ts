@@ -32,6 +32,11 @@ export default defineConfig({
     {
       name: 'camera',
       testMatch: '**/camera/**',
+      // Serial: each camera spec runs MediaPipe WASM inference (10.6 MB runtime) over the fake
+      // device, and captureFor() windows are real 3 s waits. Parallel workers starve each other
+      // on CPU and manufacture timeouts that read as flakes — a slower serial pass is the honest
+      // signal. The default project keeps fullyParallel.
+      workers: 1,
       use: {
         launchOptions: {
           args: [
