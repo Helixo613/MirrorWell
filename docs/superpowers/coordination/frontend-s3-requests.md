@@ -75,3 +75,29 @@ header keys (always rendered); conditional direction words come from `strings.tr
 not appear in every export. Note: the two orphaned salvage modules `src/lib/exportHtml.ts` +
 `src/lib/validateExport.ts` remain unused dead code (the canonical renderer is `data/export.ts`);
 left in place, flagged for the final whole-branch review to delete.
+
+## S3-REQ-3 → reconvergence / backend owner (`src/data/export.ts`) — sessions table is uncapped (one-A4-page risk)
+
+**Origin:** Task 15 export review, Stream S3. **Pre-existing, NOT an S3 regression.**
+
+**Observation:** `renderHtml` renders **every** session in range with no cap. TESTS.md §2 requires the
+printable HTML to be one A4 page; a realistic ~30-session 8-week export will likely spill past it.
+The deleted salvage renderer (`src/lib/exportHtml.ts`) had a `.slice(0, 12)` + "plus N more in the
+JSON file" cap; the canonical renderer never did. S3's enrichment added two columns to the ≤4-row
+trends table (no new rows), so it does not change page length.
+
+**Requested:** cap the sessions table (e.g. newest 12 + a "plus N more" line) or otherwise enforce
+one page, plus an automated page-count check. Left unfixed in S3: outside this stream's task and
+outside the enrichment.
+
+## S3-REQ-4 → integration owner (`strings.errors`) — no NO_BASELINE copy
+
+**Origin:** Task 15 (ExportScreen), Stream S3.
+
+**Observation:** `strings.errors` has no `NO_BASELINE` entry, so `useExportScreen` falls back to
+`VALIDATION_FAILED` copy. Reachable: an attested-but-uncalibrated user (API §17 gates `ExportScreen`
+on attestation alone) clicks Generate and sees "check your input" rather than "calibrate first".
+Behavior is correct; only the copy is misleading.
+
+**Requested:** add a `NO_BASELINE` entry to the shared `strings.errors` namespace (cross-cutting, so
+filed rather than edited unilaterally); `useExportScreen` then branches on the code.
