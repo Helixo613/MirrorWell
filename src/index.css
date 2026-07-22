@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 98%;
+    --foreground: 150 10% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 150 10% 15%;
+    --primary: 155 22% 35%;
+    --primary-foreground: 40 33% 98%;
+    --secondary: 40 20% 94%;
+    --secondary-foreground: 150 10% 20%;
+    --muted: 40 15% 92%;
+    --muted-foreground: 150 8% 40%;
+    --accent: 40 25% 90%;
+    --accent-foreground: 150 10% 20%;
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 15% 85%;
+    --input: 40 15% 85%;
+    --ring: 155 22% 35%;
+    --radius: 0.875rem;
+    --safety: 38 90% 96%;
+    --safety-foreground: 30 60% 22%;
+    --safety-border: 38 70% 55%;
+  }
+
+  .dark {
+    --background: 150 10% 8%;
+    --foreground: 40 20% 95%;
+    --card: 150 10% 12%;
+    --card-foreground: 40 20% 95%;
+    --primary: 155 30% 55%;
+    --primary-foreground: 150 10% 8%;
+    --secondary: 150 8% 18%;
+    --secondary-foreground: 40 20% 95%;
+    --muted: 150 8% 18%;
+    --muted-foreground: 40 10% 65%;
+    --accent: 150 8% 22%;
+    --accent-foreground: 40 20% 95%;
+    --destructive: 0 55% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 150 8% 22%;
+    --input: 150 8% 22%;
+    --ring: 155 30% 55%;
+    --safety: 38 40% 14%;
+    --safety-foreground: 38 80% 85%;
+    --safety-border: 38 60% 45%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+}
+
+@layer utilities {
+  .motion-safe-animate-fade-in {
+    @apply motion-safe:animate-fade-in motion-reduce:animate-none;
+  }
+}

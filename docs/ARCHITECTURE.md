@@ -64,6 +64,7 @@ Cadence: `CaptureService → LandmarkEngine → QualityMonitor → Normalization
 | `class-variance-authority` | 0.7.1 | dep | Typed component style variants. |
 | `tailwind-merge` | 3.3.1 | dep | Deduplicates conflicting Tailwind classes. |
 | `tailwindcss` | 3.4.17 | devDep | Build-time utility CSS (no runtime, no CDN). |
+| `tailwindcss-animate` | 1.0.7 | devDep | Tailwind plugin for `fade-in` keyframe utilities (build-time). |
 | `postcss` | 8.5.6 | devDep | Tailwind's build pipeline. |
 | `autoprefixer` | 10.4.21 | devDep | Vendor-prefixing at build time. |
 
