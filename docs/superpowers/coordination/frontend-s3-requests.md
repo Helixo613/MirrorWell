@@ -42,3 +42,15 @@ One file per stream = never conflicts.
 
 **Why:** <reason, citing the contract/doc §>.
 -->
+
+## S3-REQ-1 → integration owner (frozen shell) (`vitest.config.ts`) — add `@`→src alias
+
+**Origin:** Task 1 (TrendsScreen unit tests), Stream S3.
+
+**Requested change:** Added `resolve: { alias: { '@': <src> } }` to `vitest.config.ts`, mirroring
+`vite.config.ts`. Applied in this branch (additive; carried in the S3 Trends commit).
+
+**Why:** Vitest does not merge the app's vite config, so co-located `src/**/*.test.ts` — and any
+source module they import that uses the `@` alias (e.g. `src/lib/trendCaption.ts` importing
+`@/config/strings`) — fail with "Cannot find package '@/...'". The vitest `include` already lists
+`src/**/*.test.ts`; this makes those runnable. No runtime/build effect; all existing suites stay green.
