@@ -51,6 +51,22 @@ Cadence: `CaptureService → LandmarkEngine → QualityMonitor → Normalization
 | E2E / a11y | Playwright 1.61.1 (`@playwright/test`) + `@axe-core/playwright` 4.12.1 | Chromium fake-camera replays fixtures deterministically; automated WCAG scans. |
 | Server | **None** | Privacy-first; nothing to breach, no secrets to manage. |
 
+**UI-layer dependencies (Gate 0 frontend salvage, 2026-07-22).** The salvaged screen layer adds the following, exact-pinned (no `^`). All run fully offline at runtime — no web fonts, no CDN, no `@import url(...)`; Tailwind is build-time only. No state library is permitted (Redux/Zustand forbidden — React context + hooks only).
+
+| Package | Version | Kind | Purpose (offline, no network at runtime) |
+|---|---|---|---|
+| `react-router-dom` | 6.30.1 | dep | Client routing per FRONTEND.md §1 navigation map + route guards. |
+| `@radix-ui/react-checkbox` | 1.3.2 | dep | Accessible checkbox primitive (attestation, consent toggles). |
+| `@radix-ui/react-label` | 2.1.7 | dep | Accessible label primitive. |
+| `@radix-ui/react-slot` | 1.2.3 | dep | Composition primitive for the button/variant system. |
+| `lucide-react` | 0.525.0 | dep | Icon set, bundled SVG (no network). |
+| `clsx` | 2.1.1 | dep | Conditional className join. |
+| `class-variance-authority` | 0.7.1 | dep | Typed component style variants. |
+| `tailwind-merge` | 3.3.1 | dep | Deduplicates conflicting Tailwind classes. |
+| `tailwindcss` | 3.4.17 | devDep | Build-time utility CSS (no runtime, no CDN). |
+| `postcss` | 8.5.6 | devDep | Tailwind's build pipeline. |
+| `autoprefixer` | 10.4.21 | devDep | Vendor-prefixing at build time. |
+
 **Version pinning rule:** IMPLEMENTATION Task 1 resolves every "needs verification" version to latest stable and records it here; thereafter this table is canonical and no other dependency may be added without updating it.
 
 **Resolution note (Task 1, 2026-07-09):** every exact version above is the latest stable release **within the major already fixed by this table** (Vite 5.x, React 18.x, TypeScript 5.x, Recharts 2.x, `@mediapipe/tasks-vision` 0.10.x, Playwright 1.x). Current npm `latest` tags for several of these packages point to newer majors (Vite 8, React 19, TypeScript 7, Recharts 3) that were **not** installed — bumping majors is a separate decision requiring its own doc amendment, not something Task 1's "resolve needs-verification" instruction authorizes. `@vitejs/plugin-react` 5.2.0 and `vitest` 3.2.7 were selected (over their newest majors, which require Vite ^8) specifically because their `peerDependencies` are compatible with the pinned Vite 5.x. `@types/node` 22.20.1 was added as a dev-only type-declarations package (not a stack "Concern" choice — required transitively by Vitest's own peer dependencies and by `process` usage in `playwright.config.ts`).

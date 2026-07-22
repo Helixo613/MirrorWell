@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -5,6 +6,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 // PWA: offline-first per ARCHITECTURE.md §2/§5. Chromium desktop + Android Chrome installable;
 // Firefox desktop runs as an offline-capable tab (no install) but the service worker still works.
 export default defineConfig({
+  resolve: {
+    // '@/' → src/ path alias (mirrors tsconfig.app.json paths). Build-time only, no runtime cost.
+    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+  },
   plugins: [
     react(),
     VitePWA({
