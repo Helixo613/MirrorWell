@@ -52,6 +52,13 @@ test.describe('settings screen', () => {
     ).toBeVisible();
   });
 
+  test('recalibrate link opens calibration', async ({ page }) => {
+    await page
+      .getByRole('link', { name: 'Open calibration to capture a new baseline' })
+      .click();
+    await expect(page).toHaveURL(/\/calibration$/);
+  });
+
   test('has zero critical accessibility violations', async ({ page }) => {
     const results = await new AxeBuilder({ page }).analyze();
     const critical = results.violations.filter((v) => v.impact === 'critical');
