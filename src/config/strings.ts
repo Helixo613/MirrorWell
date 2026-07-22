@@ -596,36 +596,6 @@ export const strings = Object.freeze({
       back: 'Back to home',
       backAriaLabel: 'Return to home',
     },
-    html: {
-      affectedSideLeft: 'left side',
-      affectedSideRight: 'right side',
-      affectedSideUnknown: 'side not specified',
-      noTrendPoints: 'Not enough practice yet for a trend.',
-      period: 'Period',
-      symmetry: 'Symmetry',
-      sessions: 'Sessions',
-      reps: 'reps',
-      easeOff: (count: number) =>
-        count === 1 ? '1 ease-off cue' : `${count} ease-off cues`,
-      measurementQuality: (pct: string) => `${pct} low-quality frames`,
-      generated: (date: string) => `Generated ${date}`,
-      range: (from: string, to: string) => `Date range: ${from} to ${to}`,
-      profile: (side: string, exercises: string) =>
-        `Affected side: ${side}. Exercises: ${exercises}.`,
-      adherenceHeading: 'Practice adherence',
-      completionRate: (pct: string) => `Session completion rate: ${pct}`,
-      sessionsPerWeek: (counts: string) => `Sessions per week: ${counts}`,
-      trendsHeading: 'Symmetry trends',
-      sessionsHeading: (count: number) =>
-        count === 1 ? '1 session' : `${count} sessions`,
-      date: 'Date',
-      endReason: 'End reason',
-      details: 'Details',
-      moreSessions: (count: number) =>
-        count === 1
-          ? 'Plus 1 more session in the JSON file.'
-          : `Plus ${count} more sessions in the JSON file.`,
-    },
   },
   caregiver: {
     title: 'Practice summary',

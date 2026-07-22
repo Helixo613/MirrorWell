@@ -242,6 +242,28 @@ describe('ExportService.generateSummary — HTML labels sourced from strings.ts'
       expect(htmlText).toContain(value);
     }
   });
+
+  it('renders enriched trend rows: exercise display name + latest value + direction', async () => {
+    await seedAttestedExportFixture();
+
+    const { html } = await ExportService.generateSummary(RANGE);
+    const htmlText = await html.text();
+
+    // Display names, not raw enum ids — a regression back to `t.exerciseId` fails here.
+    expect(htmlText).toContain('Gentle smile');
+    expect(htmlText).not.toContain('EX_SMILE');
+    // Every trend row carries a direction word (sub-noise-floor / <2 points read "Steady").
+    // These live in strings.trends, so the exportSummary label sweep above cannot cover them.
+    expect(htmlText).toMatch(
+      new RegExp(
+        [
+          strings.trends.direction.steady,
+          strings.trends.direction.moreEven,
+          strings.trends.direction.lessEven,
+        ].join('|'),
+      ),
+    );
+  });
 });
 
 describe('ExportService.generateSummary — noiseFloorSymmetry sourcing', () => {
