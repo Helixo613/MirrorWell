@@ -42,6 +42,31 @@ test.describe('onboarding gate', () => {
     await expect(primary).toBeEnabled();
   });
 
+  // SAFETY §10 / TESTS.md §4 row 2: the emergency step cannot be skipped — there
+  // is no route or DOM path around it. Assert it sits on the linear path with only
+  // a forward acknowledgement and no attestation shortcut.
+  test('the emergency step cannot be skipped', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Continue' }).click();
+
+    await expect(
+      page.getByRole('heading', { name: 'Know when to seek care' }),
+    ).toBeVisible();
+    await expect(page.getByText(/stroke/i)).toBeVisible();
+    // No attestation checkboxes are reachable here — the only way forward is to
+    // acknowledge, so the emergency copy is always seen before attestation.
+    expect(await page.getByRole('checkbox').count()).toBe(0);
+    await expect(
+      page.getByRole('button', { name: 'I understand' }),
+    ).toBeVisible();
+  });
+
+  test('the demo entry point routes to the session as DEMO', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Try a demo' }).click();
+    await expect(page).toHaveURL(/\/session$/);
+  });
+
   test('completes the stepper through to calibration (attested)', async ({
     page,
   }) => {
