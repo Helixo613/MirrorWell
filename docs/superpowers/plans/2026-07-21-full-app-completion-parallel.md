@@ -149,6 +149,35 @@ Split by **service affinity**, three screens each, minimizing cross-stream coupl
 | **S2 — gate, hub & settings** | `OnboardingScreen`, `HomeScreen`, `SettingsScreen` | capable tier | `frontend-s2-shell` | `src/screens/{onboarding,home,settings}/**` + their tests + `strings.{onboarding,home,settings}` |
 | **S3 — longitudinal & export** | `TrendsScreen`, `CaregiverScreen`, `ExportScreen` | capable tier | `frontend-s3-data` | `src/screens/{trends,caregiver,export}/**` + their tests + `strings.{trends,caregiver,export}` + trends/export presentation utils landing in `src/lib/` |
 
+### Gate 0 frozen-tree binding (committed 2026-07-22 — this is the authoritative ownership map)
+
+Gate 0 kept the salvage's component feature-dirs in place (spawn-prompt G0.5: "one dir per
+screen (`src/screens/<screen>/…`), shared `src/components/ui/**`") rather than mass-relocating
+~40 components. Ownership is therefore by glob on the committed tree. Cross-import measurement
+(which screens import each `src/components/<feature>/` dir) gave a clean partition — no feature
+component dir is write-shared between two screen streams:
+
+- **S1** writes: `src/screens/{calibration,session,summary}/**`, `src/components/{calibration,camera,session,summary}/**`, `strings.{calibration,session,summary}`.
+- **S2** writes: `src/screens/{onboarding,home,settings}/**`, `src/components/{onboarding,forms,controls,settings}/**`, `strings.{onboarding,home,settings}`. (`src/screens/onboarding/` already holds salvage hooks/steps.)
+- **S3** writes: `src/screens/{trends,caregiver,export}/**`, `src/components/{trends,export}/**`, `strings.{trends,caregiver,export}`, plus trends/export presentation utils in `src/lib/`.
+
+**Frozen shared (NO stream edits after Gate 0 — file a request):** `src/App.tsx`, `src/main.tsx`,
+`src/router/**`, `src/context/**`, `src/screens/PlaceholderScreen.tsx`, and the cross-screen
+component dirs `src/components/{ui,layout,motion,navigation,feedback,content,home,progress}/**`.
+(`components/home/` is frozen despite its name — its members, e.g. `PrimaryActionButton`,
+`HomeHeader`, are imported by five screens across all three streams; the *screen* `HomeScreen` is
+still S2's.) `src/types/**` and non-owned `src/lib/**` are shared reads.
+
+**Stubbed at Gate 0 (rich salvage at `origin/sai-shanmukh-progress`, rebuild against main):**
+`CalibrationScreen`, `SessionScreen` (S1) and `ExportScreen` (S3) are routed `PlaceholderScreen`
+bodies; their orchestration hooks (`useSessionScreen`, `useCameraPipeline`, `useExportScreen`,
+`useCalibrationFlow`) were deleted because they target a pre-remediation SessionController/
+CalibrationFlow/ExportService surface. Their presentational components (`components/{session,
+calibration,camera,export}/**`) survived intact and are ready to wire. The other six screens
+(Onboarding, Home, Settings, Trends, Caregiver, Summary) carry their full salvage bodies, rewired
+to main's contracts and compiling — they need finishing, not rebuilding. Per-stream request logs
+live at `docs/superpowers/coordination/frontend-{s1,s2,s3}-requests.md`.
+
 **Affinity rationale.** S1 owns everything on the camera + `SessionController`/`CalibrationFlow` path
 (`CalibrationScreen` + `SessionScreen` share the single `CaptureService`/`<video>` element;
 `SummaryScreen` renders the `sessionEnded` record and shares the DEMO watermark) — the one seam that

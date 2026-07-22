@@ -1,5 +1,20 @@
 # Frontend Integration Implementation Plan
 
+> **Gate 0 reconciliation (2026-07-22, `frontend-s1-session`).** This plan is the detailed salvage
+> procedure; `2026-07-21-full-app-completion-parallel.md` is the plan of record and **supersedes
+> Task 4** (the SessionApi stub). Reconciled deltas actually applied at Gate 0:
+> - **Task 4 (stub) deleted, not built** — the real `SessionController` exists on `main`; nothing
+>   named `sessionApiStub` is present anywhere (verified: docs-only references).
+> - **Deps (Task 0) landed** with exact pins **plus** `tailwindcss-animate 1.0.7` (used by
+>   `tailwind.config.js`, which the original Task 0 list omitted). Recorded in ARCH §2.
+> - **`@/` alias** added to `tsconfig.app.json`, `tsconfig.test.json`, and `vite.config.ts`
+>   (Task 1 Step 4) — note the root `tsconfig.json` is solution-style, so the alias must live in
+>   `tsconfig.app.json`, not the root (verified fact 7).
+> - **Verification command:** use `npm run typecheck` (`tsc -b`), **never** `npx tsc --noEmit`
+>   (Task 0/3 said the latter; verified fact 7 says it type-checks nothing here).
+> - Screens with a deep pre-remediation-API mismatch (`SessionScreen`, `CalibrationScreen`,
+>   `ExportScreen`) ship as routed placeholders at Gate 0; their streams rebuild them.
+>
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Bring the screens built on `origin/sai-shanmukh-progress` onto current `main` so they run against the real, validated backend contracts — without re-introducing the rejected pre-remediation contracts that branch was written against.
