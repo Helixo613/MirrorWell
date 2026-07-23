@@ -573,7 +573,7 @@ Operation × gate state. ✅ allowed · ❌ blocked (error in parentheses) · �
 
 **Inputs consumed (nothing else):** smoothed `MetricSample`s (via `SessionController` `metricUpdate`), `QualityState` (via `qualityUpdate`), `easeOff {active}`, `repCompleted`, `stateChanged`, plus `AppSettings` display fields (`reducedFacePreview`, `showAffectedSideMarker`, `highContrast`, `audioCuesEnabled`, `hapticsEnabled`) and `user_profile.affectedSide` for the focus-side dot.
 
-**Responsibility split:** **canvas layer** (redrawn at full fps): symmetry bar, guide arc, focus-side dot, camera-preview dimming. **DOM layer** (updated ≤ 15 Hz, `aria-live` where FRONTEND §4 requires): quality banners, ease-off chip, rep counter, rest timer, DEMO watermark. Audio cues via Web Audio; haptics via the Vibration API (Android only; never the sole channel).
+**Responsibility split:** **canvas layer** (redrawn at full fps): symmetry bar, **effort meter** (vertical gauge of the smoothed `effortIndex` — the value `RepDetector` counts on — with the `effortTargetZone` band drawn as a fixed landmark; fill clamped to [0..1], frozen/dimmed on non-`QUALITY_OK` exactly like the bar), guide arc, focus-side dot, camera-preview dimming. **DOM layer** (updated ≤ 15 Hz, `aria-live` where FRONTEND §4 requires): quality banners, ease-off chip, rep counter, rest timer, DEMO watermark. Audio cues via Web Audio; haptics via the Vibration API (Android only; never the sole channel).
 
 **Public interface:**
 

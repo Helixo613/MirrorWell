@@ -15,6 +15,7 @@ import type { ExerciseId, AppSettings, UserProfile } from '@/data/schema';
 import type { MetricSample } from '@/metrics/metrics';
 import type { QualityState } from '@/sensing/quality';
 import { isHapticsAvailable } from '@/lib/deviceCapabilities';
+import { thresholds } from '@/config/thresholds';
 import {
   advanceArcPhase,
   advanceBar,
@@ -29,6 +30,14 @@ import {
 const BAR_MAX_HALF_FRAC = 0.4; // half-width of a fully-symmetric bar, as a fraction of canvas width
 const BAR_HEIGHT_PX = 14;
 const BAR_EASE = 0.2; // per-frame approach of the displayed bar toward its target (OK frames only)
+// Effort meter (API §18): vertical gauge at the left edge. Reps are DETECTED on effortIndex,
+// so without this gauge the one value that decides "did that count?" was invisible — users
+// steered by the symmetry bar, which can move on movements that never cross repStartThreshold.
+const METER_X_FRAC = 0.05; // meter centreline, as a fraction of canvas width (clear of the bar track at 0.1)
+const METER_WIDTH_PX = 10;
+const METER_TOP_FRAC = 0.18;
+const METER_BOTTOM_FRAC = 0.82;
+const ZONE_COLOR = 'rgba(22, 163, 74, 0.35)'; // effortTargetZone band — visible on both video and scrim
 const ARC_SPEED = 0.012; // guide-arc sweep per frame (calm pace)
 const ARC_SPEED_EASE = 0.005; // slower sweep while easing off (FRONTEND §5: "arc slows")
 const FOCUS_DOT_RADIUS_PX = 5;
@@ -78,6 +87,8 @@ let quality: QualityState = 'FACE_LOST';
 let prevQuality: QualityState | null = null;
 let barTarget = 0; // symmetryIndex in [0..1]; 0 = rest at centre (SI null / below movement floor)
 let barValue = 0; // displayed extent, eased toward barTarget on OK frames
+let effortTarget = 0; // effortIndex clamped to [0..1] for display (over-effort shows full + amber)
+let effortValue = 0; // displayed meter fill, eased toward effortTarget on OK frames
 let arcPhase = 0;
 
 function clamp01(n: number): number {
@@ -152,6 +163,40 @@ function draw(frozen: boolean): void {
     g.fillRect(cx - track / 2, barY + BAR_HEIGHT_PX, track * progress, 3);
   }
 
+  // Effort meter (left) — the gauge reps are actually detected on. Fill rises with smoothed
+  // effortIndex; the translucent green band marks effortTargetZone ("raise into the band, hold,
+  // then relax back down — that's one rep"). Same freeze discipline as the bar: on a non-OK
+  // frame the fill is held and dimmed, never advanced.
+  {
+    const meterX = cssW * METER_X_FRAC;
+    const meterTop = cssH * METER_TOP_FRAC;
+    const meterBottom = cssH * METER_BOTTOM_FRAC;
+    const meterSpan = meterBottom - meterTop;
+    const [zoneLow, zoneHigh] = thresholds.metrics.effortTargetZone;
+
+    g.globalAlpha = 1;
+    g.strokeStyle = TRACK_COLOR;
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(meterX, meterTop);
+    g.lineTo(meterX, meterBottom);
+    g.stroke();
+
+    // Target-zone band (always visible, even frozen — it is a fixed landmark, not live data).
+    g.fillStyle = ZONE_COLOR;
+    g.fillRect(
+      meterX - METER_WIDTH_PX,
+      meterBottom - meterSpan * zoneHigh,
+      METER_WIDTH_PX * 2,
+      meterSpan * (zoneHigh - zoneLow),
+    );
+
+    const fillH = meterSpan * clamp01(effortValue);
+    g.globalAlpha = frozen ? FROZEN_ALPHA : 1;
+    g.fillStyle = fill;
+    g.fillRect(meterX - METER_WIDTH_PX / 2, meterBottom - fillH, METER_WIDTH_PX, fillH);
+  }
+
   // Guide arc (top) — only once an exercise sets the pacing. Frozen → held at a static
   // mid-sweep; motion is paused, not the drawing.
   if (exerciseId !== null) {
@@ -185,6 +230,7 @@ function tick(): void {
   // frame holds both the bar and the arc, so successive frozen frames are pixel-identical.
   const frozen = quality !== 'QUALITY_OK';
   barValue = advanceBar(frozen, barValue, barTarget, BAR_EASE);
+  effortValue = advanceBar(frozen, effortValue, effortTarget, BAR_EASE);
   arcPhase = advanceArcPhase(frozen, arcPhase, easeOff ? ARC_SPEED_EASE : ARC_SPEED);
   draw(frozen);
 }
@@ -249,6 +295,8 @@ function mount(canvas: HTMLCanvasElement, video: HTMLVideoElement): void {
   prevQuality = null;
   barTarget = 0;
   barValue = 0;
+  effortTarget = 0;
+  effortValue = 0;
   arcPhase = 0;
   // These are module globals and no event ever clears them: SessionController.start() resets its
   // easeOffWasActive flag WITHOUT emitting, so no easeOff{active:false} reaches the renderer. Left
@@ -281,6 +329,9 @@ function render(sample: MetricSample | null, nextQuality: QualityState): void {
   if (nextQuality === 'QUALITY_OK' && sample) {
     // OK + SI number → bar tracks symmetry; OK + SI null (below movement floor) → rest at centre.
     barTarget = sample.symmetryIndex === null ? 0 : clamp01(sample.symmetryIndex);
+    // Effort meter follows the same smoothed sample RepDetector consumes, clamped for display
+    // (effort can exceed 1 on over-effort; the ease-off amber carries that signal).
+    effortTarget = clamp01(sample.effortIndex);
   }
   // Soft chime on entry to any non-OK state (FRONTEND §5).
   if (nextQuality !== 'QUALITY_OK' && nextQuality !== prevQuality) {
