@@ -677,6 +677,7 @@ export const strings = Object.freeze({
     saved: (label: string) => `Saved · ${label}`,
     savedAnnouncement: (label: string) => `${label} updated`,
     sections: {
+      profile: 'Your profile',
       display: 'Display',
       cues: 'Cues',
       displayAndCues: 'Display & cues',
@@ -685,6 +686,14 @@ export const strings = Object.freeze({
       trendsAndSharing: 'Trends & sharing',
       calibration: 'Calibration',
       danger: 'Danger zone',
+    },
+    profile: {
+      nicknameLabel: 'What should we call you? (optional)',
+      nicknameHint: 'Shown on Home. Stays on this device; never exported.',
+      motivationLabel: 'What makes this worth it for you? (optional)',
+      motivationHint: 'Shown on Home and between exercises. Stays on this device; never exported.',
+      save: 'Save profile',
+      saved: 'Profile saved',
     },
     display: {
       highContrast: {

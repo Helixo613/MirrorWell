@@ -35,6 +35,7 @@ export function DebugOverlay() {
   const [seeding, setSeeding] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     let nextId = 0;
@@ -108,7 +109,17 @@ export function DebugOverlay() {
             <button
               onClick={() => {
                 setSeeding(true);
-                void seedDev().finally(() => setSeeding(false));
+                setActionError(null);
+                // Reload after success so AppState / Home / Trends pick up the new rows;
+                // silent failures previously left users thinking seed did nothing.
+                void seedDev()
+                  .then(() => {
+                    window.location.assign('/home');
+                  })
+                  .catch((err: unknown) => {
+                    setActionError(err instanceof Error ? err.message : String(err));
+                    setSeeding(false);
+                  });
               }}
               disabled={seeding || clearing}
               style={btn}
@@ -118,6 +129,7 @@ export function DebugOverlay() {
             <button
               onClick={() => {
                 setClearing(true);
+                setActionError(null);
                 // Dev reset: profile/baseline/sessions persist in IndexedDB by design (local-
                 // first), so reopening localhost resumes where you left off. This wipes every
                 // table and reloads for a truly fresh start. Corner: while DEMO mode is active,
@@ -125,8 +137,11 @@ export function DebugOverlay() {
                 // import SafetyGate — the import-graph invariant in app-debug-hud.test.ts) — the
                 // reload still exits demo (in-memory flag), so a second click then wipes the DB.
                 void StorageService.deleteAllData()
-                  .catch(() => {})
-                  .finally(() => window.location.reload());
+                  .then(() => window.location.reload())
+                  .catch((err: unknown) => {
+                    setActionError(err instanceof Error ? err.message : String(err));
+                    setClearing(false);
+                  });
               }}
               disabled={seeding || clearing}
               style={btn}
@@ -134,6 +149,11 @@ export function DebugOverlay() {
               {clearing ? 'clearing…' : 'clear db + reload'}
             </button>
           </div>
+          {actionError ? (
+            <div style={{ marginTop: 8, color: '#ff8f8f', fontSize: 11 }}>
+              seed/clear error: {actionError}
+            </div>
+          ) : null}
 
           <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 11, color: '#999' }}>log</div>

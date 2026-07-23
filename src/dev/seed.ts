@@ -76,6 +76,9 @@ export async function seedDev(): Promise<void> {
     assignedExercises: [...assignableExercises],
     attestedAt: new Date(historyStart - 2 * 86_400_000).toISOString(),
     consentVersion: '1',
+    // Demo-visible profile fields so Home greeting + "why" are obvious after seed.
+    nickname: 'Alex',
+    motivation: 'Practice gently every day',
   };
   await StorageService.saveProfile(profile);
 
@@ -85,8 +88,13 @@ export async function seedDev(): Promise<void> {
     REGION_MOUTH_CORNER: { left: { u: 0.507, v: 0.05 }, right: { u: -0.503, v: 0.05 } },
     REGION_LIP: { left: { u: 0.231, v: 0.08 }, right: { u: -0.229, v: 0.08 } },
   };
+  // Keep comfortableMax clearly above activationFloor and leave room for neutralActivation.
   const comfortableMax: CalibrationBaseline['comfortableMax'] = Object.fromEntries(
-    assignableExercises.map((ex) => [ex, 0.05 + rng() * 0.05]),
+    assignableExercises.map((ex) => [ex, 0.35 + rng() * 0.25]),
+  );
+  // Post-rebase sessions require neutralActivation (SessionController.start → RECALIBRATION_REQUIRED).
+  const neutralActivation: CalibrationBaseline['neutralActivation'] = Object.fromEntries(
+    assignableExercises.map((ex) => [ex, 0.02 + rng() * 0.05]),
   );
 
   // Two baselines deliberately: old (inactive) and current (active), so "trends never mix
@@ -98,6 +106,7 @@ export async function seedDev(): Promise<void> {
     capturedAt: new Date(historyStart - 1 * 86_400_000).toISOString(),
     neutralStats,
     comfortableMax,
+    neutralActivation,
     qualityScore: 0.82,
     noiseFloorSymmetry: 0.04,
     noiseFloorDisplacement: 0.008,
@@ -111,6 +120,7 @@ export async function seedDev(): Promise<void> {
     capturedAt: new Date(historyStart + 1 * 86_400_000).toISOString(),
     neutralStats,
     comfortableMax,
+    neutralActivation,
     qualityScore: 0.91,
     noiseFloorSymmetry: 0.041,
     noiseFloorDisplacement: 0.007,

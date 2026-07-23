@@ -16,6 +16,11 @@ import { SETTINGS_HEADING_ID } from '@/types/settingsScreen';
 export interface UseSettingsScreenResult {
   status: SettingsScreenStatus;
   settings: AppSettings;
+  nickname: string;
+  motivation: string;
+  setNickname: (value: string) => void;
+  setMotivation: (value: string) => void;
+  saveProfileFields: () => Promise<void>;
   hapticsAvailable: boolean;
   isSaving: boolean;
   errorMessage: string | null;
@@ -37,6 +42,7 @@ export interface UseSettingsScreenResult {
 export function useSettingsScreen(): UseSettingsScreenResult {
   const navigate = useNavigate();
   const {
+    profile,
     setProfile,
     setActiveBaseline,
     setSettings: setGlobalSettings,
@@ -45,6 +51,8 @@ export function useSettingsScreen(): UseSettingsScreenResult {
 
   const [status, setStatus] = useState<SettingsScreenStatus>('loading');
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [nickname, setNickname] = useState('');
+  const [motivation, setMotivation] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [deletePhase, setDeletePhase] = useState<DeleteDataPhase>('idle');
@@ -58,6 +66,11 @@ export function useSettingsScreen(): UseSettingsScreenResult {
   useEffect(() => {
     setHapticsAvailable(isHapticsAvailable());
   }, []);
+
+  useEffect(() => {
+    setNickname(profile?.nickname ?? '');
+    setMotivation(profile?.motivation ?? '');
+  }, [profile?.nickname, profile?.motivation]);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +98,45 @@ export function useSettingsScreen(): UseSettingsScreenResult {
       cancelled = true;
     };
   }, [setGlobalSettings]);
+
+  const saveProfileFields = useCallback(async () => {
+    if (!profile) {
+      setErrorMessage(strings.settings.a11y.updateFailed);
+      return;
+    }
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSavingAnnouncement(strings.settings.saving);
+    try {
+      const next = {
+        ...profile,
+        nickname: nickname.trim() || undefined,
+        motivation: motivation.trim() || undefined,
+      };
+      await StorageService.saveProfile(next);
+      setProfile(next);
+      setSaveFeedback(strings.settings.profile.saved);
+      setSaveSuccessAnnouncement(strings.settings.profile.saved);
+      if (saveFeedbackTimerRef.current !== null) {
+        clearTimeout(saveFeedbackTimerRef.current);
+      }
+      saveFeedbackTimerRef.current = setTimeout(() => {
+        setSaveFeedback(null);
+        saveFeedbackTimerRef.current = null;
+      }, thresholds.settings.saveFeedbackDismissMs);
+    } catch (error) {
+      if (error instanceof MirrorWellError && error.code === 'VALIDATION_FAILED') {
+        setErrorMessage(error.message);
+      } else if (error instanceof MirrorWellError && error.code === 'DB_UNAVAILABLE') {
+        setErrorMessage(strings.errors.DB_UNAVAILABLE.body);
+      } else {
+        setErrorMessage(strings.settings.a11y.updateFailed);
+      }
+    } finally {
+      setIsSaving(false);
+      setSavingAnnouncement('');
+    }
+  }, [motivation, nickname, profile, setProfile]);
 
   useEffect(() => {
     if (status === 'ready') {
@@ -183,6 +235,11 @@ export function useSettingsScreen(): UseSettingsScreenResult {
   return {
     status,
     settings,
+    nickname,
+    motivation,
+    setNickname,
+    setMotivation,
+    saveProfileFields,
     hapticsAvailable,
     isSaving,
     errorMessage,
