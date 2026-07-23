@@ -101,11 +101,17 @@ function ProductApp() {
   );
 }
 
-function DevOnly({ loader }: { loader: () => Promise<{ default: ComponentType }> }) {
+function DevOnly({
+  loader,
+  componentProps,
+}: {
+  loader: () => Promise<{ default: ComponentType<{ cameraControls?: boolean }> }>;
+  componentProps?: { cameraControls?: boolean };
+}) {
   const Comp = lazy(loader);
   return (
     <Suspense fallback={null}>
-      <Comp />
+      <Comp {...componentProps} />
     </Suspense>
   );
 }
@@ -121,11 +127,21 @@ export function App() {
   const liveV1 = import.meta.env.VITE_ENABLE_LIVE_V1_HARNESS === 'true';
   const captureHarness = import.meta.env.VITE_ENABLE_CAPTURE_HARNESS === 'true';
   const debugHud = import.meta.env.VITE_ENABLE_DEBUG_HUD === 'true';
-  const devHarness =
-    import.meta.env.DEV && (liveDemo || liveV1 || captureHarness || debugHud);
+  const devHarness = import.meta.env.DEV && (liveDemo || liveV1 || captureHarness);
+  const showDebugHud = import.meta.env.DEV && debugHud;
 
   if (!devHarness) {
-    return <ProductApp />;
+    return showDebugHud ? (
+      <>
+        <ProductApp />
+        <DevOnly
+          loader={() => import('./dev/DebugHud').then((m) => ({ default: m.DebugHud }))}
+          componentProps={{ cameraControls: false }}
+        />
+      </>
+    ) : (
+      <ProductApp />
+    );
   }
 
   return (
@@ -144,7 +160,7 @@ export function App() {
           loader={() => import('./dev/CaptureHarness').then((m) => ({ default: m.CaptureHarness }))}
         />
       ) : null}
-      {debugHud && (
+      {showDebugHud && (
         <DevOnly loader={() => import('./dev/DebugHud').then((m) => ({ default: m.DebugHud }))} />
       )}
     </div>

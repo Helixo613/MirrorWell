@@ -36,7 +36,7 @@ function downloadCsv(rows: DebugHudRow[]): void {
   URL.revokeObjectURL(url);
 }
 
-export function DebugHud() {
+export function DebugHud({ cameraControls = true }: { cameraControls?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mountedVideoRef = useRef<HTMLVideoElement | null>(null);
   const landmarkerReadyRef = useRef(false);
@@ -74,7 +74,7 @@ export function DebugHud() {
 
   useEffect(() => {
     const unsubscribe = CaptureService.onFrame((video, timestampMs) => {
-      if (containerRef.current && mountedVideoRef.current !== video) {
+      if (cameraControls && containerRef.current && mountedVideoRef.current !== video) {
         containerRef.current.replaceChildren(video);
         mountedVideoRef.current = video;
       }
@@ -129,10 +129,10 @@ export function DebugHud() {
     });
     return () => {
       unsubscribe();
-      CaptureService.stop();
+      if (cameraControls) CaptureService.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseline]);
+  }, [baseline, cameraControls]);
 
   async function handleStart() {
     setError(null);
@@ -197,12 +197,16 @@ export function DebugHud() {
           ))}
         </select>
       </label>{' '}
-      <button onClick={handleStart} disabled={running}>
-        Start
-      </button>
-      <button onClick={handleStop} disabled={!running}>
-        Stop
-      </button>
+      {cameraControls && (
+        <>
+          <button onClick={handleStart} disabled={running}>
+            Start
+          </button>
+          <button onClick={handleStop} disabled={!running}>
+            Stop
+          </button>
+        </>
+      )}
       <button onClick={handleSeed} disabled={seeding}>
         Seed
       </button>
@@ -221,7 +225,9 @@ export function DebugHud() {
       <p>
         symmetryIndex (smoothed): {sample?.symmetryIndex ?? '—'} | effortIndex (smoothed): {sample?.effortIndex ?? '—'}
       </p>
-      <div ref={containerRef} style={{ position: 'relative', width: 640, height: 480 }} />
+      {cameraControls && (
+        <div ref={containerRef} style={{ position: 'relative', width: 640, height: 480 }} />
+      )}
     </div>
   );
 }
