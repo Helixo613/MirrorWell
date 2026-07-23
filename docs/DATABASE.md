@@ -172,8 +172,8 @@ The **only** way any data leaves the device: `ExportService.generateSummary` pro
 
 Script: `scripts/seed-dev.ts`, run with `npm run seed:dev` (uses `fake-indexeddb` under Vitest; in the browser it runs via the `DebugHud` "seed" button, dev builds only).
 
-- Deterministic PRNG (seed `42`) so E2E assertions are stable.
-- Inserts: 1 `user_profile` (`affectedSide: 'left'`, all four exercises assigned, attested); 2 `calibration_baseline` rows (an old inactive one and the active one, `qualityScore` 0.82/0.91, vector `neutralStats`, `noiseFloorSymmetry` / `noiseFloorDisplacement` populated) — two baselines exist deliberately so the "trends never mix baselines" rule is testable; 6 weeks of `session_record`s (4–5/week, a few `user_stopped` and one `quality_abandoned`) with nested results/reps: `meanSymmetryIndex` trending 0.58 → 0.74 with realistic noise, `easeOffCount` trending 6 → 1 (the app's own efficacy signal), `lowQualityFramePct` 0.05–0.20.
+- Deterministic PRNG (inline mulberry32, seed `42`) so E2E assertions and demo charts are stable.
+- Inserts: 1 `user_profile` (`affectedSide: 'left'`, `assignableExercises` assigned, attested); 2 `calibration_baseline` rows (an old inactive one and the active one, `qualityScore` 0.82/0.91, vector `neutralStats`, `noiseFloorSymmetry` / `noiseFloorDisplacement` populated) — two baselines exist deliberately so the "trends never mix baselines" rule is testable; ~60 days / 9 weeks of `session_record`s ending today (4–6/week on distinct days so 1–3 missed days/week, a few `user_stopped` and one `quality_abandoned`) with nested results/reps: `meanSymmetryIndex` trending 0.55 → 0.78 with realistic noise, `easeOffCount` trending 6 → 1 (the app's own efficacy signal), `lowQualityFramePct` 0.05–0.20. All rows written through `StorageService` (integer `durationMs`, `0|1` flags — never raw Dexie).
 - `app_settings` with `caregiverViewEnabled: true` (so `CaregiverScreen` is reachable in dev). Noise floors live on the baseline rows, not settings.
 - **RULE:** seed code is dev/test-only — excluded from the production bundle; the seed script must refuse to run when `import.meta.env.PROD`.
 
