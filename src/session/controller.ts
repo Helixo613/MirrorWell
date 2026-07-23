@@ -312,6 +312,15 @@ export const SessionController = {
     } else {
       const baseline = await StorageService.getActiveBaseline();
       if (!baseline) throw new MirrorWellError('NO_BASELINE', 'no active baseline');
+      // A baseline saved before the neutral rebase (ARCHITECTURE §7) has no neutralActivation;
+      // running on it reproduces the inverted-rep defect the rebase fixed (rep closes only on
+      // the OPPOSITE movement for pairs with nonzero resting reads). MetricEngine's `?? 0`
+      // fallback exists so old ROWS stay readable, but a session must not silently run the
+      // pre-rebase formula — same recovery route as drift: RECALIBRATION_REQUIRED, which the
+      // session screen turns into a "recalibrate" exit.
+      if (baseline.neutralActivation === undefined) {
+        throw new MirrorWellError('RECALIBRATION_REQUIRED', 'baseline predates the neutral rebase');
+      }
       const profile = await StorageService.getProfile();
       if (!profile || exerciseIds.some((id) => !profile.assignedExercises.includes(id))) {
         throw new MirrorWellError('VALIDATION_FAILED', 'exercise not assigned to profile');

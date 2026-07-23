@@ -30,7 +30,9 @@ export interface CalibrationBaseline {
   // Median NEUTRAL max(mL,mR) per assigned exercise, captured during the neutral windows.
   // MediaPipe reports nonzero resting activation for some blendshapes (browOuterUp, eyeBlink),
   // so effortIndex rebases: (act − neutralActivation) / (comfortableMax − neutralActivation)
-  // (ARCHITECTURE §7). Optional: baselines saved before this field behave as neutral = 0.
+  // (ARCHITECTURE §7). Optional so pre-field rows stay readable; SessionController.start
+  // refuses a baseline without it (RECALIBRATION_REQUIRED) — a session must never silently
+  // run the pre-rebase formula.
   neutralActivation?: Partial<Record<ExerciseId, number>>;
   qualityScore: number;           // [0..1] = fraction of QUALITY_OK capture frames; >= 0.7 enforced
   noiseFloorSymmetry: number;     // std of smoothed SI over held comfortable-max captures (B1b)

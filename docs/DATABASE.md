@@ -45,7 +45,7 @@ export interface CalibrationBaseline {
   // projections — legitimately negative; do NOT require > 0.
   neutralStats: Record<RegionId, { left: { u: number; v: number }; right: { u: number; v: number } }>;
   comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max peak blendshape activation max(L,R), 0..1 score units (was IOD-units displacement — blendshape-si-v1, pre-release reset per DG-5), keys = assignedExercises
-  neutralActivation?: Partial<Record<ExerciseId, number>>; // median RESTING max(L,R) per assigned exercise, from the neutral windows; effortIndex rebases on it (ARCHITECTURE §7). Optional: rows saved before this field behave as 0
+  neutralActivation?: Partial<Record<ExerciseId, number>>; // median RESTING max(L,R) per assigned exercise, from the neutral windows; effortIndex rebases on it (ARCHITECTURE §7). Optional so pre-field rows stay readable; SessionController.start refuses a baseline without it (RECALIBRATION_REQUIRED)
   qualityScore: number;           // [0..1] = fraction of QUALITY_OK capture frames; >= 0.7 enforced
   noiseFloorSymmetry: number;     // std of smoothed SI over held comfortable-max captures (B1b)
   noiseFloorDisplacement: number; // std of blendshape activation max(L,R) over neutral OK frames (B1a, 0..1 score units — blendshape-si-v1)

@@ -150,6 +150,11 @@ function makeBaseline(comfortableMax: Partial<Record<ExerciseId, number>>, neutr
       REGION_LIP: zero,
     },
     comfortableMax,
+    // Post-rebase baselines always carry neutralActivation (calibration writes it); start()
+    // refuses a baseline without it (RECALIBRATION_REQUIRED) — one test below removes it.
+    neutralActivation: Object.fromEntries(
+      Object.keys(comfortableMax).map((id) => [id, 0]),
+    ) as Partial<Record<ExerciseId, number>>,
     qualityScore: 0.9,
     noiseFloorSymmetry: 0.01,
     noiseFloorDisplacement: 0.01,
@@ -279,6 +284,17 @@ describe('SessionController preconditions', () => {
     await seedAttested(['EX_SMILE']);
     vi.spyOn(CalibrationFlow, 'checkBaselineDrift').mockResolvedValue('recalibrate');
     await expect(SessionController.start(['EX_SMILE'])).rejects.toMatchObject({ code: 'RECALIBRATION_REQUIRED' });
+  });
+
+  it('rejects a pre-rebase baseline (no neutralActivation) with RECALIBRATION_REQUIRED', async () => {
+    // A baseline saved before the neutral rebase would silently run the pre-rebase effort
+    // formula and reproduce the inverted-rep defect — the session must route to recalibration.
+    await seedAttested(['EX_SMILE']);
+    const { neutralActivation: _dropped, ...preRebase } = makeBaseline({ EX_SMILE: 1 });
+    vi.spyOn(StorageService, 'getActiveBaseline').mockResolvedValue(preRebase as CalibrationBaseline);
+    await expect(SessionController.start(['EX_SMILE'])).rejects.toMatchObject({
+      code: 'RECALIBRATION_REQUIRED',
+    });
   });
 
   it('rejects an exercise not assigned to the profile', async () => {
