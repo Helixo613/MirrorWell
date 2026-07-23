@@ -53,8 +53,8 @@ export default {
           to: { opacity: '1' },
         },
         breathe: {
-          '0%, 100%': { transform: 'scale(1)' },
-          '50%': { transform: 'scale(1.15)' },
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.85' },
+          '50%': { transform: 'scale(1.12)', opacity: '1' },
         },
       },
       animation: {

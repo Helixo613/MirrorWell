@@ -82,7 +82,7 @@ export function SessionScreen() {
           <h1 id={HEADING_ID} className="text-lg font-medium text-foreground">
             {s.exerciseName || strings.session.screenTitle}
           </h1>
-          {s.phase === 'active' || s.phase === 'arrival' ? (
+          {s.phase === 'active' ? (
             <SessionStopButton
               label={strings.session.stop.label}
               ariaLabel={strings.session.stop.ariaLabel}
@@ -91,9 +91,16 @@ export function SessionScreen() {
           ) : null}
         </div>
 
-        <div className="relative">
+        <div className="relative overflow-hidden rounded-2xl">
           <CameraPreview ref={s.previewRef} dimmed={s.reducedFacePreview} />
-          <FeedbackCanvas onMount={s.mountFeedbackCanvas} onUnmount={s.unmountFeedbackCanvas} />
+          {/* Keep canvas mounted (renderer needs a stable surface) but hide gauges during arrival —
+              the green effort meter peeking through the scrim looked broken/crooked. */}
+          <div
+            className={s.phase === 'arrival' ? 'pointer-events-none invisible' : undefined}
+            aria-hidden={s.phase === 'arrival' || undefined}
+          >
+            <FeedbackCanvas onMount={s.mountFeedbackCanvas} onUnmount={s.unmountFeedbackCanvas} />
+          </div>
           <DemoWatermark label={strings.session.demoWatermark} visible={s.isDemo} />
           {s.phase === 'active' && s.coachText ? (
             <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-4">
