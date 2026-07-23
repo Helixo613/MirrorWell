@@ -15,7 +15,7 @@ Integrator: Cursor session (review + merge only, minimal tokens). Every worker a
 
 Within a track, tasks are SEQUENTIAL (same files). Across tracks, everything is parallel. Six agents can run at once.
 
-**V3 note:** do not start V3 until V2 merges; V3 Task 1 (responsive layout) must then run ALONE before V3 Tasks 2–6 fan out.
+**V3 note (done):** V2 is merged and tagged `v2.0`. For V3 use `docs/superpowers/plans/2026-07-23-v3-agent-dispatch.md` and `docs/superpowers/plans/2026-07-23-v3-session-handoff.md` — Task 1 (responsive layout) still runs ALONE before V3 Tasks 2–6 fan out.
 
 ## One-time setup (you, in the repo root)
 
