@@ -93,13 +93,6 @@ export function SessionScreen() {
         <div className="relative">
           <CameraPreview ref={s.previewRef} dimmed={s.reducedFacePreview} />
           <FeedbackCanvas onMount={s.mountFeedbackCanvas} onUnmount={s.unmountFeedbackCanvas} />
-          {s.phase === 'active' && s.coachText ? (
-            <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-4">
-              <p className="rounded-lg bg-background/90 px-5 py-2.5 text-center text-lg font-medium text-foreground shadow-sm sm:text-xl">
-                {s.coachText}
-              </p>
-            </div>
-          ) : null}
           <DemoWatermark label={strings.session.demoWatermark} visible={s.isDemo} />
           <QuickSetupOverlay
             visible={s.phase === 'quickSetup'}

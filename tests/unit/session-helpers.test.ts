@@ -6,14 +6,12 @@ import {
   advanceArcPhase,
   advanceBar,
   audioCueEnabled,
-  coachPhaseFor,
   demoComfortableMax,
   hapticCueEnabled,
   restRemainingSeconds,
 } from '../../src/screens/session/sessionHelpers.ts';
 import { resolveSessionStatus } from '../../src/lib/sessionStatus.ts';
 import { strings } from '../../src/config/strings.ts';
-import { thresholds } from '../../src/config/thresholds.ts';
 
 function settings(overrides: Partial<AppSettings>): AppSettings {
   return {
@@ -74,19 +72,6 @@ describe('demoComfortableMax — the demo baseline invariant', () => {
   it('throws NO_BASELINE on non-finite input', () => {
     expect(() => demoComfortableMax([Number.NEGATIVE_INFINITY])).toThrow(MirrorWellError);
     expect(() => demoComfortableMax([Number.NaN])).toThrow(MirrorWellError);
-  });
-});
-
-describe('coachPhaseFor — live coaching phase from the smoothed effortIndex', () => {
-  it('maps below-zone to raise, in-zone (edges inclusive) to hold, above-zone to easeBack', () => {
-    const [low, high] = thresholds.metrics.effortTargetZone;
-    expect(coachPhaseFor(0)).toBe('raise');
-    expect(coachPhaseFor(low - 0.01)).toBe('raise');
-    expect(coachPhaseFor(low)).toBe('hold');
-    expect(coachPhaseFor(high)).toBe('hold');
-    expect(coachPhaseFor(high + 0.01)).toBe('easeBack');
-    // Over-effort clamps only the DISPLAY (renderer); the coaching phase must still say ease back.
-    expect(coachPhaseFor(1.5)).toBe('easeBack');
   });
 });
 
