@@ -123,7 +123,10 @@ export function SessionScreen() {
             message={strings.session.arrival.message}
             beginLabel={strings.session.arrival.begin}
             beginAriaLabel={strings.session.arrival.beginAriaLabel}
+            stopLabel={strings.session.arrival.stop}
+            stopAriaLabel={strings.session.arrival.stopAriaLabel}
             onBegin={s.handleBeginArrival}
+            onStop={s.openStopDialog}
           />
         </div>
 

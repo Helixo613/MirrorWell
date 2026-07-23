@@ -171,20 +171,20 @@ export const strings = Object.freeze({
       exercisesRequired: 'Select at least one assigned exercise to continue.',
     },
     nickname: {
-      label: 'What should we call you? (optional)',
-      placeholder: 'Your nickname',
-      hint: 'This stays on this device and is never included in exports.',
+      label: '1. What should we call you?',
+      placeholder: 'Your first name or nickname',
+      hint: 'Optional. Shown in your greeting on Home. Stays on this device.',
     },
     motivation: {
-      label: 'What makes this worth it for you? (optional, stays on this device)',
-      placeholder: 'Your reason for practicing',
-      hint: 'Your words stay on this device and are never included in exports.',
+      label: '2. What makes this worth it for you?',
+      placeholder: 'e.g. Feeling more like myself again',
+      hint: 'Optional. Your “why” — shown on Home and between exercises. Never exported.',
     },
     steps: {
       aboutYou: {
         title: 'A little about you',
         subtitle:
-          'Optional — skip anytime. We use this only to greet you and remind you why you practice. It never leaves this device.',
+          'Two optional questions — scroll if you need to. Skip anytime with Continue.',
       },
       intendedUse: {
         title: 'Exercise support for facial retraining',
@@ -335,6 +335,8 @@ export const strings = Object.freeze({
       tryAgain: 'Try again',
       continue: 'Continue to home',
       skipUnavailable: 'Go back',
+      notNow: 'Not now',
+      notNowAriaLabel: 'Leave calibration and return home',
     },
     errors: {
       notAttested: 'Please complete onboarding before calibrating.',
@@ -406,6 +408,8 @@ export const strings = Object.freeze({
       message: "Take a slow breath… we'll begin when you're ready.",
       begin: 'Begin',
       beginAriaLabel: 'Begin the exercise session',
+      stop: 'Stop',
+      stopAriaLabel: 'Stop and leave this session',
     },
     demo: {
       ready: "I'm ready",

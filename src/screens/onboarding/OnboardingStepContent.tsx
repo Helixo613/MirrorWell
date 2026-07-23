@@ -115,49 +115,54 @@ export function OnboardingStepContent({
       );
     }
     case 4: {
-      // Post-consent "About you" — optional nickname + why (FRONTEND §2.1). Consent
-      // checkboxes stay on step 3 alone so the name is not buried under legal boxes.
+      // Post-consent "About you" — optional nickname + why (FRONTEND §2.1). Both fields must
+      // stay above the sticky Continue footer — numbered labels + scroll padding so the second
+      // question is obvious (users reported only seeing the name field).
       const copy = strings.onboarding.steps.aboutYou;
       return (
-        <OnboardingStepFrame>
+        <OnboardingStepFrame className="pb-8">
           <StepHeading
             id={headingId}
             title={copy.title}
             subtitle={copy.subtitle}
           />
-          <div className="space-y-2">
-            <Label htmlFor="onboarding-nickname">
-              {strings.onboarding.nickname.label}
-            </Label>
-            <Input
-              id="onboarding-nickname"
-              value={nickname}
-              maxLength={thresholds.profile.nicknameMaxLength}
-              placeholder={strings.onboarding.nickname.placeholder}
-              aria-describedby="onboarding-nickname-hint"
-              disabled={disabled}
-              onChange={(event) => onNicknameChange(event.target.value)}
-            />
-            <p id="onboarding-nickname-hint" className="text-sm text-muted-foreground">
-              {strings.onboarding.nickname.hint}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="onboarding-motivation">
-              {strings.onboarding.motivation.label}
-            </Label>
-            <Input
-              id="onboarding-motivation"
-              value={motivation}
-              maxLength={thresholds.profile.motivationMaxLength}
-              placeholder={strings.onboarding.motivation.placeholder}
-              aria-describedby="onboarding-motivation-hint"
-              disabled={disabled}
-              onChange={(event) => onMotivationChange(event.target.value)}
-            />
-            <p id="onboarding-motivation-hint" className="text-sm text-muted-foreground">
-              {strings.onboarding.motivation.hint}
-            </p>
+          <div className="space-y-6">
+            <div className="space-y-2 rounded-xl border border-border/80 bg-muted/30 p-4">
+              <Label htmlFor="onboarding-nickname">
+                {strings.onboarding.nickname.label}
+              </Label>
+              <Input
+                id="onboarding-nickname"
+                value={nickname}
+                maxLength={thresholds.profile.nicknameMaxLength}
+                placeholder={strings.onboarding.nickname.placeholder}
+                aria-describedby="onboarding-nickname-hint"
+                disabled={disabled}
+                onChange={(event) => onNicknameChange(event.target.value)}
+              />
+              <p id="onboarding-nickname-hint" className="text-sm text-muted-foreground">
+                {strings.onboarding.nickname.hint}
+              </p>
+            </div>
+            <div className="space-y-2 rounded-xl border border-border/80 bg-muted/30 p-4">
+              <Label htmlFor="onboarding-motivation">
+                {strings.onboarding.motivation.label}
+              </Label>
+              <textarea
+                id="onboarding-motivation"
+                value={motivation}
+                maxLength={thresholds.profile.motivationMaxLength}
+                placeholder={strings.onboarding.motivation.placeholder}
+                aria-describedby="onboarding-motivation-hint"
+                disabled={disabled}
+                rows={3}
+                className="flex min-h-touch w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                onChange={(event) => onMotivationChange(event.target.value)}
+              />
+              <p id="onboarding-motivation-hint" className="text-sm text-muted-foreground">
+                {strings.onboarding.motivation.hint}
+              </p>
+            </div>
           </div>
         </OnboardingStepFrame>
       );

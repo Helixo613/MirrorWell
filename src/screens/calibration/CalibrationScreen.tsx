@@ -392,6 +392,20 @@ export function CalibrationScreen() {
         >
           {primaryLabel(phase, coaching)}
         </Button>
+        <Button
+          type="button"
+          size="lg"
+          variant="outline"
+          className="w-full"
+          disabled={isCapturing}
+          aria-label={strings.calibration.actions.notNowAriaLabel}
+          onClick={() => {
+            CaptureService.stop();
+            navigate('/home', { replace: true });
+          }}
+        >
+          {strings.calibration.actions.notNow}
+        </Button>
       </CalibrationActionBar>
     </ScreenShell>
   );
