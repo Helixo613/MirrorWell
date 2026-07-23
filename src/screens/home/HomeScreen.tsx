@@ -17,6 +17,7 @@ import { QuietNavLink } from '@/components/navigation/QuietNavLink';
 import { strings } from '@/config/strings';
 import { useAppState } from '@/context/useAppState';
 import { useHomeScreen } from '@/hooks/useHomeScreen';
+import { greetingFor } from '@/screens/home/homeHelpers';
 
 const STAGGER_MS = 60;
 
@@ -117,9 +118,15 @@ export function HomeScreen() {
       <div className="flex flex-1 flex-col gap-10">
         <StaggerFadeIn animationKey={status}>
           <HomeHeader
-            title={strings.home.title}
+            title={greetingFor(new Date().getHours(), profile?.nickname)}
             subtitle={strings.home.subtitle}
-          />
+          >
+            {profile?.motivation ? (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {profile.motivation}
+              </p>
+            ) : null}
+          </HomeHeader>
         </StaggerFadeIn>
 
         <div className="flex flex-col gap-8">

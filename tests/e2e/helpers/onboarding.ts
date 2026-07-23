@@ -37,7 +37,11 @@ export async function walkOnboardingStepper(page: Page): Promise<void> {
   }
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  // Step 4: pick one assigned exercise, then start calibration.
+  // Step 4: optional "About you" (nickname + why) — skip with Continue.
+  await expect(page.getByRole('heading', { name: 'A little about you' })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  // Step 5: pick one assigned exercise, then start calibration.
   const start = page.getByRole('button', { name: 'Start calibration' });
   await expect(start).toBeVisible();
   await page.getByRole('checkbox').first().check();

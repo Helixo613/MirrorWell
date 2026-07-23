@@ -17,12 +17,18 @@ import {
   runDemoQuickSetup,
   type QuickSetupPhase,
 } from '@/screens/session/demoQuickSetup';
-import { REST_EXTEND_SECONDS, restRemainingSeconds } from '@/screens/session/sessionHelpers';
+import {
+  coachPhaseFor,
+  REST_EXTEND_SECONDS,
+  restRemainingSeconds,
+  type CoachPhase,
+} from '@/screens/session/sessionHelpers';
 import type { SummaryLocationState } from '@/types/summary';
 
 export type SessionScreenPhase =
   | 'loading'
   | 'quickSetup'
+  | 'arrival'
   | 'active'
   | 'paused'
   | 'error'
@@ -59,9 +65,13 @@ export interface UseSessionScreenResult {
   reducedFacePreview: boolean;
   exerciseName: string;
   instruction: string;
+  motivation: string | undefined;
   quality: QualityState;
   status: SessionStatusMessage | null;
   repSummary: string;
+  /** Live coaching copy over the preview during REPS, or null while another message owns the
+   *  screen (non-OK quality / ease-off) or outside REPS. */
+  coachText: string | null;
   easeOffActive: boolean;
   restSecondsRemaining: number;
   restRemainingLabel: string;
@@ -78,6 +88,7 @@ export interface UseSessionScreenResult {
   openStopDialog: () => void;
   closeStopDialog: () => void;
   handleQuickSetup: () => void;
+  handleBeginArrival: () => void;
   handleAdvance: () => void;
   handleExtendRest: () => void;
   handleJustStop: () => void;
@@ -105,6 +116,7 @@ export function useSessionScreen(): UseSessionScreenResult {
   const [repDone, setRepDone] = useState(0);
   const [repTotal, setRepTotal] = useState(0);
   const [easeOffActive, setEaseOffActive] = useState(false);
+  const [coachPhase, setCoachPhase] = useState<CoachPhase | null>(null);
   const [restSecondsRemaining, setRestSecondsRemaining] = useState(0);
   const [stopDialogOpen, setStopDialogOpen] = useState(false);
   const [qualityOfferOpen, setQualityOfferOpen] = useState(false);
@@ -187,7 +199,10 @@ export function useSessionScreen(): UseSessionScreenResult {
           CaptureService.stop();
           return;
         }
-        setPhase('active');
+        // Real sessions land on the breathing arrival moment first (FRONTEND §2.4); the camera is
+        // already live behind it. Demo keeps its quick-setup flow, which goes straight to 'active'
+        // from handleQuickSetup below.
+        setPhase('arrival');
       } catch (err) {
         if (mountedRef.current) applyStartError(err);
       }
@@ -227,6 +242,9 @@ export function useSessionScreen(): UseSessionScreenResult {
       }),
       SessionController.on('metricUpdate', ({ sample }) => {
         FeedbackRenderer.render(sample, qualityRef.current);
+        // metricUpdate is already throttled (~15 Hz) and only fires during REPS; setState with
+        // an unchanged value is a no-op re-render-wise, so no extra guard is needed.
+        setCoachPhase(coachPhaseFor(sample.effortIndex));
       }),
       SessionController.on('qualityUpdate', ({ state }) => {
         qualityRef.current = state;
@@ -350,6 +368,13 @@ export function useSessionScreen(): UseSessionScreenResult {
     })();
   }, [applyStartError]);
 
+  const handleBeginArrival = useCallback(() => {
+    // FRONTEND §2.4: Begin hands off to the first exercise. SessionController.start() leaves
+    // the machine in DEMO; without advance() the user would see a second "I'm ready" gate.
+    setPhase('active');
+    SessionController.advance();
+  }, []);
+
   const handleAdvance = useCallback(() => {
     SessionController.advance();
   }, []);
@@ -438,6 +463,13 @@ export function useSessionScreen(): UseSessionScreenResult {
   const instruction = exerciseId ? exercises[exerciseId]!.instruction : '';
   const status = resolveSessionStatus(quality, easeOffActive, null);
 
+  // The coach line yields to anything with higher authority: quality problems and the ease-off
+  // safety cue (both carried by SessionStatusStrip). It exists only during live REPS frames.
+  const coachText =
+    subState === 'REPS' && quality === 'QUALITY_OK' && !easeOffActive && coachPhase !== null
+      ? strings.session.coach[coachPhase]
+      : null;
+
   return {
     previewRef,
     phase,
@@ -447,9 +479,11 @@ export function useSessionScreen(): UseSessionScreenResult {
     reducedFacePreview: settings.reducedFacePreview,
     exerciseName,
     instruction,
+    motivation: isDemo ? undefined : profile?.motivation,
     quality,
     status,
     repSummary: strings.session.repCounter(repDone, repTotal),
+    coachText,
     easeOffActive,
     restSecondsRemaining,
     restRemainingLabel: strings.session.rest.remaining(restSecondsRemaining),
@@ -466,6 +500,7 @@ export function useSessionScreen(): UseSessionScreenResult {
     openStopDialog,
     closeStopDialog,
     handleQuickSetup,
+    handleBeginArrival,
     handleAdvance,
     handleExtendRest,
     handleJustStop,

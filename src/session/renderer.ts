@@ -28,16 +28,16 @@ import {
 // they do not belong in thresholds.ts (API §15) and the canvas is aria-hidden/decorative (every
 // value a user reads off it also exists as DOM live-text). Tune on real hardware.
 const BAR_MAX_HALF_FRAC = 0.4; // half-width of a fully-symmetric bar, as a fraction of canvas width
-const BAR_HEIGHT_PX = 14;
+const BAR_HEIGHT_PX = 22;
 const BAR_EASE = 0.2; // per-frame approach of the displayed bar toward its target (OK frames only)
 // Effort meter (API §18): vertical gauge at the left edge. Reps are DETECTED on effortIndex,
 // so without this gauge the one value that decides "did that count?" was invisible — users
 // steered by the symmetry bar, which can move on movements that never cross repStartThreshold.
 const METER_X_FRAC = 0.05; // meter centreline, as a fraction of canvas width (clear of the bar track at 0.1)
-const METER_WIDTH_PX = 10;
+const METER_WIDTH_PX = 24;
 const METER_TOP_FRAC = 0.18;
 const METER_BOTTOM_FRAC = 0.82;
-const ZONE_COLOR = 'rgba(22, 163, 74, 0.35)'; // effortTargetZone band — visible on both video and scrim
+const ZONE_COLOR = 'rgba(22, 163, 74, 0.5)'; // effortTargetZone band — visible on both video and scrim
 const ARC_SPEED = 0.012; // guide-arc sweep per frame (calm pace)
 const ARC_SPEED_EASE = 0.005; // slower sweep while easing off (FRONTEND §5: "arc slows")
 const FOCUS_DOT_RADIUS_PX = 5;
@@ -206,7 +206,7 @@ function draw(frozen: boolean): void {
     const sweep = Math.PI * (0.15 + 0.7 * phase);
     g.globalAlpha = frozen ? FROZEN_ALPHA : 1;
     g.strokeStyle = fill;
-    g.lineWidth = 4;
+    g.lineWidth = 6;
     g.beginPath();
     g.arc(cx, arcY, arcR, Math.PI - sweep, Math.PI, false);
     g.stroke();

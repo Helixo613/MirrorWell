@@ -43,6 +43,8 @@ export function OnboardingScreen() {
   const [attestations, setAttestations] =
     useState<AttestationState>(INITIAL_ATTESTATIONS);
   const [selectedExercises, setSelectedExercises] = useState<ExerciseId[]>([]);
+  const [nickname, setNickname] = useState('');
+  const [motivation, setMotivation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [blockingError, setBlockingError] = useState<{
     title: string;
@@ -80,6 +82,20 @@ export function OnboardingScreen() {
       cancelled = true;
     };
   }, [navigate, setGate]);
+
+  // Prefill optional profile fields when a local profile already exists (consent-version
+  // bump / unfinished attestation). Empty defaults would wipe nickname/motivation on save.
+  useEffect(() => {
+    let cancelled = false;
+    void StorageService.getProfile().then((existing) => {
+      if (cancelled || !existing) return;
+      if (existing.nickname) setNickname(existing.nickname);
+      if (existing.motivation) setMotivation(existing.motivation);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const heading = document.getElementById(ONBOARDING_STEP_HEADING_ID);
@@ -149,11 +165,17 @@ export function OnboardingScreen() {
       // finished attestation, or a dev-seeded profile. Each threw VALIDATION_FAILED
       // ("a different local profile already exists") with no way forward from the UI.
       const existing = await StorageService.getProfile();
+      // Prefer the typed value; if the user clears the field, keep the prior saved value
+      // rather than silently deleting local-only profile text on re-onboarding.
+      const nextNickname = nickname.trim() || existing?.nickname;
+      const nextMotivation = motivation.trim() || existing?.motivation;
       const profile = {
         profileId: existing?.profileId ?? createProfileId(),
         createdAt: existing?.createdAt ?? now,
         affectedSide: existing?.affectedSide ?? ('left' as const),
         assignedExercises: selectedExercises,
+        ...(nextNickname ? { nickname: nextNickname } : {}),
+        ...(nextMotivation ? { motivation: nextMotivation } : {}),
         attestedAt: null,
         consentVersion: null,
       };
@@ -186,6 +208,8 @@ export function OnboardingScreen() {
     isLastStep,
     goNext,
     selectedExercises,
+    nickname,
+    motivation,
     setProfile,
     setGate,
     navigate,
@@ -231,6 +255,10 @@ export function OnboardingScreen() {
           onAttestationToggle={toggleAttestation}
           selectedExercises={selectedExercises}
           onExerciseToggle={toggleExercise}
+          nickname={nickname}
+          onNicknameChange={setNickname}
+          motivation={motivation}
+          onMotivationChange={setMotivation}
           disabled={isSubmitting}
         />
       </FadeIn>

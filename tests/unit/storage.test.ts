@@ -126,6 +126,30 @@ describe('StorageService — round-trip', () => {
 });
 
 describe('StorageService.saveProfile', () => {
+  it('accepts an optional motivation up to 120 chars and rejects longer', async () => {
+    await StorageService.saveProfile(makeProfile({ motivation: '  Keep smiling with my family.  ' }));
+    expect((await StorageService.getProfile())?.motivation).toBe('Keep smiling with my family.');
+
+    await StorageService.saveProfile(makeProfile({ motivation: '   ' }));
+    expect(await StorageService.getProfile()).not.toHaveProperty('motivation');
+
+    await expect(
+      StorageService.saveProfile(makeProfile({ motivation: 'x'.repeat(121) })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('accepts an optional nickname up to 30 chars and rejects longer', async () => {
+    await StorageService.saveProfile(makeProfile({ nickname: '  Ravi  ' }));
+    expect((await StorageService.getProfile())?.nickname).toBe('Ravi');
+
+    await StorageService.saveProfile(makeProfile({ nickname: '   ' }));
+    expect(await StorageService.getProfile()).not.toHaveProperty('nickname');
+
+    await expect(
+      StorageService.saveProfile(makeProfile({ nickname: 'x'.repeat(31) })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
   it('rejects a different profileId and preserves the single existing profile', async () => {
     const original = makeProfile();
     await StorageService.saveProfile(original);

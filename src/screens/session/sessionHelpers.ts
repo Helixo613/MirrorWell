@@ -32,6 +32,22 @@ export function advanceArcPhase(frozen: boolean, phase: number, speed: number): 
   return frozen ? phase : (phase + speed) % 1;
 }
 
+/**
+ * Live coaching phase from the smoothed effortIndex (the value RepDetector counts on), against
+ * the documented effortTargetZone. Pure so the mapping is unit-testable; the screen turns the
+ * phase into copy (strings.session.coach) and suppresses it while quality/ease-off messages own
+ * the screen. Ease-off itself stays the MetricEngine sustained condition — this is guidance,
+ * never the safety cue.
+ */
+export type CoachPhase = 'raise' | 'hold' | 'easeBack';
+
+export function coachPhaseFor(effortIndex: number): CoachPhase {
+  const [zoneLow, zoneHigh] = thresholds.metrics.effortTargetZone;
+  if (effortIndex < zoneLow) return 'raise';
+  if (effortIndex <= zoneHigh) return 'hold';
+  return 'easeBack';
+}
+
 /** Audio cue channel is open only when the user enabled audio cues. */
 export function audioCueEnabled(settings: AppSettings | null): boolean {
   return settings?.audioCuesEnabled === true;

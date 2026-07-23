@@ -6,6 +6,7 @@ import { CameraPreview } from '@/components/camera/CameraPreview';
 import { FeedbackCanvas } from '@/components/session/FeedbackCanvas';
 import { DemoWatermark } from '@/components/session/DemoWatermark';
 import { QuickSetupOverlay } from '@/components/session/QuickSetupOverlay';
+import { ArrivalOverlay } from '@/components/session/ArrivalOverlay';
 import { SessionStatusStrip } from '@/components/session/SessionStatusStrip';
 import { SessionRepCounter } from '@/components/session/SessionRepCounter';
 import { SessionRestPanel } from '@/components/session/SessionRestPanel';
@@ -90,10 +91,24 @@ export function SessionScreen() {
           ) : null}
         </div>
 
-        <div className="relative">
+        <div className="relative overflow-hidden rounded-2xl">
           <CameraPreview ref={s.previewRef} dimmed={s.reducedFacePreview} />
-          <FeedbackCanvas onMount={s.mountFeedbackCanvas} onUnmount={s.unmountFeedbackCanvas} />
+          {/* Keep canvas mounted (renderer needs a stable surface) but hide gauges during arrival —
+              the green effort meter peeking through the scrim looked broken/crooked. */}
+          <div
+            className={s.phase === 'arrival' ? 'pointer-events-none invisible' : undefined}
+            aria-hidden={s.phase === 'arrival' || undefined}
+          >
+            <FeedbackCanvas onMount={s.mountFeedbackCanvas} onUnmount={s.unmountFeedbackCanvas} />
+          </div>
           <DemoWatermark label={strings.session.demoWatermark} visible={s.isDemo} />
+          {s.phase === 'active' && s.coachText ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-4">
+              <p className="rounded-lg bg-background/90 px-5 py-2.5 text-center text-xl font-semibold shadow-md">
+                {s.coachText}
+              </p>
+            </div>
+          ) : null}
           <QuickSetupOverlay
             visible={s.phase === 'quickSetup'}
             title={strings.session.quickSetup.title}
@@ -109,6 +124,16 @@ export function SessionScreen() {
                   : null
             }
             onStart={s.handleQuickSetup}
+          />
+          <ArrivalOverlay
+            visible={s.phase === 'arrival'}
+            message={strings.session.arrival.message}
+            beginLabel={strings.session.arrival.begin}
+            beginAriaLabel={strings.session.arrival.beginAriaLabel}
+            stopLabel={strings.session.arrival.stop}
+            stopAriaLabel={strings.session.arrival.stopAriaLabel}
+            onBegin={s.handleBeginArrival}
+            onStop={s.openStopDialog}
           />
         </div>
 
@@ -135,6 +160,7 @@ export function SessionScreen() {
                   <SessionStatusStrip message={s.status.message} variant={s.status.variant} />
                 ) : null}
                 <SessionRepCounter summary={s.repSummary} label={strings.session.repCounterLabel} />
+                <p className="text-center text-sm text-muted-foreground">{strings.session.coach.legend}</p>
               </div>
             ) : null}
 
@@ -142,6 +168,11 @@ export function SessionScreen() {
               <SessionRestPanel
                 title={strings.session.rest.title}
                 remainingLabel={s.restRemainingLabel}
+                motivation={
+                  s.motivation
+                    ? strings.session.rest.motivation(s.motivation)
+                    : undefined
+                }
                 extendLabel={strings.session.rest.extend}
                 extendAriaLabel={strings.session.rest.extendAriaLabel}
                 skipLabel={strings.session.rest.skip}

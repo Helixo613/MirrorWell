@@ -11,7 +11,10 @@ import { ScreenShell } from '@/components/layout/ScreenShell';
 import { StaggerFadeIn } from '@/components/motion/StaggerFadeIn';
 import { QuietNavLink } from '@/components/navigation/QuietNavLink';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { strings } from '@/config/strings';
+import { thresholds } from '@/config/thresholds';
 import { useSettingsScreen } from '@/hooks/useSettingsScreen';
 import { cn } from '@/lib/utils';
 
@@ -100,6 +103,47 @@ export function SettingsScreen() {
       ) : null}
 
       <div className="flex flex-col gap-6">
+        <SettingsSection
+          title={strings.settings.sections.profile}
+          headingId="settings-profile-heading"
+        >
+          <SoftPanel className="flex flex-col gap-4 p-4">
+            <div className="space-y-2">
+              <Label htmlFor="settings-nickname">{strings.settings.profile.nicknameLabel}</Label>
+              <Input
+                id="settings-nickname"
+                value={settingsScreen.nickname}
+                maxLength={thresholds.profile.nicknameMaxLength}
+                disabled={disabled}
+                onChange={(event) => settingsScreen.setNickname(event.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">{strings.settings.profile.nicknameHint}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="settings-motivation">
+                {strings.settings.profile.motivationLabel}
+              </Label>
+              <Input
+                id="settings-motivation"
+                value={settingsScreen.motivation}
+                maxLength={thresholds.profile.motivationMaxLength}
+                disabled={disabled}
+                onChange={(event) => settingsScreen.setMotivation(event.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                {strings.settings.profile.motivationHint}
+              </p>
+            </div>
+            <Button
+              type="button"
+              disabled={disabled}
+              onClick={() => void settingsScreen.saveProfileFields()}
+            >
+              {strings.settings.profile.save}
+            </Button>
+          </SoftPanel>
+        </SettingsSection>
+
         <SettingsSection
           title={strings.settings.sections.displayAndCues}
           headingId="settings-display-cues-heading"

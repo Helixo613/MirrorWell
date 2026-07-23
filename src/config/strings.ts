@@ -170,7 +170,22 @@ export const strings = Object.freeze({
         'Check all four boxes above to continue.',
       exercisesRequired: 'Select at least one assigned exercise to continue.',
     },
+    nickname: {
+      label: '1. What should we call you?',
+      placeholder: 'Your first name or nickname',
+      hint: 'Optional. Shown in your greeting on Home. Stays on this device.',
+    },
+    motivation: {
+      label: '2. What makes this worth it for you?',
+      placeholder: 'e.g. Feeling more like myself again',
+      hint: 'Optional. Your “why” — shown on Home and between exercises. Never exported.',
+    },
     steps: {
+      aboutYou: {
+        title: 'A little about you',
+        subtitle:
+          'Two optional questions — scroll if you need to. Skip anytime with Continue.',
+      },
       intendedUse: {
         title: 'Exercise support for facial retraining',
         goodToKnowTitle: 'Good to know',
@@ -320,6 +335,8 @@ export const strings = Object.freeze({
       tryAgain: 'Try again',
       continue: 'Continue to home',
       skipUnavailable: 'Go back',
+      notNow: 'Not now',
+      notNowAriaLabel: 'Leave calibration and return home',
     },
     errors: {
       notAttested: 'Please complete onboarding before calibrating.',
@@ -328,6 +345,11 @@ export const strings = Object.freeze({
   home: {
     title: 'MirrorWell',
     subtitle: 'Your exercises, at your pace.',
+    greeting: {
+      morning: 'Good morning',
+      afternoon: 'Good afternoon',
+      evening: 'Good evening',
+    },
     startExercises: 'Start my exercises',
     startExercisesAriaLabel: 'Start your assigned exercises',
     loading: 'Loading your home screen…',
@@ -379,6 +401,16 @@ export const strings = Object.freeze({
       phaseNeutral: 'Relax your face and look at the camera…',
       phaseGentle: 'Now — one gentle smile, about half of what feels possible.',
     },
+    // Arrival moment (real sessions only, FRONTEND §2.4): shown once start() resolves and before
+    // the first exercise, camera already live behind it — never auto-dismisses (FRONTEND §4 no
+    // time pressure), user taps Begin when ready.
+    arrival: {
+      message: "Take a slow breath… we'll begin when you're ready.",
+      begin: 'Begin',
+      beginAriaLabel: 'Begin the exercise session',
+      stop: 'Stop',
+      stopAriaLabel: 'Stop and leave this session',
+    },
     demo: {
       ready: "I'm ready",
       readyAriaLabel: 'Begin exercise reps',
@@ -386,9 +418,19 @@ export const strings = Object.freeze({
     repCounter: (done: number, total: number) => `${done} of ${total}`,
     repCounterLabel: 'Rep progress',
     easeOff: 'Ease off — stay gentle',
+    // Live coaching line over the preview, driven by the SAME smoothed effortIndex the rep
+    // counter runs on (sessionHelpers.coachPhaseFor) — the meter shows where you are, this
+    // says what to do. Suppressed while quality/ease-off messages own the screen (FRONTEND §2.4).
+    coach: {
+      raise: 'Raise gently into the green band',
+      hold: 'Lovely — hold it gently',
+      easeBack: 'A little less — settle back toward the band',
+      legend: 'The green band is your gentle target: rise into it, hold, then relax to count a rep.',
+    },
     rest: {
       title: 'Rest',
       remaining: (seconds: number) => `${seconds} seconds left`,
+      motivation: (motivation: string) => `Remember your why: ${motivation}`,
       extend: '+30 s',
       extendAriaLabel: 'Add thirty seconds of rest',
       skip: 'Continue',
@@ -451,9 +493,13 @@ export const strings = Object.freeze({
     demoDone: 'Back to onboarding',
     demoDoneAriaLabel: 'Return to onboarding',
     repsDone: (count: number) => `${count} reps completed`,
-    easeOffLine: (gentle: number, total: number) =>
-      `You kept it gentle ${gentle} of ${total} times`,
-    encouraging: 'Thank you for practicing today.',
+    celebration: {
+      label: 'Gentle practice',
+      allGentle: 'Every single rep gentle. Perfect restraint.',
+      someGentle: (gentle: number, total: number) =>
+        `You kept it gentle ${gentle} of ${total} times — that's exactly the skill.`,
+    },
+    qualityNote: 'This is a single-session snapshot of movement.',
     demoWatermark: 'DEMO — not for exercise use',
     symmetry: {
       label: 'Movement symmetry',
@@ -602,35 +648,34 @@ export const strings = Object.freeze({
     },
   },
   caregiver: {
-    title: 'Practice summary',
-    subtitle: 'A read-only overview for a trusted person',
-    banner: 'Read-only view, enabled by the device owner',
-    loading: 'Loading summary…',
+    title: 'Your practice summary',
+    subtitle: 'A read-only view for someone who supports your practice',
+    banner: 'Read-only view — your practice stays on this device',
+    loading: 'Gathering your practice summary…',
     empty: {
-      title: 'No practice to show yet',
-      body: 'Once a few sessions are recorded they will appear here.',
+      title: 'Your practice will appear here',
+      body: 'After a few sessions, you’ll see your practice gathered here.',
     },
     adherence: {
-      heading: 'Practice adherence',
-      completionRate: (pct: number) => `${pct}% of sessions completed`,
-      sessionsPerWeek: (counts: string) => `Sessions per week: ${counts}`,
+      heading: 'Your steady practice',
+      completionRate: (_pct: number) => 'Sessions completed with care',
+      sessionsPerWeek: (counts: string) => `Sessions across recent weeks: ${counts}`,
     },
-    trendsHeading: 'Symmetry trends',
-    lastSessionHeading: 'Most recent session',
+    trendsHeading: 'Your practice over time',
+    lastSessionHeading: 'Your latest session',
     measurementQuality: {
-      heading: 'Measurement quality',
-      value: (pct: number) =>
-        `${pct}% of frames were clearly captured across recent sessions.`,
-      unavailable: 'Measurement quality will appear after a few sessions.',
+      heading: 'Clear practice moments',
+      value: (_pct: number) => 'Clear moments were captured across recent sessions.',
+      unavailable: 'Clear moments will appear after a few sessions.',
     },
-    exportLink: 'Open export',
-    exportLinkAriaLabel: 'Go to export to share a summary with your care team',
+    exportLink: 'Open the full summary',
+    exportLinkAriaLabel: 'Open the full summary to share with your care team',
     nav: {
       back: 'Back to home',
       backAriaLabel: 'Return to home',
     },
     a11y: {
-      announcement: 'Caregiver practice summary loaded.',
+      announcement: 'Your practice summary is ready.',
     },
   },
   settings: {
@@ -641,6 +686,7 @@ export const strings = Object.freeze({
     saved: (label: string) => `Saved · ${label}`,
     savedAnnouncement: (label: string) => `${label} updated`,
     sections: {
+      profile: 'Your profile',
       display: 'Display',
       cues: 'Cues',
       displayAndCues: 'Display & cues',
@@ -649,6 +695,14 @@ export const strings = Object.freeze({
       trendsAndSharing: 'Trends & sharing',
       calibration: 'Calibration',
       danger: 'Danger zone',
+    },
+    profile: {
+      nicknameLabel: 'What should we call you? (optional)',
+      nicknameHint: 'Shown on Home. Stays on this device; never exported.',
+      motivationLabel: 'What makes this worth it for you? (optional)',
+      motivationHint: 'Shown on Home and between exercises. Stays on this device; never exported.',
+      save: 'Save profile',
+      saved: 'Profile saved',
     },
     display: {
       highContrast: {

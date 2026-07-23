@@ -9,7 +9,7 @@ import { SummaryExerciseCard } from '@/components/summary/SummaryExerciseCard';
 import { exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
 import { useSummaryScreen } from '@/hooks/useSummaryScreen';
-import { symmetryPlainLabel } from '@/lib/summaryMetrics';
+import { gentlenessStat, symmetryPlainLabel } from '@/lib/summaryMetrics';
 
 const STAGGER_MS = 60;
 
@@ -37,6 +37,11 @@ export function SummaryScreen() {
 
   const { isDemo, textScale, highContrast, handleDone, headingId } = summary;
   const hasResults = record.results.length > 0;
+  const { gentle, total } = gentlenessStat(record.results);
+  const celebration =
+    gentle === total
+      ? strings.summary.celebration.allGentle
+      : strings.summary.celebration.someGentle(gentle, total);
 
   return (
     <ScreenShell
@@ -54,10 +59,37 @@ export function SummaryScreen() {
         <StaggerFadeIn animationKey="summary-header">
           <HomeHeader
             title={strings.summary.title}
-            subtitle={strings.summary.encouraging}
             headingId={headingId}
           />
         </StaggerFadeIn>
+
+        {total > 0 ? (
+          <section
+            aria-label={strings.summary.celebration.label}
+            className="motion-safe:animate-[summary-celebration_400ms_ease-out_both] rounded-2xl border border-primary/20 bg-primary/5 p-5"
+          >
+            <style>{`@keyframes summary-celebration { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } } @keyframes summary-check { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }`}</style>
+            <div className="flex items-start gap-3">
+              <svg
+                aria-hidden="true"
+                className="mt-0.5 h-7 w-7 shrink-0 text-primary"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  className="motion-safe:animate-[summary-check_300ms_ease-out_both]"
+                  d="m5 12 4 4L19 6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeDasharray="24"
+                  strokeWidth="2"
+                />
+              </svg>
+              <p className="text-lg font-semibold leading-relaxed text-foreground">
+                {celebration}
+              </p>
+            </div>
+          </section>
+        ) : null}
 
         {hasResults ? (
           <section
@@ -87,6 +119,10 @@ export function SummaryScreen() {
             </p>
           </StaggerFadeIn>
         )}
+
+        <p className="text-base leading-relaxed text-muted-foreground">
+          {strings.summary.qualityNote}
+        </p>
       </div>
 
       <StickyScreenFooter>
