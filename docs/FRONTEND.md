@@ -84,9 +84,9 @@ Route guard rules (React Router or equivalent): UNATTESTED → everything redire
 ### 2.9 `SettingsScreen`
 
 - **Purpose:** accessibility, honesty settings, consent toggles, deletion.
-- **Layout:** grouped lists — Display (highContrast, textScale slider 100–200%, reducedFacePreview, showAffectedSideMarker); Cues (haptics — hidden on desktop, audio); Trends (granularity); Sharing (caregiverViewEnabled with one-line explanation of what it reveals); Calibration (Recalibrate now → `CalibrationScreen`); Danger zone (Delete everything → typed "DELETE" confirmation → `deleteAllData` → `OnboardingScreen`).
+- **Layout:** grouped lists — **Your profile** (optional `nickname` + `motivation`, saved via `StorageService.saveProfile` — same fields as onboarding so already-attested users can edit without re-onboarding); Display (highContrast, textScale slider 100–200%, reducedFacePreview, showAffectedSideMarker); Cues (haptics — hidden on desktop, audio); Trends (granularity); Sharing (caregiverViewEnabled with one-line explanation of what it reveals — Home only shows the Caregiver nav link when this is on); Calibration (Recalibrate now → `CalibrationScreen`); Danger zone (Delete everything → typed "DELETE" confirmation → `deleteAllData` → `OnboardingScreen`).
 - **States:** standard; deletion has its own confirm/progress/done micro-flow.
-- **Calls:** `SettingsService.get/update`, `StorageService.deleteAllData`.
+- **Calls:** `SettingsService.get/update`, `StorageService.saveProfile` (profile fields), `StorageService.deleteAllData`.
 
 ## 3. State management
 
