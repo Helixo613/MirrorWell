@@ -394,6 +394,14 @@ export const strings = Object.freeze({
       phaseNeutral: 'Relax your face and look at the camera…',
       phaseGentle: 'Now — one gentle smile, about half of what feels possible.',
     },
+    // Arrival moment (real sessions only, FRONTEND §2.4): shown once start() resolves and before
+    // the first exercise, camera already live behind it — never auto-dismisses (FRONTEND §4 no
+    // time pressure), user taps Begin when ready.
+    arrival: {
+      message: "Take a slow breath… we'll begin when you're ready.",
+      begin: 'Begin',
+      beginAriaLabel: 'Begin the exercise session',
+    },
     demo: {
       ready: "I'm ready",
       readyAriaLabel: 'Begin exercise reps',
@@ -401,6 +409,15 @@ export const strings = Object.freeze({
     repCounter: (done: number, total: number) => `${done} of ${total}`,
     repCounterLabel: 'Rep progress',
     easeOff: 'Ease off — stay gentle',
+    // Live coaching line over the preview, driven by the SAME smoothed effortIndex the rep
+    // counter runs on (sessionHelpers.coachPhaseFor) — the meter shows where you are, this
+    // says what to do. Suppressed while quality/ease-off messages own the screen (FRONTEND §2.4).
+    coach: {
+      raise: 'Raise gently into the green band',
+      hold: 'Lovely — hold it gently',
+      easeBack: 'A little less — settle back toward the band',
+      legend: 'The green band is your gentle target: rise into it, hold, then relax to count a rep.',
+    },
     rest: {
       title: 'Rest',
       remaining: (seconds: number) => `${seconds} seconds left`,
