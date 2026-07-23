@@ -44,6 +44,7 @@ Merge order: **A first**, then F anytime; after A: E → C → B → D preferred
 - `executing-plans` or `subagent-driven-development` for V3 task checkboxes
 - `verification-before-completion` before claiming done (`npm run typecheck` + `npx vitest run`)
 - `agents-skills-policy` / `AGENTS_SKILLS.md` for token routing
+- Track A only: optional Refero MCP for shell/layout craft (plan locks still win — see V3 plan Task 1)
 - Track D: re-read SAFETY before any code; doc carve-out commit first
 
 ## What NOT to redo

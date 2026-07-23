@@ -29,6 +29,8 @@
 
 **Decision (locked 2026-07-23):** one dynamic responsive app (no separate mobile build). Desktop is the primary design target (the Zoom demo surface); the same layout reflows to a first-class phone experience. Calm-clinical visual language: generous whitespace, muted sage/slate palette, one accent (the gauge green), no decorative gradients.
 
+**Refero MCP (optional craft aid — does not change scope):** Before implementing the shell, the Track A agent may use Refero MCP (`refero_search_screens` / `refero_search_styles`, health or calm clinical apps) for 2–3 reference patterns on sidebar↔tab navigation and distraction-free stage layouts. Refero informs spacing, hierarchy, and chrome craft only. It must **not** add features, change breakpoints, invent identifiers, or override the locked decisions above or SAFETY §8. If Refero is unavailable, skip it and implement from this plan + existing `src/components/layout/` patterns.
+
 **Files:**
 - Modify: `src/components/layout/*` (app shell: sidebar nav ≥1024px, bottom tab bar <1024px)
 - Modify: `src/screens/session/SessionScreen.tsx` (session stage: preview + gauges centered, max-w ~5xl on desktop; full-bleed column on mobile)

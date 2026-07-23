@@ -6,6 +6,8 @@ Integrator: Cursor session (review + merge only, minimal tokens). Every worker a
 
 **Critical sequencing:** Track A (responsive layout) must **merge first**. Tracks B–E rebase on that merge and must not start coding until A is on `main`. Track F (demo runbook) may run anytime, even before A.
 
+**Refero MCP (Track A only, optional):** For Task 1 UI craft, agents may consult Refero MCP for real-app layout patterns (sidebar/tab shells, calm clinical screens). Locked plan decisions win over any Refero example — no new features, no new breakpoints, no scope creep. See Task 1 note in `2026-07-23-v3-full-product.md`. Tracks B–F do not need Refero.
+
 ## Assignment table
 
 | Track | Tasks (V3 plan) | Agent | Why this agent | Starts when |
@@ -73,7 +75,7 @@ WORKING DIRECTORY (mandatory): /home/arnavbansal/MW-v3-trackA
 BRANCH (mandatory): v3/responsive-layout
 Do all work only in that directory on that branch. Before anything else run `pwd` and `git rev-parse --abbrev-ref HEAD` and STOP if either is wrong. Never switch to main or another worktree. Commit only to this branch.
 
-You are implementing Task 1 ONLY from docs/superpowers/plans/2026-07-23-v3-full-product.md. Read that plan file first. Locked design: one dynamic responsive app (no separate mobile build); desktop-first; calm-clinical; session gauge as centerpiece; one breakpoint lg (1024px); session active phase is chrome-free. Inventory src/components/layout/ and navigation first. No new dependencies. Amend FRONTEND §1 in the same commit. Manual matrix: 1920×1080, 1280×800, 768×1024, 390×844. Follow checkbox order; typecheck + vitest green before PR.
+You are implementing Task 1 ONLY from docs/superpowers/plans/2026-07-23-v3-full-product.md. Read that plan file first. Locked design: one dynamic responsive app (no separate mobile build); desktop-first; calm-clinical; session gauge as centerpiece; one breakpoint lg (1024px); session active phase is chrome-free. Inventory src/components/layout/ and navigation first. Optional: before coding the shell, use Refero MCP (refero_search_screens / refero_search_styles) for 2–3 calm/clinical or health-app references on sidebar↔tab nav and distraction-free stages — craft only; if Refero is unavailable, skip it. Refero must not change scope, breakpoints, or add features. No new dependencies. Amend FRONTEND §1 in the same commit. Manual matrix: 1920×1080, 1280×800, 768×1024, 390×844. Follow checkbox order; typecheck + vitest green before PR.
 [+ shared rules block]
 ```
 
