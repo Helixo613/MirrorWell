@@ -8,6 +8,7 @@ import { MirrorWellError } from '../../src/data/errors.ts';
 // twice, or stopping it out from under each other.
 const capture = vi.hoisted(() => ({
   subscribers: new Set<(video: HTMLVideoElement, timestampMs: number) => void>(),
+  stopSubscribers: new Set<() => void>(),
   running: false,
   start: vi.fn(),
   stop: vi.fn(),
@@ -19,13 +20,20 @@ vi.mock('../../src/sensing/capture.ts', () => ({
       capture.subscribers.add(cb);
       return () => capture.subscribers.delete(cb);
     },
+    onStop: (cb: () => void) => {
+      capture.stopSubscribers.add(cb);
+      return () => capture.stopSubscribers.delete(cb);
+    },
     start: async (...args: unknown[]) => {
       await capture.start(...args);
       capture.running = true;
     },
+    // Mirrors the real stop(): abort listeners are announced last, from a snapshot, because
+    // each one unsubscribes itself (and may re-enter stop()) from inside the loop.
     stop: (...args: unknown[]) => {
       capture.running = false;
       capture.stop(...args);
+      for (const cb of [...capture.stopSubscribers]) cb();
     },
     isRunning: () => capture.running,
   },

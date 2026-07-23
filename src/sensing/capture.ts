@@ -11,6 +11,12 @@ type FrameCallback = (video: HTMLVideoElement, timestampMs: number) => void;
 let stream: MediaStream | null = null;
 let videoEl: HTMLVideoElement | null = null;
 const subscribers = new Set<FrameCallback>();
+// Abort listeners (docs/API.md §4 `onStop`). A frame subscriber CANNOT simply be dropped by
+// stop(): SessionScreen pauses by stopping the camera and resuming it later WITHOUT
+// re-subscribing (useSessionScreen), so clearing the set here would silently kill the session
+// on resume. Instead stop() announces itself, and the one kind of consumer that cannot survive
+// it — a capture window that only ever closes on an arriving frame — unsubscribes itself.
+const stopSubscribers = new Set<() => void>();
 let running = false;
 let processingFrame = false;
 let useVideoFrameCallback = false;
@@ -102,6 +108,10 @@ function stop(): void {
   stream = null;
   videoEl = null;
   strategyDetected = false;
+  // Announced last, with the camera already released, so a listener that tears itself down (and
+  // may re-enter stop() through its own frame-source teardown) finds nothing left to release.
+  // Snapshot: every listener unsubscribes itself from inside this loop.
+  for (const cb of [...stopSubscribers]) cb();
 }
 
 function onFrame(cb: FrameCallback): () => void {
@@ -109,8 +119,13 @@ function onFrame(cb: FrameCallback): () => void {
   return () => subscribers.delete(cb);
 }
 
+function onStop(cb: () => void): () => void {
+  stopSubscribers.add(cb);
+  return () => stopSubscribers.delete(cb);
+}
+
 function isRunning(): boolean {
   return running;
 }
 
-export const CaptureService = { start, stop, onFrame, isRunning };
+export const CaptureService = { start, stop, onFrame, onStop, isRunning };

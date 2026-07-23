@@ -29,6 +29,7 @@ let db: typeof import('../../src/data/schema.ts').db;
 // driven synthetically by frame-timestamp only (no wall-clock timers).
 const capture = vi.hoisted(() => ({
   subscribers: new Set<(video: HTMLVideoElement, timestampMs: number) => void>(),
+  stopSubscribers: new Set<() => void>(),
   running: false,
   /** Fired synchronously by a successful start() — the only way frames reach a subscriber in
    * these tests, mirroring production where CaptureService.tick() fans out only while running. */
@@ -44,6 +45,10 @@ vi.mock('../../src/sensing/capture.ts', () => ({
       capture.subscribers.add(cb);
       return () => capture.subscribers.delete(cb);
     },
+    onStop: (cb: () => void) => {
+      capture.stopSubscribers.add(cb);
+      return () => capture.stopSubscribers.delete(cb);
+    },
     // Models the real service's ownership flag: start() sets `running` (on success only),
     // stop() clears it, isRunning() reports it — so src/session/frames.ts's
     // start-if-not-running / stop-only-if-I-started logic is genuinely exercised.
@@ -52,9 +57,12 @@ vi.mock('../../src/sensing/capture.ts', () => ({
       capture.running = true;
       capture.onStart?.();
     },
+    // Mirrors the real stop(): abort listeners announced last, from a snapshot, because each
+    // unsubscribes itself (and may re-enter stop()) from inside the loop.
     stop: (...args: unknown[]) => {
       capture.running = false;
       capture.stop(...args);
+      for (const cb of [...capture.stopSubscribers]) cb();
     },
     isRunning: () => capture.running,
   },

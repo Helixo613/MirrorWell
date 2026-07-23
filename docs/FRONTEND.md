@@ -15,7 +15,7 @@ flowchart LR
     CGx[CaregiverScreen, toggle off] -.redirect.-> HOME
 ```
 
-Route guard rules (React Router or equivalent): UNATTESTED → everything redirects to `OnboardingScreen`; DEMO → only `SessionScreen`/`SummaryScreen` reachable (watermarked); `CaregiverScreen` additionally requires `caregiverViewEnabled === true`.
+Route guard rules (React Router or equivalent): UNATTESTED → everything redirects to `OnboardingScreen`; DEMO → only `SessionScreen`/`SummaryScreen` reachable (watermarked), plus `OnboardingScreen`, which is demo's **exit** and clears the flag on mount (ARCHITECTURE §11, API §2 `exitDemoMode`); `CaregiverScreen` additionally requires `caregiverViewEnabled === true`.
 
 ## 2. Screens
 

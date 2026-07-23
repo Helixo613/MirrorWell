@@ -77,6 +77,23 @@ describe('SafetyGate', () => {
     await expect(SafetyGate.recordAttestation('2')).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
   });
 
+  it('exits demo mode without touching storage (the OnboardingScreen close-out)', async () => {
+    SafetyGate.enterDemoMode();
+    expect(SafetyGate.isDemoMode()).toBe(true);
+    // Demo refuses every write, so recordAttestation — the only other exit — cannot run here.
+    await expect(StorageService.saveProfile(makeProfile())).rejects.toMatchObject({
+      code: 'VALIDATION_FAILED',
+    });
+
+    SafetyGate.exitDemoMode();
+
+    expect(SafetyGate.isDemoMode()).toBe(false);
+    // The exit is real, not cosmetic: writes work again, so the stepper can attest.
+    await StorageService.saveProfile(makeProfile());
+    await SafetyGate.recordAttestation('1');
+    expect(await SafetyGate.isAttested()).toBe(true);
+  });
+
   it('keeps demo mode in module memory only', async () => {
     SafetyGate.enterDemoMode();
     expect(SafetyGate.isDemoMode()).toBe(true);

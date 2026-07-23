@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { completeOnboarding } from './helpers/onboarding';
+import { completeOnboarding, walkOnboardingStepper } from './helpers/onboarding';
 
 /**
  * OnboardingScreen (Task 9). Covers the S2 slices of TESTS.md §4 row 1 (the
@@ -65,6 +65,35 @@ test.describe('onboarding gate', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Try a demo' }).click();
     await expect(page).toHaveURL(/\/session$/);
+  });
+
+  /**
+   * REGRESSION — S1-REQ-2 (`docs/superpowers/coordination/frontend-s1-requests.md`).
+   *
+   * FRONTEND §1/§2.5 and API §17 all put demo's exit at `OnboardingScreen`, but `/onboarding`
+   * admitted only UNATTESTED, so a DEMO visitor was bounced to "/" and RootRedirect sent them
+   * straight back to `/session` — demo was a one-way door until a page reload, and nothing
+   * cleared SafetyGate's in-memory `demoMode` on the way out (ARCHITECTURE §11 makes that exit
+   * a safety property).
+   *
+   * Client-side history navigation throughout, deliberately: `goto`/`reload` destroys the
+   * in-memory demo flag, so a spec that navigated that way would pass against the bug. No
+   * camera is needed — the demo SessionScreen opens nothing until its quick-setup is started.
+   */
+  test('leaving demo through the onboarding exit clears DEMO', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Try a demo' }).click();
+    await expect(page).toHaveURL(/\/session$/);
+
+    // Back is the same client-side pop the demo SummaryScreen's "Return to onboarding"
+    // performs — the guard it hits is identical, and it needs no camera to reach.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/onboarding$/);
+
+    // Proves the FLAG is cleared, not merely that the route rendered: every StorageService
+    // write throws VALIDATION_FAILED while demoMode is set (API §2), so the stepper's
+    // saveProfile would land on a blocking notice instead of reaching /calibration.
+    await walkOnboardingStepper(page);
   });
 
   test('completes the stepper through to calibration (attested)', async ({

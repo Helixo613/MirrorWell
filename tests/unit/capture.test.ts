@@ -104,4 +104,39 @@ describe('CaptureService.stop', () => {
       expect(track.stop).toHaveBeenCalledTimes(1);
     }
   });
+
+  it('announces the stop to onStop listeners, and unsubscribe silences them', async () => {
+    const { CaptureService } = await import('../../src/sensing/capture.ts');
+    const onStop = vi.fn();
+    const unsubscribe = CaptureService.onStop(onStop);
+
+    await CaptureService.start();
+    CaptureService.stop();
+    expect(onStop).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    await CaptureService.start();
+    CaptureService.stop();
+    expect(onStop).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps frame subscribers across a stop/start cycle (SessionScreen pause → resume)', async () => {
+    const { CaptureService } = await import('../../src/sensing/capture.ts');
+    const cb = vi.fn();
+
+    await CaptureService.start();
+    CaptureService.onFrame(cb);
+    rafCallbacks[rafCallbacks.length - 1]!(1000);
+    expect(cb).toHaveBeenCalledTimes(1);
+
+    // Pause: useSessionScreen stops the camera and later restarts it WITHOUT re-subscribing —
+    // the SessionController's frame source and the preview both ride on that same subscription.
+    // This is why the S1-REQ-3 fix could not be "stop() clears `subscribers`".
+    CaptureService.stop();
+    await CaptureService.start();
+    rafCallbacks[rafCallbacks.length - 1]!(2000);
+    expect(cb).toHaveBeenCalledTimes(2);
+
+    CaptureService.stop();
+  });
 });

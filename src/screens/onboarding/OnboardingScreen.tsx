@@ -58,17 +58,28 @@ export function OnboardingScreen() {
     ONBOARDING_STEP_COUNT,
   );
 
+  // Reaching this screen IS the demo close-out (API §17: OnboardingScreen is "✅ (exits demo)"
+  // in DEMO; FRONTEND §2.5 "ends at OnboardingScreen"), and ARCHITECTURE §11 treats leaving demo
+  // as a safety property — so the flag is cleared here rather than on the Summary button: every
+  // route in (demo Done, browser Back, a deep link) must exit, not just the one the copy names.
+  //
+  // The gate is then re-derived, never hard-coded: an ATTESTED user who tried the demo would
+  // otherwise be sent to /calibration with the context gate still 'DEMO', and that route's
+  // GateRoute reads the context — bouncing them back to /session through RootRedirect.
   useEffect(() => {
     let cancelled = false;
+    SafetyGate.exitDemoMode();
     void SafetyGate.isAttested().then((attested) => {
-      if (!cancelled && attested) {
+      if (cancelled) return;
+      setGate(attested ? 'ATTESTED' : 'UNATTESTED');
+      if (attested) {
         navigate('/calibration', { replace: true });
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [navigate, setGate]);
 
   useEffect(() => {
     const heading = document.getElementById(ONBOARDING_STEP_HEADING_ID);

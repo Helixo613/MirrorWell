@@ -201,13 +201,13 @@ test.describe('SummaryScreen — DEMO variant', () => {
 
     // TESTS.md §4.3: a demo pass must not change DB row counts.
     await page.getByRole('button', { name: 'Return to onboarding' }).click();
-    // NOTE (defect, reported not fixed): FRONTEND §2.5 says the DEMO variant "ends at
-    // OnboardingScreen", but handleDone's navigate('/onboarding') is bounced by the frozen
-    // shell — /onboarding admits only UNATTESTED (src/App.tsx), so it redirects to "/" and
-    // RootRedirect (src/router/RouteGuard.tsx) sends ATTESTED->/home and DEMO->/session.
-    // Nothing clears SafetyGate's in-memory demoMode on this path (src/session/safety.ts has
-    // no exit). Observed here: /home. Asserting only "left /summary" keeps this spec honest
-    // and still green once the shell is fixed.
+    // The destination is deliberately NOT pinned here. This spec reaches /summary by writing
+    // history state and RELOADING, which wipes SafetyGate's in-memory demoMode — the gate is
+    // ATTESTED (seeded profile), only `state.demo` makes the screen render its demo variant.
+    // So handleDone's navigate('/onboarding') is correctly bounced for an attested user and
+    // lands on /home. The real DEMO exit (S1-REQ-2, now fixed: /onboarding admits DEMO and
+    // clears the flag on mount) needs a gate that survives, so it is covered without a reload
+    // in tests/e2e/onboarding.spec.ts "leaving demo through the onboarding exit clears DEMO".
     await expect(page).not.toHaveURL(/\/summary$/);
     expect(await readCounts(page)).toEqual(before);
   });

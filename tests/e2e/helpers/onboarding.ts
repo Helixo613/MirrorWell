@@ -14,7 +14,15 @@ import { expect, type Page } from '@playwright/test';
 export async function completeOnboarding(page: Page): Promise<void> {
   await page.goto('/');
   await expect(page).toHaveURL(/\/onboarding$/);
+  await walkOnboardingStepper(page);
+}
 
+/**
+ * The stepper itself, from step 0 to `/calibration`, with no navigation of its own — for
+ * specs that must arrive at `/onboarding` by some other route (e.g. the DEMO exit, which a
+ * `goto` would falsify by reloading the in-memory demo flag away).
+ */
+export async function walkOnboardingStepper(page: Page): Promise<void> {
   // Steps 0–2: intended use, red-flag, local processing.
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'I understand' }).click();

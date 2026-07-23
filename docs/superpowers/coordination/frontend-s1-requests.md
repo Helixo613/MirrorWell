@@ -104,6 +104,22 @@ completely"), and the demo `SessionScreen` → `SummaryScreen` → `OnboardingSc
 evaluator journey (FRONTEND §1). S1's specs assert only "left `/summary`" so they stay green both
 before and after the fix; a spec that pinned the destination would have to encode the bug.
 
+**CLOSED (Reconvergence, `fix/reconvergence-shell`).** Both halves fixed. (1) `/onboarding` now
+admits `['UNATTESTED','DEMO']`. (2) `SafetyGate.exitDemoMode()` was added and is called by
+`OnboardingScreen` on mount — the "clear it on the screen" option was not an alternative to adding
+API surface, since `demoMode` is module-private and the only other clearer (`recordAttestation`)
+writes, which DEMO refuses. Mount was chosen over the Summary button because ARCH §11 makes the exit
+a safety property: every route in must exit, not only the one the copy names. The screen then
+re-derives the gate from `isAttested()` instead of hard-coding UNATTESTED — an attested user who had
+tried the demo would otherwise be sent to `/calibration` with the context gate still `'DEMO'` and
+bounced back to `/session`. `DOCS-CHANGE: API §2 — SafetyGate.exitDemoMode() added`, plus ARCH §11 /
+FRONTEND §3 / TESTS §4.3 amended. ARCH §12 was **not** amended: it tracks services, screens, tables,
+fields, events, error codes and types — it has no row for method names (`SessionController`'s row
+lists its events, not its methods), so `exitDemoMode` has no home there and API §2 is its owning doc.
+Regression: `tests/e2e/onboarding.spec.ts` "leaving demo through the onboarding exit clears DEMO" —
+red on unfixed shell (`/session`), and red again with only half (1) applied (stalls at `/onboarding`
+because `saveProfile` is demo-refused).
+
 ## S1-NOTE-2 → Reconvergence / backend owner (`src/session/controller.ts`, `src/session/calibration.ts`) — drift re-check gates every session start on live quality
 
 **Origin:** Task 11 (`SessionScreen`), Stream S1. Not S1's to fix (frozen backend), filed for the
@@ -156,6 +172,21 @@ around is broken.
 **Requested change (owner's choice):** either have `CaptureService.stop()` clear `subscribers`, or
 give the capture windows an abort path that settles when the camera stops. A screen-level palliative
 was deliberately not attempted — it would duplicate ownership logic the seam already owns.
+
+**CLOSED (Reconvergence, `fix/reconvergence-shell`) — abort path; the first option is a defect.**
+`stop()` must NOT clear `subscribers`: `SessionScreen` pauses by stopping the camera and resumes by
+restarting it **without re-subscribing** (`useSessionScreen` — the `SessionController`'s frame source
+and the preview both ride that one subscription), so clearing would silently kill every resumed
+session. Fix instead: `CaptureService.onStop(cb)` (`DOCS-CHANGE: API §4`), consumed by
+`openFrameSource`'s new optional `onCameraStopped` argument, so the seam — not each window — owns
+both the release and the unsubscribe-on-normal-close (a stale stop-listener would otherwise abort the
+*next* window's teardown-stop). Both windows (`calibration.captureFor`, `demoQuickSetup.captureWindow`)
+now throw `CAMERA_UNAVAILABLE` on abort rather than resolving a partial capture, which would send
+`captureWindows()` into the next window and re-open the camera on an unmounted screen.
+
+**Honest limit, unchanged.** The regression test pins the **invariant** (one `detect()` per frame
+restored), measured against the real `capture.ts`/`frames.ts`/`calibration.ts`. MediaPipe's response
+to a repeated timestamp was **not** probed and remains **inferred**, exactly as filed.
 
 ## S1-NOTE-3 → deferred minors from the same review (no action requested yet)
 

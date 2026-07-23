@@ -41,10 +41,22 @@ async function captureFor(durationMs: number): Promise<Capture> {
   let windowStartMs: number | null = null;
   let closed = false;
   let teardown: (() => void) | null = null;
+  let abortError: MirrorWellError | null = null;
   let closeWindow!: () => void;
   const windowClosed = new Promise<void>((resolve) => {
     closeWindow = resolve;
   });
+
+  // Aborting THROWS rather than resolving a partial capture: captureWindows() would otherwise
+  // loop straight into the next window and re-open the camera on a screen that is already gone
+  // (the hard camera rule, CLAUDE.md). `abortError` is carried out instead of rejecting
+  // `windowClosed` so nothing can reject before the `await` below is attached.
+  const abort = () => {
+    if (closed) return;
+    closed = true;
+    abortError = new MirrorWellError('CAMERA_UNAVAILABLE', 'camera stopped mid-capture');
+    closeWindow();
+  };
 
   // The window opens and closes on the raw CaptureService timestamp, never on lf.timestampMs:
   // under persistent INFERENCE_FAILED (lf === null on every frame) a window guarded by `lf`
@@ -64,9 +76,10 @@ async function captureFor(durationMs: number): Promise<Capture> {
     }
   };
 
-  teardown = await openFrameSource(handler);
-  if (closed) teardown(); // window closed while the camera was still starting up
+  teardown = await openFrameSource(handler, abort);
+  if (closed) teardown(); // window closed (or aborted) while the camera was still starting up
   await windowClosed;
+  if (abortError) throw abortError;
   return capture;
 }
 

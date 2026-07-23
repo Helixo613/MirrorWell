@@ -68,9 +68,13 @@ Persists attestation onto the **existing** profile row. `StorageService.saveProf
 
 > **Rule:** the four attestation checkboxes (diagnosed / clinician-assigned / 18+ / understands non-diagnostic scope) are UI-level; this method must only be called after all four are checked. TESTS.md verifies the screen cannot call it otherwise.
 
-### `SafetyGate.enterDemoMode(): void` / `SafetyGate.isDemoMode(): boolean`
+### `SafetyGate.enterDemoMode(): void` / `SafetyGate.isDemoMode(): boolean` / `SafetyGate.exitDemoMode(): void`
 
-Enters DEMO (in-memory flag). Full rule set in ARCHITECTURE §11 — watermark, no persistence, blocked screens, reload exits.
+Enters/leaves DEMO (in-memory flag). Full rule set in ARCHITECTURE §11 — watermark, no persistence, blocked screens, reload exits.
+
+`exitDemoMode()` clears the flag and touches nothing else (no storage read or write, so it is callable from inside demo, where every write is refused). Its one caller is `OnboardingScreen` on mount: reaching that screen **is** the documented demo close-out (§17 lists `OnboardingScreen` as ✅ *"exits demo"* in DEMO; FRONTEND §2.5 "ends at `OnboardingScreen`"), and the screen re-derives the gate from `isAttested()` afterwards rather than assuming UNATTESTED.
+
+> **DOCS-CHANGE (Reconvergence, 2026-07-23):** `exitDemoMode` is new. `recordAttestation` was the only documented exit and it *writes* — impossible from DEMO — so demo was a one-way door until a page reload, and the `SummaryScreen` → `OnboardingScreen` close-out silently landed elsewhere. ARCHITECTURE §11 makes the exit a safety property, so it needed a real one. Named to match the existing `enterDemoMode`/`isDemoMode` pair; no new canonical identifier (ARCHITECTURE §12 tracks services, screens, tables, fields, events, error codes and types — not method names).
 
 > **Rule:** while `isDemoMode()` is true, **every `StorageService` write throws** `VALIDATION_FAILED` with message `"demo mode is read-only"`. This is a backstop — correctly written callers never reach it.
 
@@ -197,9 +201,13 @@ Clears all six tables in one transaction. **Errors:** `DB_UNAVAILABLE`
 | `start(constraints?)` | optional `MediaTrackConstraints` | `Promise<void>` | `CAMERA_DENIED` (user refused — recoverable, show permission guidance), `CAMERA_UNAVAILABLE` (no device / in use — recoverable, show device guidance) |
 | `stop()` | — | `void` (camera light must go off) | — |
 | `onFrame(cb)` | `(video: HTMLVideoElement, timestampMs: number) => void` | `() => void` unsubscribe | — |
+| `onStop(cb)` | `() => void` | `() => void` unsubscribe | — |
 | `isRunning()` | — | `boolean` | — |
 
+> **DOCS-CHANGE (Reconvergence, 2026-07-23):** `onStop` is new. `stop()` announces itself to these listeners **after** the tracks are released; `stop()` does **not** clear `onFrame` subscribers, because `SessionScreen`'s pause → resume stops and restarts the camera on the *same* subscription. The one consumer that cannot survive a stop is a capture window that closes only on an arriving frame: it hung forever and orphaned its subscriber for the page lifetime, so the next session ran two `LandmarkEngine.detect()` per frame on one timestamp. `openFrameSource` (`src/session/frames.ts`) takes an optional `onCameraStopped` and does the subscribing; no other caller needs `onStop` directly.
+
 > **Rule:** latest-frame-wins; never queue.
+> **Rule (abort):** a consumer whose window closes only on an arriving frame must pass `onCameraStopped` and treat the abort as `CAMERA_UNAVAILABLE`. Resolving a partial capture instead would let the next window re-open the camera on an unmounted screen.
 > **Rule (camera lifecycle):** in production, the stream may be open only while `CalibrationScreen` or `SessionScreen` is mounted. Narrow exception: **dev-only harnesses under `src/dev/`** (excluded from the prod bundle) may open the camera for validation and live tooling, and may record its stream via `MediaRecorder` solely for consented fixture-master capture (download-only; SAFETY §6 exception); no production screen or service may rely on either path.
 
 ---

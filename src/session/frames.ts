@@ -27,8 +27,21 @@ let startInFlight: Promise<void> | null = null;
  * Subscribes `onFrame` to CaptureService and starts the camera if it is not already running.
  * Resolves to a teardown that unsubscribes and stops the camera **only if this call started
  * it**. If starting fails, the subscriber is removed before the error propagates.
+ *
+ * `onCameraStopped` is the abort path for a consumer whose window closes only on an ARRIVING
+ * frame (both capture windows). Stop the camera mid-window and no frame ever arrives: the
+ * consumer's promise hangs, its teardown never runs, and its subscriber is orphaned in
+ * CaptureService's module-level Set for the page lifetime — the next session then runs two
+ * LandmarkEngine.detect() per frame on the same timestamp, breaking the one-detect-per-frame
+ * invariant `detectForVideo` requires. The subscription is released here before the callback
+ * runs, so the caller only has to settle. Consumers that legitimately outlive a stop (the
+ * SessionScreen pause/resume path re-uses its subscription) simply omit it — which is why
+ * CaptureService.stop() must never clear `subscribers` wholesale.
  */
-export async function openFrameSource(onFrame: FrameHandler): Promise<() => void> {
+export async function openFrameSource(
+  onFrame: FrameHandler,
+  onCameraStopped?: () => void,
+): Promise<() => void> {
   const unsubscribe = CaptureService.onFrame((video, timestampMs) => {
     // Narrow: only LandmarkEngine.detect is caught (INFERENCE_FAILED -> null). onFrame is
     // called exactly once, outside the try, so a downstream pipeline exception (e.g.
@@ -43,6 +56,20 @@ export async function openFrameSource(onFrame: FrameHandler): Promise<() => void
     onFrame(video, timestampMs, lf);
   });
 
+  // Both unsubscribes always run together: a stale stop-listener left behind by a completed
+  // window would fire during the NEXT window's teardown-stop and abort it.
+  let unsubscribeStop: () => void = () => undefined;
+  const release = () => {
+    unsubscribe();
+    unsubscribeStop();
+  };
+  if (onCameraStopped) {
+    unsubscribeStop = CaptureService.onStop(() => {
+      release();
+      onCameraStopped();
+    });
+  }
+
   let owned = false;
   if (!CaptureService.isRunning()) {
     if (!startInFlight) {
@@ -52,14 +79,14 @@ export async function openFrameSource(onFrame: FrameHandler): Promise<() => void
     try {
       await startInFlight; // both initiator and piggybackers await the same start
     } catch (err) {
-      unsubscribe(); // finding 1: no stop() here -- a rejected start acquired nothing, and
+      release(); // finding 1: no stop() here -- a rejected start acquired nothing, and
       // stop() could tear down a DIFFERENT consumer's legitimately-owned camera.
       throw err;
     }
   }
 
   return () => {
-    unsubscribe();
+    release(); // before the stop below, so this call's own listener never sees it
     if (owned) CaptureService.stop(); // stop-only-if-I-started, still exactly one owner
   };
 }

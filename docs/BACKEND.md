@@ -12,10 +12,13 @@ Responsibility: own the camera lifecycle and frame loop; nothing else.
 start(constraints?: MediaTrackConstraints): Promise<void>   // throws CAMERA_DENIED | CAMERA_UNAVAILABLE
 stop(): void                                                // must release tracks (camera light OFF)
 onFrame(cb: (video: HTMLVideoElement, timestampMs: number) => void): () => void  // returns unsubscribe
+onStop(cb: () => void): () => void                          // abort signal, fired after tracks release
 isRunning(): boolean
 ```
 
 Internals: `getUserMedia({video: {facingMode: 'user', width: {ideal: 640}, height: {ideal: 480}}})`; frame loop via `video.requestVideoFrameCallback` with `requestAnimationFrame` fallback (detect once at startup, log which). The callback delivers the live `HTMLVideoElement` + timestamp — no `VideoFrame`/WebCodecs construction (MediaPipe's `detectForVideo` accepts the video element directly; this also sidesteps a Firefox WebCodecs compatibility risk). Latest-frame-wins: if a callback is still processing, drop the incoming tick — **never queue frames** (queuing trades latency for staleness; a therapy mirror must be live).
+
+`stop()` never clears the `onFrame` subscriber set: `SessionScreen`'s pause → resume stops and restarts the camera on the same subscription, so dropping subscribers would silently kill the session on resume. It instead announces itself via `onStop` (API §4), which is how the two capture windows — which close only on an arriving frame — abort instead of hanging and orphaning a subscriber for the page lifetime (two `detect()` per frame in the next session).
 
 **Never:** hold more than one frame in memory; keep the stream open outside `CalibrationScreen`/`SessionScreen` in production (narrow exception: dev-only harnesses under `src/dev/`, excluded from the prod bundle — API.md §4); auto-restart after `stop()` without an explicit user action.
 

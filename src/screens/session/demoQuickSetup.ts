@@ -35,10 +35,21 @@ async function captureWindow(durationMs: number): Promise<Capture> {
   let windowStartMs: number | null = null;
   let closed = false;
   let teardown: (() => void) | null = null;
+  let abortError: MirrorWellError | null = null;
   let closeWindow!: () => void;
   const windowClosed = new Promise<void>((resolve) => {
     closeWindow = resolve;
   });
+
+  // Same abort discipline as calibration.captureFor: the camera stopping mid-window (a
+  // SessionScreen unmount during quick setup) is the one thing no arriving frame can close, so
+  // openFrameSource releases the subscription and hands the window back here to throw.
+  const abort = () => {
+    if (closed) return;
+    closed = true;
+    abortError = new MirrorWellError('CAMERA_UNAVAILABLE', 'camera stopped mid-capture');
+    closeWindow();
+  };
 
   const handler: FrameHandler = (video, timestampMs, lf) => {
     if (closed) return;
@@ -53,9 +64,10 @@ async function captureWindow(durationMs: number): Promise<Capture> {
     }
   };
 
-  teardown = await openFrameSource(handler);
-  if (closed) teardown(); // window closed while the camera was still starting up
+  teardown = await openFrameSource(handler, abort);
+  if (closed) teardown(); // window closed (or aborted) while the camera was still starting up
   await windowClosed;
+  if (abortError) throw abortError;
   return capture;
 }
 

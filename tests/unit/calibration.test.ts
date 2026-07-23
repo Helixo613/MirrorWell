@@ -16,6 +16,7 @@ let NormalizationLayer: typeof import('../../src/metrics/normalize.ts').Normaliz
 
 const capture = vi.hoisted(() => ({
   subscribers: new Set<(video: HTMLVideoElement, timestampMs: number) => void>(),
+  stopSubscribers: new Set<() => void>(),
   running: false,
   start: vi.fn(),
   stop: vi.fn(),
@@ -29,15 +30,22 @@ vi.mock('../../src/sensing/capture.ts', () => ({
       capture.subscribers.add(cb);
       return () => capture.subscribers.delete(cb);
     },
+    onStop: (cb: () => void) => {
+      capture.stopSubscribers.add(cb);
+      return () => capture.stopSubscribers.delete(cb);
+    },
     // Models the real service's ownership flag so src/session/frames.ts's
     // start-if-not-running / stop-only-if-I-started logic is genuinely exercised.
     start: async (...args: unknown[]) => {
       await capture.start(...args);
       capture.running = true;
     },
+    // Mirrors the real stop(): abort listeners announced last, from a snapshot, because each
+    // unsubscribes itself (and may re-enter stop()) from inside the loop.
     stop: (...args: unknown[]) => {
       capture.running = false;
       capture.stop(...args);
+      for (const cb of [...capture.stopSubscribers]) cb();
     },
     isRunning: () => capture.running,
   },

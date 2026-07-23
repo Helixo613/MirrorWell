@@ -46,6 +46,12 @@ function TrendsRouteFallback() {
 // root (rather than a fixed screen) is what keeps DEMO out of everything but
 // Session/Summary without a redirect loop. Caregiver additionally requires the
 // caregiverViewEnabled consent (CaregiverRoute).
+//
+// /onboarding is the one exception: it admits DEMO as well, because it is demo's documented
+// EXIT (API §17 "✅ (exits demo)", FRONTEND §1/§2.5 "ends at OnboardingScreen"). Admitting only
+// UNATTESTED bounced the demo close-out back through RootRedirect to /session, making demo a
+// one-way door until reload. OnboardingScreen clears the flag on mount (SafetyGate.exitDemoMode)
+// and re-derives the gate, so a DEMO visitor is UNATTESTED again by its first effect.
 function ProductApp() {
   return (
     <AppStateProvider>
@@ -55,7 +61,7 @@ function ProductApp() {
           <Route
             path="/onboarding"
             element={
-              <GateRoute allowed={['UNATTESTED']} redirectTo="/">
+              <GateRoute allowed={['UNATTESTED', 'DEMO']} redirectTo="/">
                 <OnboardingScreen />
               </GateRoute>
             }
