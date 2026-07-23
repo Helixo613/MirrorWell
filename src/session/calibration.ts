@@ -165,6 +165,16 @@ async function captureComfortableMax(exerciseId: ExerciseId): Promise<number> {
     throw new MirrorWellError('QUALITY_TOO_LOW', 'comfortable-max capture quality too low');
   }
   const result = median(peaks);
+  // Same invariant the demo quick setup enforces (demoComfortableMax): a user who held still
+  // through the "gentle movements" windows yields a noise-level median peak, and
+  // effortIndex = activation / comfortableMax then reads ANY facial motion — including
+  // cross-activation from an unrelated movement (e.g. an eye squeeze bleeding into the brow
+  // blendshapes) — as a full-effort rep. activationFloor is the documented "below this is
+  // noise" boundary (API §15). QUALITY_TOO_LOW (not NO_BASELINE): CalibrationScreen coaches
+  // and offers a retry on this code, which is the right recovery here.
+  if (result < thresholds.blendshapes.activationFloor) {
+    throw new MirrorWellError('QUALITY_TOO_LOW', 'comfortable-max capture measured no movement');
+  }
   comfortableMax = { ...comfortableMax, [exerciseId]: result };
   comfortableExercise = exerciseId;
   return result;

@@ -128,7 +128,7 @@ State machine per exercise: `DEMO → REPS → REST`; transitions: `advance()` (
 
 ```typescript
 captureNeutral(): Promise<NeutralCaptureResult>                 // 3×3 s, measureAbsolute + median; throws QUALITY_TOO_LOW
-captureComfortableMax(exerciseId: ExerciseId): Promise<number>  // 3 gentle reps, median peak blendshape activation max(L,R), 0..1 units; throws QUALITY_TOO_LOW; no blendshapePair → VALIDATION_FAILED
+captureComfortableMax(exerciseId: ExerciseId): Promise<number>  // 3 gentle reps, median peak blendshape activation max(L,R), 0..1 units; throws QUALITY_TOO_LOW (also when the median peak < thresholds.blendshapes.activationFloor — a held-still capture yields a noise-level comfortableMax that makes effortIndex read any facial motion, incl. cross-activation bleed from unrelated movements, as a full-effort rep); no blendshapePair → VALIDATION_FAILED
 runNoiseFloorSelfTest(): Promise<number>                        // noiseFloorSymmetry (API §11): std of smoothed SI during held comfortable-max
 // noiseFloorDisplacement (activation std at neutral, B1a) is computed inside captureNeutral;
 // both floors are written onto calibration_baseline by saveBaseline — never into app_settings (DG-4)

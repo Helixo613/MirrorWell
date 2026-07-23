@@ -185,7 +185,13 @@ function handleRepsFrame(quality: QualityResult, timestampMs: number): void {
         repIndex: event.repIndex,
         peakSymmetryIndex: event.peakSymmetryIndex,
         peakEffortIndex: event.peakEffortIndex,
-        durationMs: event.durationMs,
+        // Same assembly-time conversion rule as easeOffTriggered below (ARCH §12): the event
+        // surface carries the raw difference of frame timestamps — FRACTIONAL performance-clock
+        // ms — while rep_metric.durationMs is "integer > 0" (DATABASE §
+        // rep_metric). Unrounded, saveSession rejects the whole record at session end
+        // (VALIDATION_FAILED), sessionEnded never fires, and the idempotent-stop guard then
+        // swallows every later advance/stop click — a dead REST screen.
+        durationMs: Math.round(event.durationMs),
         easeOffTriggered: event.easeOffTriggered ? 1 : 0,
       });
       emitter.emit('repCompleted', { event });

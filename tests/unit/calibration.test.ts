@@ -201,6 +201,20 @@ describe('CalibrationFlow', () => {
     await expect(result).resolves.toBe(0.7);
   });
 
+  it('rejects a comfortable-max median peak below activationFloor (held-still capture)', async () => {
+    // Same invariant demoComfortableMax enforces: a noise-level comfortableMax makes
+    // effortIndex = activation / comfortableMax read ANY facial motion — including
+    // cross-activation bleed from an unrelated movement — as a full-effort rep.
+    // QUALITY_TOO_LOW so CalibrationScreen's coaching/retry path handles it.
+    const result = CalibrationFlow.captureComfortableMax('EX_SMILE');
+    await captureThree(result.then(() => undefined, () => undefined), [
+      frame({ mouthSmileLeft: 0.02, mouthSmileRight: 0.01 }),
+      frame({ mouthSmileLeft: 0.03, mouthSmileRight: 0.02 }),
+      frame({ mouthSmileLeft: 0.04, mouthSmileRight: 0.02 }),
+    ]);
+    await expect(result).rejects.toMatchObject({ code: 'QUALITY_TOO_LOW' });
+  });
+
   it('uses the median of per-rep peaks, not all frame activations', async () => {
     const result = CalibrationFlow.captureComfortableMax('EX_SMILE');
     await captureThreeWithFrames(result, [

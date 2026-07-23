@@ -446,6 +446,46 @@ describe('SessionController hot path', () => {
     expect(record.results[0]!.repsCompleted).toBe(exercises.EX_BROW_RAISE.repsPerSet);
   });
 
+  // Regression: production frame timestamps are FRACTIONAL performance-clock values, so a
+  // rep's duration (difference of two of them) is fractional too — but rep_metric.durationMs
+  // is "integer > 0" (DATABASE §rep_metric). Unrounded, saveSession rejected the completed
+  // session with VALIDATION_FAILED, sessionEnded never fired, and the idempotent-stop guard
+  // swallowed every later advance()/stop() click: a dead "Rest — 0 seconds left" screen.
+  it('persists a completed session under fractional timestamps, rounding durationMs at assembly', async () => {
+    await seedAttested(['EX_SMILE']);
+    await SessionController.start(['EX_SMILE']);
+    SessionController.advance();
+    const ended = vi.fn();
+    on('sessionEnded', ended);
+
+    const pair = exercises.EX_SMILE.blendshapePair!;
+    let ts = 1000.4;
+    for (let rep = 0; rep < exercises.EX_SMILE.repsPerSet; rep++) {
+      ts += 2000; // > gapResetMs: clears the smoothing window between reps
+      for (let i = 0; i < 31; i++) {
+        emitOk({ [pair.left]: 0.3, [pair.right]: 0.3 }, ts);
+        ts += 33.3; // ~30 Hz with a fractional step, like real rVFC timestamps
+      }
+      for (let i = 0; i < 3; i++) {
+        emitOk({ [pair.left]: 0.02, [pair.right]: 0.02 }, ts);
+        ts += 33.3;
+      }
+    }
+
+    emitOk({}, ts + exercises.EX_SMILE.restSeconds * 1000 + 10);
+    await vi.waitFor(() => expect(ended).toHaveBeenCalledTimes(1));
+    const record = ended.mock.calls[0]![0].record;
+    expect(record.endReason).toBe('completed');
+    const reps = record.results[0]!.reps;
+    expect(reps).toHaveLength(exercises.EX_SMILE.repsPerSet);
+    for (const rep of reps) {
+      expect(Number.isInteger(rep.durationMs)).toBe(true);
+      expect(rep.durationMs).toBeGreaterThan(0);
+    }
+    // The defect was a rejected saveSession — prove the record actually reached IndexedDB.
+    expect(await db.rep_metric.count()).toBe(exercises.EX_SMILE.repsPerSet);
+  });
+
   it('throttles metricUpdate to <= 15 events under a 30Hz synthetic frame stream', async () => {
     await seedAttested(['EX_SMILE']);
     await SessionController.start(['EX_SMILE']);

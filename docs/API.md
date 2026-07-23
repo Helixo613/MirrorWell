@@ -178,7 +178,7 @@ One transaction: `session_record` + all `exercise_result` rows + all `rep_metric
 **Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (any DATABASE §3 rule; unknown `baselineId`/`profileId`; demo mode)
 
 > **Rule:** a thrown error anywhere in the transaction leaves **zero** rows. TESTS.md includes a forced mid-transaction failure test.
-> **Type-conversion note:** `RepEvent.easeOffTriggered` is `boolean` on the event surface; `SessionController` converts it to `0 | 1` during session assembly (IndexedDB indexability, DATABASE.md §1).
+> **Type-conversion note:** `RepEvent.easeOffTriggered` is `boolean` on the event surface; `SessionController` converts it to `0 | 1` during session assembly (IndexedDB indexability, DATABASE.md §1). Likewise `RepEvent.durationMs` is a raw difference of frame timestamps (fractional performance-clock ms); `SessionController` rounds it to the integer `rep_metric.durationMs` (DATABASE §3: "integer > 0") during the same assembly — an unrounded value would make `saveSession` reject the whole completed session.
 
 ### `getSessions(range: {from: string; to: string}): Promise<SessionRecordFull[]>`
 
