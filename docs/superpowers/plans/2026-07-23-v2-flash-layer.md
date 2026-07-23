@@ -34,7 +34,7 @@
 
 ### Task 1: Session centerpiece — coach line + Zoom-legible gauges (V2.0 / absorbs most of old V3.1)
 
-**Status note:** Steps 1–3 are ALREADY COMMITTED on main (commit "feat(session): live coach line over the preview…", 2026-07-23): `strings.session.coach.*`, `coachPhaseFor()` + its unit test, `coachText` in `useSessionScreen.ts`, and the SessionScreen overlay. Remaining work = Steps 4–7 (legend caption, renderer scale-up, docs).
+**Status note:** an earlier cut of steps 1–3 was committed and then REVERTED off main (kept clean of V2 implementation until this plan executes). Commit `2e1bbe1` remains in history as a working reference for the plumbing (`strings.session.coach.*`, `coachPhaseFor()` + unit test, `coachText` in `useSessionScreen.ts`, the SessionScreen overlay) — you may cherry-pick or re-derive it, but implement ALL steps below on a fresh `v2/session-centerpiece` branch and verify from scratch.
 
 **Files:**
 - Modify: `src/session/renderer.ts` (presentation constants + meter geometry)
