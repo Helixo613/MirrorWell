@@ -142,10 +142,17 @@ export function OnboardingScreen() {
 
     try {
       const now = new Date().toISOString();
+      // Re-onboarding MUST reuse the existing local profile's identity. saveProfile refuses a
+      // different profileId by design (one local profile, ever — DATABASE rule), so minting a
+      // fresh uuid here permanently dead-ends every documented re-onboarding path: a consent-
+      // version bump (.env.example: "bump forces re-onboarding"), an earlier run that never
+      // finished attestation, or a dev-seeded profile. Each threw VALIDATION_FAILED
+      // ("a different local profile already exists") with no way forward from the UI.
+      const existing = await StorageService.getProfile();
       const profile = {
-        profileId: createProfileId(),
-        createdAt: now,
-        affectedSide: 'left' as const,
+        profileId: existing?.profileId ?? createProfileId(),
+        createdAt: existing?.createdAt ?? now,
+        affectedSide: existing?.affectedSide ?? ('left' as const),
         assignedExercises: selectedExercises,
         attestedAt: null,
         consentVersion: null,
