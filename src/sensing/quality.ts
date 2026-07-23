@@ -44,6 +44,21 @@ const EYE_L_OUTER_CORNER = 263;
 const FACE_BBOX_MARGIN = 0.1;
 const LUMA_DOWNSAMPLE = 64;
 
+// One reusable downsample surface for the luma gate. evaluate() runs per frame (~30 Hz);
+// allocating a fresh <canvas> per frame churned the GC for no benefit. willReadFrequently
+// keeps the canvas on a CPU-readable path since every draw is followed by getImageData.
+let lumaCanvas: HTMLCanvasElement | null = null;
+let lumaCtx: CanvasRenderingContext2D | null = null;
+
+function getLumaContext(): CanvasRenderingContext2D | null {
+  if (lumaCtx) return lumaCtx;
+  lumaCanvas = document.createElement('canvas');
+  lumaCanvas.width = LUMA_DOWNSAMPLE;
+  lumaCanvas.height = LUMA_DOWNSAMPLE;
+  lumaCtx = lumaCanvas.getContext('2d', { willReadFrequently: true });
+  return lumaCtx;
+}
+
 // Jitter history: last two landmark frames in pixel-comparable normalized form for the
 // second-difference estimator. Assumption (BACKEND §1.3): frame intervals are approximately
 // uniform — second difference is computed per sample without Δt scaling.
@@ -68,10 +83,7 @@ function resetJitterState(): void {
  * LOW_LIGHT (intended, BACKEND §1.3).
  */
 function faceRegionLuma64(video: HTMLVideoElement, landmarks: LandmarkFrame['landmarks']): number {
-  const canvas = document.createElement('canvas');
-  canvas.width = LUMA_DOWNSAMPLE;
-  canvas.height = LUMA_DOWNSAMPLE;
-  const ctx = canvas.getContext('2d');
+  const ctx = getLumaContext();
   if (!ctx) return 255; // no canvas context: fail open on this gate, other gates still apply
   ctx.drawImage(video, 0, 0, LUMA_DOWNSAMPLE, LUMA_DOWNSAMPLE);
   const { data } = ctx.getImageData(0, 0, LUMA_DOWNSAMPLE, LUMA_DOWNSAMPLE);

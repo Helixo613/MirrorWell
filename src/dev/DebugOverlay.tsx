@@ -9,6 +9,7 @@
 // Dev-only twice over: src/dev/ is dropped from production bundles, and tapDevLog() is a no-op
 // outside import.meta.env.DEV.
 import { useEffect, useState } from 'react';
+import { StorageService } from '../data/storage.ts';
 import { tapDevLog } from '../log.ts';
 import { seedDev } from './seed.ts';
 
@@ -32,6 +33,7 @@ export function DebugOverlay() {
   const [capture, setCapture] = useState<{ approved: number; total: number } | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [seeding, setSeeding] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -102,16 +104,34 @@ export function DebugOverlay() {
             </div>
           )}
 
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
             <button
               onClick={() => {
                 setSeeding(true);
                 void seedDev().finally(() => setSeeding(false));
               }}
-              disabled={seeding}
+              disabled={seeding || clearing}
               style={btn}
             >
               {seeding ? 'seeding…' : 'seed db'}
+            </button>
+            <button
+              onClick={() => {
+                setClearing(true);
+                // Dev reset: profile/baseline/sessions persist in IndexedDB by design (local-
+                // first), so reopening localhost resumes where you left off. This wipes every
+                // table and reloads for a truly fresh start. Corner: while DEMO mode is active,
+                // StorageService structurally refuses the clear (by design; this overlay may not
+                // import SafetyGate — the import-graph invariant in app-debug-hud.test.ts) — the
+                // reload still exits demo (in-memory flag), so a second click then wipes the DB.
+                void StorageService.deleteAllData()
+                  .catch(() => {})
+                  .finally(() => window.location.reload());
+              }}
+              disabled={seeding || clearing}
+              style={btn}
+            >
+              {clearing ? 'clearing…' : 'clear db + reload'}
             </button>
           </div>
 
