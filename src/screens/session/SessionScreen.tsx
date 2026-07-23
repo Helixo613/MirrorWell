@@ -142,6 +142,11 @@ export function SessionScreen() {
               <SessionRestPanel
                 title={strings.session.rest.title}
                 remainingLabel={s.restRemainingLabel}
+                motivation={
+                  s.motivation
+                    ? strings.session.rest.motivation(s.motivation)
+                    : undefined
+                }
                 extendLabel={strings.session.rest.extend}
                 extendAriaLabel={strings.session.rest.extendAriaLabel}
                 skipLabel={strings.session.rest.skip}

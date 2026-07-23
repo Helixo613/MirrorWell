@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 export interface SessionRestPanelProps {
   title: string;
   remainingLabel: string;
+  motivation?: string;
   extendLabel?: string;
   extendAriaLabel?: string;
   skipLabel?: string;
@@ -18,6 +19,7 @@ export interface SessionRestPanelProps {
 export function SessionRestPanel({
   title,
   remainingLabel,
+  motivation,
   extendLabel,
   extendAriaLabel,
   skipLabel,
@@ -51,6 +53,9 @@ export function SessionRestPanel({
       >
         {remainingLabel}
       </p>
+      {motivation ? (
+        <p className="text-sm leading-relaxed text-muted-foreground">{motivation}</p>
+      ) : null}
       {contentOnly ? null : (
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button

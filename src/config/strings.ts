@@ -170,6 +170,16 @@ export const strings = Object.freeze({
         'Check all four boxes above to continue.',
       exercisesRequired: 'Select at least one assigned exercise to continue.',
     },
+    nickname: {
+      label: 'What should we call you? (optional)',
+      placeholder: 'Your nickname',
+      hint: 'This stays on this device and is never included in exports.',
+    },
+    motivation: {
+      label: 'What makes this worth it for you? (optional, stays on this device)',
+      placeholder: 'Your reason for practicing',
+      hint: 'Your words stay on this device and are never included in exports.',
+    },
     steps: {
       intendedUse: {
         title: 'Exercise support for facial retraining',
@@ -328,6 +338,11 @@ export const strings = Object.freeze({
   home: {
     title: 'MirrorWell',
     subtitle: 'Your exercises, at your pace.',
+    greeting: {
+      morning: 'Good morning',
+      afternoon: 'Good afternoon',
+      evening: 'Good evening',
+    },
     startExercises: 'Start my exercises',
     startExercisesAriaLabel: 'Start your assigned exercises',
     loading: 'Loading your home screen…',
@@ -389,6 +404,7 @@ export const strings = Object.freeze({
     rest: {
       title: 'Rest',
       remaining: (seconds: number) => `${seconds} seconds left`,
+      motivation: (motivation: string) => `Remember your why: ${motivation}`,
       extend: '+30 s',
       extendAriaLabel: 'Add thirty seconds of rest',
       skip: 'Continue',
