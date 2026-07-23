@@ -93,14 +93,14 @@ export function SessionScreen() {
         <div className="relative">
           <CameraPreview ref={s.previewRef} dimmed={s.reducedFacePreview} />
           <FeedbackCanvas onMount={s.mountFeedbackCanvas} onUnmount={s.unmountFeedbackCanvas} />
+          <DemoWatermark label={strings.session.demoWatermark} visible={s.isDemo} />
           {s.phase === 'active' && s.coachText ? (
-            <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center px-4">
-              <p className="rounded-lg bg-background/90 px-5 py-2.5 text-center text-lg font-medium text-foreground shadow-sm sm:text-xl">
+            <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-4">
+              <p className="rounded-lg bg-background/90 px-5 py-2.5 text-center text-xl font-semibold shadow-md">
                 {s.coachText}
               </p>
             </div>
           ) : null}
-          <DemoWatermark label={strings.session.demoWatermark} visible={s.isDemo} />
           <QuickSetupOverlay
             visible={s.phase === 'quickSetup'}
             title={strings.session.quickSetup.title}
@@ -142,6 +142,7 @@ export function SessionScreen() {
                   <SessionStatusStrip message={s.status.message} variant={s.status.variant} />
                 ) : null}
                 <SessionRepCounter summary={s.repSummary} label={strings.session.repCounterLabel} />
+                <p className="text-center text-sm text-muted-foreground">{strings.session.coach.legend}</p>
               </div>
             ) : null}
 
