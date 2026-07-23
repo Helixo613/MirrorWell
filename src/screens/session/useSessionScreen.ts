@@ -144,7 +144,16 @@ export function useSessionScreen(): UseSessionScreenResult {
         if (startedRef.current) return;
         startedRef.current = true;
         await SessionController.start(sessionExercises);
-        if (!mountedRef.current) return;
+        if (!mountedRef.current) {
+          // Unmounted while start() was still opening the camera. The teardown effect's
+          // deferred stop() may already have run (a macrotask) BEFORE start() resolved, when
+          // the stream did not exist yet — so its CaptureService.stop() was a no-op and the
+          // stream that arrived afterward would leak. Release it here (idempotent with the
+          // teardown). The hard camera rule (CLAUDE.md): open only while this screen is mounted.
+          void SessionController.stop('user_stopped').catch(() => {});
+          CaptureService.stop();
+          return;
+        }
         setPhase('active');
       } catch (err) {
         if (mountedRef.current) applyStartError(err);
@@ -272,10 +281,21 @@ export function useSessionScreen(): UseSessionScreenResult {
     void (async () => {
       try {
         await runDemoQuickSetup(DEMO_EXERCISE_ID);
-        if (!mountedRef.current) return;
+        if (!mountedRef.current) {
+          // runDemoQuickSetup's capture windows release the camera on their own teardown, so a
+          // mid-quick-setup unmount leaves nothing open here — but start() below has not run.
+          CaptureService.stop();
+          return;
+        }
         startedRef.current = true;
         await SessionController.start([DEMO_EXERCISE_ID]);
-        if (!mountedRef.current) return;
+        if (!mountedRef.current) {
+          // Same race as the real path: start() may have opened the camera after the deferred
+          // teardown already ran. Release it here (idempotent).
+          void SessionController.stop('user_stopped').catch(() => {});
+          CaptureService.stop();
+          return;
+        }
         setPhase('active');
       } catch (err) {
         if (mountedRef.current) applyStartError(err);
