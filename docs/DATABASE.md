@@ -18,7 +18,8 @@ This file is the schema. Copy verbatim to `src/data/schema.ts`.
 ```typescript
 // src/data/schema.ts — canonical schema for mirrorwell_db, version 1.
 // RULE (non-negotiable): only derived numeric data. Never images, video,
-// raw landmark arrays, audio, names, emails, or free-text health notes.
+// raw landmark arrays, audio, emails, or free-text health notes. The narrow
+// nickname exception is optional, user-chosen, local-only, and never exported.
 // RULE: the type exports below (ExerciseId, RegionId, EndReason, row types)
 // are the single canonical definitions. src/config/exercises.ts and all
 // services IMPORT them from here — never redeclare them anywhere.
@@ -31,6 +32,7 @@ export type EndReason = 'completed' | 'user_stopped' | 'red_flag_stopped' | 'qua
 export interface UserProfile {
   profileId: string;              // PK, uuid v4
   createdAt: string;              // UTC ISO 8601
+  nickname?: string;              // optional display name, trimmed length 1..30; never exported
   affectedSide: 'left' | 'right' | 'unknown';  // display orientation ONLY, never scoring
   assignedExercises: ExerciseId[];// therapist-assigned subset, length 1..4
   attestedAt: string | null;      // UTC ISO 8601; null until onboarding attestation
@@ -126,6 +128,7 @@ export const db = new MirrorWellDB();
 |---|---|
 | `user_profile.assignedExercises` | Non-empty array; every entry a valid `ExerciseId`; no duplicates |
 | `user_profile.affectedSide` | One of `left`/`right`/`unknown` |
+| `user_profile.nickname` | Optional string; trimmed before storage; empty omitted; trimmed length `1..30`; excluded from `ExportService` JSON and HTML |
 | `user_profile.profileId` | At most one local profile row. `saveProfile` updates the existing row only when `profileId` matches; a different `profileId` is rejected with `VALIDATION_FAILED`. |
 | `calibration_baseline.qualityScore` | `[0..1]`; **`< 0.7` rejected with `QUALITY_TOO_LOW` (not VALIDATION_FAILED)** |
 | `calibration_baseline.neutralStats` | All four `RegionId` keys present; each side has `{u, v}`; **all components finite only — NOT required `> 0`** (signed face-local projections are legitimately negative) |
@@ -146,7 +149,7 @@ export const db = new MirrorWellDB();
 
 | Table | Stores | Written by | Read by | Retention |
 |---|---|---|---|---|
-| `user_profile` | The single local profile: affected side, assigned exercises, attestation | `OnboardingScreen` via `SafetyGate`/`StorageService.saveProfile` | `SafetyGate`, `SessionController`, `CaregiverScreen`, `ExportService` | Until user deletes (`deleteAllData` or clearing site data). No automatic expiry — it's the user's own device and data |
+| `user_profile` | The single local profile: optional local-only nickname, affected side, assigned exercises, attestation | `OnboardingScreen` via `SafetyGate`/`StorageService.saveProfile` | `SafetyGate`, `SessionController`, `CaregiverScreen`; `ExportService` reads only its explicit allow-list and excludes `nickname` | Until user deletes (`deleteAllData` or clearing site data). No automatic expiry — it's the user's own device and data |
 | `calibration_baseline` | Neutral vector geometry + per-exercise comfortable max + capture quality + baseline-paired noise floors (`noiseFloorSymmetry`, `noiseFloorDisplacement`) | `CalibrationFlow` via `StorageService.saveBaseline` (noise fields from `runNoiseFloorSelfTest` during held comfortable-max / neutral captures) | `NormalizationLayer` (via `getActiveBaseline`), `MetricEngine`, `TrendsService` (partition key + noise floor) | All baselines kept (historical sessions reference them); user deletion removes all |
 | `session_record` | One row per session: window, baseline link, end reason | `SessionController.stop` via `StorageService.saveSession` (single transaction with children) | `TrendsService`, `SummaryScreen`, `CaregiverScreen`, `ExportService` | Until user deletes |
 | `exercise_result` | Per-exercise aggregates within a session | Same transaction as parent | Same readers | Until user deletes |
@@ -161,6 +164,7 @@ There is no server; **100% of data is on-device**. Per-category privacy reasonin
 
 | Category | Tables/fields | Why on-device only |
 |---|---|---|
+| Optional display identity | `nickname` | User-chosen display name used only for an on-device greeting. It is never included in JSON or HTML exports. |
 | Condition-adjacent identity | `affectedSide`, `assignedExercises` | Reveals a medical condition; combined with any identifier off-device it becomes regulated health data. Locally it never joins an identity — the app stores no name, email, or account. |
 | Face-derived calibration geometry | `neutralStats`, `comfortableMax`, `neutralActivation`, `noiseFloorSymmetry`, `noiseFloorDisplacement` | Derived from the user's face at rest / held gentle max. Deliberately reduced to a handful of region offsets (not a biometric template, not landmarks), but face-derived data leaving the device would demand consent and security machinery a student project cannot honestly operate. |
 | Exercise performance | `session_record`, `exercise_result`, `rep_metric` | Longitudinal health-behavior data. The clinician gets it via user-initiated export files; a server copy would add breach risk and zero product value. |

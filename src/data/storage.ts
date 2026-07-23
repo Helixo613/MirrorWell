@@ -17,6 +17,7 @@ import type {
 } from './schema.ts';
 import { MirrorWellError } from './errors.ts';
 import { SafetyGate } from '../session/safety.ts';
+import { thresholds } from '../config/thresholds.ts';
 
 export interface RepMetricInput extends Omit<RepMetric, 'resultId'> {}
 export interface ExerciseResultInput extends Omit<ExerciseResult, 'sessionId'> {
@@ -75,7 +76,7 @@ async function withDbErrors<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-function assertProfileShape(p: UserProfile): void {
+function normalizeProfile(p: UserProfile): UserProfile {
   assertUuidV4(p.profileId, 'profileId');
   if (!['left', 'right', 'unknown'].includes(p.affectedSide)) {
     throw new MirrorWellError('VALIDATION_FAILED', `invalid affectedSide: ${p.affectedSide}`);
@@ -93,6 +94,12 @@ function assertProfileShape(p: UserProfile): void {
     }
     seen.add(ex);
   }
+  const nickname = p.nickname?.trim();
+  if (nickname !== undefined && nickname.length > thresholds.profile.nicknameMaxLength) {
+    throw new MirrorWellError('VALIDATION_FAILED', 'nickname is too long');
+  }
+  const { nickname: _nickname, ...profile } = p;
+  return nickname ? { ...profile, nickname } : profile;
 }
 
 function isFiniteVec(v: unknown): v is { u: number; v: number } {
@@ -219,13 +226,13 @@ export const StorageService = {
   async saveProfile(p: UserProfile): Promise<void> {
     return withDbErrors(async () => {
       assertDemoWritable();
-      assertProfileShape(p);
+      const profile = normalizeProfile(p);
       await db.transaction('rw', db.user_profile, async () => {
         const existing = await db.user_profile.toCollection().first();
-        if (existing && existing.profileId !== p.profileId) {
+        if (existing && existing.profileId !== profile.profileId) {
           throw new MirrorWellError('VALIDATION_FAILED', 'a different local profile already exists');
         }
-        await db.user_profile.put(p);
+        await db.user_profile.put(profile);
       });
     });
   },

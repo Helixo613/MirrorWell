@@ -8,7 +8,7 @@ describe('thresholds', () => {
     expect(Object.keys(thresholds).sort()).toEqual(
       [
         'blendshapes', 'calibration', 'landmarker', 'liveDemo', 'metrics',
-        'qualityGates', 'reps', 'session', 'v1Protocol',
+        'profile', 'qualityGates', 'reps', 'session', 'v1Protocol',
         // UI presentation tunables (frontend salvage, Gate 0)
         'home', 'summary', 'trends', 'export', 'settings',
       ].sort(),
@@ -63,6 +63,11 @@ describe('thresholds', () => {
     expect(Object.keys(thresholds.session).sort()).toEqual(['metricEventMinIntervalMs', 'qualityProblemOfferStopMs', 'restExtendSeconds'].sort());
   });
 
+  it('profile exposes local-only text limits', () => {
+    expect(Object.keys(thresholds.profile)).toEqual(['nicknameMaxLength']);
+    expect(thresholds.profile.nicknameMaxLength).toBe(30);
+  });
+
   it('v1Protocol exposes MODEL_AND_DATA §7 capture tunables', () => {
     expect(Object.keys(thresholds.v1Protocol).sort()).toEqual(
       [
@@ -88,7 +93,11 @@ describe('thresholds', () => {
   });
 
   it('exposes the UI presentation namespaces (frontend salvage; API.md §15)', () => {
-    expect(Object.keys(thresholds.home)).toEqual(['sessionLookbackDays']);
+    expect(Object.keys(thresholds.home)).toEqual([
+      'sessionLookbackDays',
+      'afternoonStartHour',
+      'eveningStartHour',
+    ]);
     expect(Object.keys(thresholds.summary).sort()).toEqual(
       ['symmetryFairlyEvenMin', 'symmetryMostlyEvenMin', 'symmetrySomeDifferenceMin'].sort(),
     );

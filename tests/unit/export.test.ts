@@ -180,6 +180,16 @@ beforeEach(async () => {
 });
 
 describe('ExportService.generateSummary — schema validation', () => {
+  it('never exports the local-only nickname anywhere in the JSON', async () => {
+    await seedAttestedExportFixture();
+    const profile = await StorageService.getProfile();
+    await StorageService.saveProfile({ ...profile!, nickname: 'Ravi' });
+
+    const { json } = await ExportService.generateSummary(RANGE);
+
+    expect(await json.text()).not.toContain('"nickname"');
+  });
+
   it('produces a JSON payload that validates against tests/schemas/export.schema.json', async () => {
     await seedAttestedExportFixture();
 

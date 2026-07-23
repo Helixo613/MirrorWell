@@ -1,5 +1,8 @@
 import { strings } from '@/config/strings';
+import { thresholds } from '@/config/thresholds';
 import { CheckboxGroup } from '@/components/forms/CheckboxGroup';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { CollapsibleDetails } from '@/components/content/CollapsibleDetails';
 import {
   BulletList,
@@ -26,6 +29,8 @@ export interface OnboardingStepContentProps {
   onAttestationToggle: (key: AttestationKey, checked: boolean) => void;
   selectedExercises: ExerciseId[];
   onExerciseToggle: (id: ExerciseId, checked: boolean) => void;
+  nickname: string;
+  onNicknameChange: (value: string) => void;
   disabled?: boolean;
 }
 
@@ -35,6 +40,8 @@ export function OnboardingStepContent({
   onAttestationToggle,
   selectedExercises,
   onExerciseToggle,
+  nickname,
+  onNicknameChange,
   disabled = false,
 }: OnboardingStepContentProps) {
   const attestationOptions = useAttestationOptions();
@@ -100,6 +107,23 @@ export function OnboardingStepContent({
             onToggle={onAttestationToggle}
             disabled={disabled}
           />
+          <div className="space-y-2">
+            <Label htmlFor="onboarding-nickname">
+              {strings.onboarding.nickname.label}
+            </Label>
+            <Input
+              id="onboarding-nickname"
+              value={nickname}
+              maxLength={thresholds.profile.nicknameMaxLength}
+              placeholder={strings.onboarding.nickname.placeholder}
+              aria-describedby="onboarding-nickname-hint"
+              disabled={disabled}
+              onChange={(event) => onNicknameChange(event.target.value)}
+            />
+            <p id="onboarding-nickname-hint" className="text-sm text-muted-foreground">
+              {strings.onboarding.nickname.hint}
+            </p>
+          </div>
         </OnboardingStepFrame>
       );
     }

@@ -68,6 +68,11 @@ export const thresholds = Object.freeze({
     restExtendSeconds: 30,
   }),
 
+  // Optional local-only profile text. Owning section: docs/DATABASE.md §3.
+  profile: Object.freeze({
+    nicknameMaxLength: 30,
+  }),
+
   // Live V1 protocol harness (dev-only). Owning section: docs/MODEL_AND_DATA.md §7
   // (B1a/B1b/B2/B3 statistical protocol: 2 trials × 6 phases, ≥70% OK, yaw band [7°,13°]).
   v1Protocol: Object.freeze({
@@ -94,6 +99,8 @@ export const thresholds = Object.freeze({
   /** FRONTEND §2.3 — how far back HomeScreen looks for the "last session" line. */
   home: Object.freeze({
     sessionLookbackDays: 7,
+    afternoonStartHour: 12,
+    eveningStartHour: 18,
   }),
   /** FRONTEND §2.5 — plain-language symmetry buckets (no numeric grades). */
   summary: Object.freeze({
