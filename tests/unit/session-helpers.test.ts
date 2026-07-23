@@ -50,6 +50,16 @@ describe('demoComfortableMax — the demo baseline invariant', () => {
     expect(() => demoComfortableMax([-0.2, -0.1])).toThrow(MirrorWellError);
   });
 
+  it('throws NO_BASELINE when the peak is below activationFloor (a held-still face → noise peak)', () => {
+    // A noise-level comfortableMax makes effortIndex = activation / comfortableMax read pure
+    // sensor noise as full-effort movement — phantom reps at a timer-like cadence.
+    expect(() => demoComfortableMax([0.01, 0.02, 0.04])).toThrow(
+      expect.objectContaining({ code: 'NO_BASELINE' }),
+    );
+    // At the floor exactly is accepted (>= activationFloor, mirroring the SI activation rule).
+    expect(demoComfortableMax([0.05])).toBe(0.05);
+  });
+
   it('throws NO_BASELINE on non-finite input', () => {
     expect(() => demoComfortableMax([Number.NEGATIVE_INFINITY])).toThrow(MirrorWellError);
     expect(() => demoComfortableMax([Number.NaN])).toThrow(MirrorWellError);

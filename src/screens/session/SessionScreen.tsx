@@ -101,6 +101,13 @@ export function SessionScreen() {
             actionLabel={strings.session.quickSetup.action}
             runningLabel={strings.session.quickSetup.running}
             isRunning={s.quickSetupRunning}
+            phaseText={
+              s.quickSetupPhase === 'neutral'
+                ? strings.session.quickSetup.phaseNeutral
+                : s.quickSetupPhase === 'gentle'
+                  ? strings.session.quickSetup.phaseGentle
+                  : null
+            }
             onStart={s.handleQuickSetup}
           />
         </div>

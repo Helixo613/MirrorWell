@@ -374,6 +374,10 @@ export const strings = Object.freeze({
       body: 'Relax your face for a few seconds, then one gentle smile. This stays on your device only.',
       action: 'Start quick setup',
       running: 'Setting up…',
+      // Live phase prompts shown WHILE capturing (preview stays visible) — the user cannot time
+      // the gentle rep without being told when the second window starts (FRONTEND §2.4).
+      phaseNeutral: 'Relax your face and look at the camera…',
+      phaseGentle: 'Now — one gentle smile, about half of what feels possible.',
     },
     demo: {
       ready: "I'm ready",

@@ -22,6 +22,11 @@ import { demoComfortableMax } from '@/screens/session/sessionHelpers';
 // The demo exercise: any assignable exercise (has a validated blendshapePair) — never EX_PUCKER.
 export const DEMO_EXERCISE_ID: ExerciseId = 'EX_SMILE';
 
+/** The two capture phases, surfaced so the overlay can tell the user WHEN to smile. Without a
+ *  live prompt the neutral and gentle windows run back-to-back invisibly, the user holds still
+ *  through both, and the "gentle rep" peak is pure sensor noise (see demoComfortableMax). */
+export type QuickSetupPhase = 'neutral' | 'gentle';
+
 interface Capture {
   total: number;
   approved: ApprovedFrame[];
@@ -82,14 +87,19 @@ function gentleActivation(frame: ApprovedFrame, pair: { left: string; right: str
  * `aggregateNeutral([])` would produce NaN stats. That loud failure is the designed behaviour
  * (ARCHITECTURE §11): a demo that appears to run while detecting nothing would be worse.
  */
-export async function runDemoQuickSetup(exerciseId: ExerciseId): Promise<void> {
+export async function runDemoQuickSetup(
+  exerciseId: ExerciseId,
+  onPhase?: (phase: QuickSetupPhase) => void,
+): Promise<void> {
   const pair = exercises[exerciseId]!.blendshapePair;
   if (!pair) {
     throw new MirrorWellError('VALIDATION_FAILED', `no blendshapePair for demo exercise ${exerciseId}`);
   }
 
   const windowMs = thresholds.calibration.captureSeconds * 1000;
+  onPhase?.('neutral');
   const neutral = await captureWindow(windowMs);
+  onPhase?.('gentle');
   const gentle = await captureWindow(windowMs);
 
   if (neutral.approved.length === 0) {

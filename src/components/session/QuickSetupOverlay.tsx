@@ -8,6 +8,8 @@ export interface QuickSetupOverlayProps {
   actionLabel: string;
   runningLabel: string;
   isRunning: boolean;
+  /** Live prompt for the current capture phase (relax / gentle smile). Shown while running. */
+  phaseText?: string | null;
   onStart: () => void;
   className?: string;
 }
@@ -19,11 +21,34 @@ export function QuickSetupOverlay({
   actionLabel,
   runningLabel,
   isRunning,
+  phaseText,
   onStart,
   className,
 }: QuickSetupOverlayProps) {
   if (!visible) {
     return null;
+  }
+
+  // While capturing, the full-screen card gives way to a slim live prompt so the user can SEE
+  // themselves in the preview and time the gentle rep to the phase text (FRONTEND §2.4). The
+  // prompt is aria-live: the phase change is announced without stealing focus.
+  if (isRunning) {
+    return (
+      <div
+        className={cn(
+          'absolute inset-x-0 bottom-0 z-30 flex justify-center p-4',
+          className,
+        )}
+      >
+        <p
+          role="status"
+          aria-live="polite"
+          className="rounded-md bg-background/90 px-4 py-3 text-center text-base font-medium shadow-sm"
+        >
+          {phaseText ?? runningLabel}
+        </p>
+      </div>
+    );
   }
 
   return (

@@ -46,18 +46,21 @@ export function hapticCueEnabled(settings: AppSettings | null, available: boolea
 
 /**
  * The demo baseline invariant (ARCHITECTURE §11, TESTS.md §2): the gentle rep must produce a
- * positive, finite peak activation, or the demo has measured nothing and there is no honest
- * baseline. A faceless device yields zero approved gentle-rep frames → `Math.max(...[]) ===
- * -Infinity` → this throws `NO_BASELINE` loudly, instead of letting a `comfortableMax <= 0` sail
- * through `MetricEngine.setBaseline` (which only checks presence) and leaving the demo silently
- * detecting nothing.
+ * peak activation at or above `thresholds.blendshapes.activationFloor`, or the demo has
+ * measured nothing and there is no honest baseline. A faceless device yields zero approved
+ * gentle-rep frames → `Math.max(...[]) === -Infinity` → this throws `NO_BASELINE` loudly. The
+ * floor matters just as much as the emptiness check: a user who held STILL through the gentle
+ * window produces a tiny-but-positive noise peak (~0.01–0.05), and `effortIndex =
+ * activation / comfortableMax` then reads pure sensor noise as full-effort movement — reps
+ * fire on their own at a timer-like cadence. activationFloor is the same "below this is
+ * indistinguishable from noise" boundary the SI computation already uses (API §15).
  */
 export function demoComfortableMax(gentleActivations: readonly number[]): number {
   let peak = Number.NEGATIVE_INFINITY;
   for (const value of gentleActivations) {
     if (value > peak) peak = value;
   }
-  if (!Number.isFinite(peak) || peak <= 0) {
+  if (!Number.isFinite(peak) || peak < thresholds.blendshapes.activationFloor) {
     throw new MirrorWellError('NO_BASELINE', 'demo quick-setup captured no measurable movement');
   }
   return peak;

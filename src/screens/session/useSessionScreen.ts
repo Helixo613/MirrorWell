@@ -12,7 +12,11 @@ import { LandmarkEngine } from '@/sensing/landmarks';
 import type { QualityState } from '@/sensing/quality';
 import { SessionController } from '@/session/controller';
 import { FeedbackRenderer } from '@/session/renderer';
-import { DEMO_EXERCISE_ID, runDemoQuickSetup } from '@/screens/session/demoQuickSetup';
+import {
+  DEMO_EXERCISE_ID,
+  runDemoQuickSetup,
+  type QuickSetupPhase,
+} from '@/screens/session/demoQuickSetup';
 import { REST_EXTEND_SECONDS, restRemainingSeconds } from '@/screens/session/sessionHelpers';
 import type { SummaryLocationState } from '@/types/summary';
 
@@ -64,6 +68,7 @@ export interface UseSessionScreenResult {
   stopDialogOpen: boolean;
   qualityOfferOpen: boolean;
   quickSetupRunning: boolean;
+  quickSetupPhase: QuickSetupPhase | null;
   resuming: boolean;
   errorExitIsCalibration: boolean;
   error: ErrorNotice | null;
@@ -104,6 +109,7 @@ export function useSessionScreen(): UseSessionScreenResult {
   const [stopDialogOpen, setStopDialogOpen] = useState(false);
   const [qualityOfferOpen, setQualityOfferOpen] = useState(false);
   const [quickSetupRunning, setQuickSetupRunning] = useState(false);
+  const [quickSetupPhase, setQuickSetupPhase] = useState<QuickSetupPhase | null>(null);
   const [resuming, setResuming] = useState(false);
   const [errorExit, setErrorExit] = useState<string>('/');
   const [error, setError] = useState<ErrorNotice | null>(null);
@@ -314,7 +320,9 @@ export function useSessionScreen(): UseSessionScreenResult {
     setError(null);
     void (async () => {
       try {
-        await runDemoQuickSetup(DEMO_EXERCISE_ID);
+        await runDemoQuickSetup(DEMO_EXERCISE_ID, (phase) => {
+          if (mountedRef.current) setQuickSetupPhase(phase);
+        });
         if (!mountedRef.current) {
           // runDemoQuickSetup's capture windows release the camera on their own teardown, so a
           // mid-quick-setup unmount leaves nothing open here — but start() below has not run.
@@ -334,7 +342,10 @@ export function useSessionScreen(): UseSessionScreenResult {
       } catch (err) {
         if (mountedRef.current) applyStartError(err);
       } finally {
-        if (mountedRef.current) setQuickSetupRunning(false);
+        if (mountedRef.current) {
+          setQuickSetupRunning(false);
+          setQuickSetupPhase(null);
+        }
       }
     })();
   }, [applyStartError]);
@@ -433,6 +444,7 @@ export function useSessionScreen(): UseSessionScreenResult {
     stopDialogOpen,
     qualityOfferOpen,
     quickSetupRunning,
+    quickSetupPhase,
     resuming,
     errorExitIsCalibration: errorExit === '/calibration',
     error,
