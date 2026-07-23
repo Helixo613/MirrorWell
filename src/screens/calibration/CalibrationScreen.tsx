@@ -160,10 +160,12 @@ export function CalibrationScreen() {
     });
   }, [ready, paused]);
 
-  // FRONTEND §6: hidden tab → camera off (light off, privacy). But captureFor() in
-  // src/session/calibration.ts closes its window on an ARRIVING FRAME — stopping the camera
-  // mid-capture means no frame ever closes it and the promise never settles, hanging the UI
-  // in "Capturing…" forever. So a hide that lands during a capture is deferred (below).
+  // FRONTEND §6: hidden tab → camera off (light off, privacy). A hide that lands during a
+  // capture is still deferred (below): captureFor() in src/session/calibration.ts now aborts
+  // rather than hanging when the camera stops mid-window (S1-REQ-3), but aborting turns a
+  // transient tab-blink into a blocking CAMERA_UNAVAILABLE notice. Deferring lets the capture
+  // finish and stops the camera immediately afterwards (settleCapture), which is both quieter
+  // and still off-within-one-window.
   useEffect(() => {
     const onVisibilityChange = () => {
       if (document.hidden) {
