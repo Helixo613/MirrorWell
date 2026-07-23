@@ -105,8 +105,22 @@ export async function runDemoQuickSetup(
   if (neutral.approved.length === 0) {
     throw new MirrorWellError('NO_BASELINE', 'demo quick-setup captured no neutral frames');
   }
-  // Throws NO_BASELINE when the gentle rep produced no measurable activation (peak <= 0).
-  const peak = demoComfortableMax(gentle.approved.map((frame) => gentleActivation(frame, pair)));
+  // Median resting activation for the demo pair, from the neutral window — effortIndex rebases
+  // on it (ARCHITECTURE §7), same as the real calibration's neutralActivation capture.
+  const neutralValues = neutral.approved
+    .map((frame) => gentleActivation(frame, pair))
+    .sort((a, b) => a - b);
+  const mid = Math.floor(neutralValues.length / 2);
+  const restingActivation =
+    neutralValues.length % 2 === 0
+      ? (neutralValues[mid - 1]! + neutralValues[mid]!) / 2
+      : neutralValues[mid]!;
+
+  // Throws NO_BASELINE when the gentle rep never rose measurably above the resting read.
+  const peak = demoComfortableMax(
+    gentle.approved.map((frame) => gentleActivation(frame, pair)),
+    restingActivation,
+  );
 
   const neutralStats = aggregateNeutral(neutral.approved.map(measureAbsolute));
   const neutralTotal = neutral.total + gentle.total;
@@ -118,6 +132,7 @@ export async function runDemoQuickSetup(
     capturedAt: new Date().toISOString(),
     neutralStats,
     comfortableMax: { [exerciseId]: peak },
+    neutralActivation: { [exerciseId]: restingActivation },
     qualityScore: neutralTotal === 0 ? 1 : approvedTotal / neutralTotal,
     // In-memory only; no noise floor is measured for a demo and nothing reads these (demo does
     // not persist and TrendsService never runs). Must be finite & >= 0 for NormalizationLayer.

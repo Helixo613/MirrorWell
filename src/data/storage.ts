@@ -140,6 +140,28 @@ function assertComfortableMax(max: CalibrationBaseline['comfortableMax'], assign
   }
 }
 
+function assertNeutralActivation(b: CalibrationBaseline, assigned: ExerciseId[]): void {
+  if (b.neutralActivation === undefined) return; // optional: pre-field baselines behave as 0
+  const assignedSet = new Set(assigned);
+  for (const [key, value] of Object.entries(b.neutralActivation)) {
+    if (!assignedSet.has(key as ExerciseId)) {
+      throw new MirrorWellError('VALIDATION_FAILED', `neutralActivation key ${key} not in assignedExercises`);
+    }
+    if (!Number.isFinite(value) || (value as number) < 0 || (value as number) >= 1) {
+      throw new MirrorWellError('VALIDATION_FAILED', `neutralActivation.${key} must be finite in [0, 1)`);
+    }
+    const max = b.comfortableMax[key as ExerciseId];
+    // effortIndex divides by (comfortableMax − neutralActivation); a non-positive span would
+    // make the whole exercise's effort undefined, so it is rejected at write time.
+    if (max !== undefined && (value as number) >= max) {
+      throw new MirrorWellError(
+        'VALIDATION_FAILED',
+        `neutralActivation.${key} must be < comfortableMax.${key}`,
+      );
+    }
+  }
+}
+
 function assertSessionRecordInput(s: SessionRecordInput): void {
   assertUuidV4(s.sessionId, 'sessionId');
   assertUuidV4(s.profileId, 'profileId');
@@ -243,6 +265,7 @@ export const StorageService = {
           throw new MirrorWellError('VALIDATION_FAILED', `unknown profileId: ${b.profileId}`);
         }
         assertComfortableMax(b.comfortableMax, profile.assignedExercises);
+        assertNeutralActivation(b, profile.assignedExercises);
 
         // "Exactly one active" invariant: deactivate this profile's current active row
         // in the same transaction as the insert.

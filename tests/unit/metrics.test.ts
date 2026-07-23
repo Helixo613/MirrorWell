@@ -88,6 +88,40 @@ describe('MetricEngine — NO_BASELINE', () => {
   });
 });
 
+describe('MetricEngine — neutral-rebased effortIndex (ARCHITECTURE §7)', () => {
+  // MediaPipe reports nonzero RESTING activation for some pairs (browOuterUp, eyeBlink). Without
+  // the rebase, resting effort sat above repStart/repEnd thresholds: a rep opened at rest and
+  // only closed on the OPPOSITE movement (furrow / eyes wide), while the intended movement pinned
+  // effort over the ease-off ceiling — the inverted behaviour reported for those two exercises.
+  it('effort is 0 at the resting read and 1 at comfortableMax', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline({ ...baseline({ EX_SMILE: 0.6 }), neutralActivation: { EX_SMILE: 0.2 } });
+    MetricEngine.reset();
+    expect(MetricEngine.compute(bsFrame(0.2, 0.2, 0), 'EX_SMILE').effortIndex).toBeCloseTo(0, 6);
+    MetricEngine.reset();
+    expect(MetricEngine.compute(bsFrame(0.6, 0.6, 0), 'EX_SMILE').effortIndex).toBeCloseTo(1, 6);
+    // Below the resting read (the opposite movement suppressing the pair) clamps to 0, never negative.
+    MetricEngine.reset();
+    expect(MetricEngine.compute(bsFrame(0.05, 0.05, 0), 'EX_SMILE').effortIndex).toBe(0);
+  });
+
+  it('a baseline without neutralActivation behaves as neutral = 0 (pre-field rows)', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline(baseline({ EX_SMILE: 0.5 }));
+    MetricEngine.reset();
+    expect(MetricEngine.compute(bsFrame(0.25, 0.25, 0), 'EX_SMILE').effortIndex).toBeCloseTo(0.5, 6);
+  });
+
+  it('neutralActivation >= comfortableMax throws NO_BASELINE (effort denominator must stay positive)', async () => {
+    const { MetricEngine } = await import('../../src/metrics/metrics.ts');
+    MetricEngine.setBaseline({ ...baseline({ EX_SMILE: 0.3 }), neutralActivation: { EX_SMILE: 0.3 } });
+    MetricEngine.reset();
+    expect(() => MetricEngine.compute(bsFrame(0.5, 0.5, 0), 'EX_SMILE')).toThrow(
+      expect.objectContaining({ code: 'NO_BASELINE' }),
+    );
+  });
+});
+
 describe('MetricEngine — blendshape symmetryIndex', () => {
   it('symmetric pair → SI 1', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');

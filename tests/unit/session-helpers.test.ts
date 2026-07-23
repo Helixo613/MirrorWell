@@ -50,6 +50,15 @@ describe('demoComfortableMax — the demo baseline invariant', () => {
     expect(() => demoComfortableMax([-0.2, -0.1])).toThrow(MirrorWellError);
   });
 
+  it('applies the floor RELATIVE to the resting activation (neutral rebase)', () => {
+    // A pair with a nonzero neutral read (eyeBlink-like): a peak barely above rest is a
+    // held-still capture even though it clears the absolute floor.
+    expect(() => demoComfortableMax([0.32, 0.34], 0.3)).toThrow(
+      expect.objectContaining({ code: 'NO_BASELINE' }),
+    );
+    expect(demoComfortableMax([0.4], 0.3)).toBe(0.4);
+  });
+
   it('throws NO_BASELINE when the peak is below activationFloor (a held-still face → noise peak)', () => {
     // A noise-level comfortableMax makes effortIndex = activation / comfortableMax read pure
     // sensor noise as full-effort movement — phantom reps at a timer-like cadence.

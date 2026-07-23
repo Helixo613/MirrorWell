@@ -363,23 +363,35 @@ export function useSessionScreen(): UseSessionScreenResult {
   const openStopDialog = useCallback(() => setStopDialogOpen(true), []);
   const closeStopDialog = useCallback(() => setStopDialogOpen(false), []);
 
+  // User-initiated stops surface a failure loudly. On success stop() emits sessionEnded and the
+  // screen navigates away; on failure (e.g. the session record is rejected at save) a silent
+  // catch left a live-looking screen where every control was a no-op — the controller's
+  // idempotent-stop guard swallows all later advance()/stop() calls. The unmount/teardown stops
+  // above keep their silent catch: there is no UI left to inform.
+  const applyStopError = useCallback(
+    (err: unknown) => {
+      if (mountedRef.current) applyStartError(err);
+    },
+    [applyStartError],
+  );
+
   const handleJustStop = useCallback(() => {
     setStopDialogOpen(false);
-    void SessionController.stop('user_stopped').catch(() => {});
-  }, []);
+    void SessionController.stop('user_stopped').catch(applyStopError);
+  }, [applyStopError]);
 
   const handleFeltWrong = useCallback(() => {
     setStopDialogOpen(false);
-    void SessionController.stop('red_flag_stopped').catch(() => {});
-  }, []);
+    void SessionController.stop('red_flag_stopped').catch(applyStopError);
+  }, [applyStopError]);
 
   const handleQualityContinue = useCallback(() => {
     setQualityOfferOpen(false);
   }, []);
 
   const handleQualityEnd = useCallback(() => {
-    void SessionController.stop('quality_abandoned').catch(() => {});
-  }, []);
+    void SessionController.stop('quality_abandoned').catch(applyStopError);
+  }, [applyStopError]);
 
   const handleResume = useCallback(() => {
     if (resumingRef.current) return; // belt-and-braces with the disabled button

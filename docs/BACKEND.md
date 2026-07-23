@@ -103,7 +103,7 @@ reset(): void
 
 1. Read vector displacements `ΔL`, `ΔR` from `nf.regionDisplacements[regionId]`; mirror `ΔR̃ = (−ΔR.u, ΔR.v)`; magnitudes `mL = |ΔL|`, `mR = |ΔR̃|`.
 2. `symmetryIndex` (candidate `blendshape-si-v1`, 2026-07-19 — supersedes the geometry-displacement source after three geometry candidates failed V1 B3; evidence `tests/analysis/rejected/` + blendshape probes): for exercises with a `blendshapePair`, `L/R = blendshapes[pair.left/right]`, `act = max(L,R)`; if `act < blendshapes.activationFloor` → `null`; else `SI = min(L,R)/max(L,R)`. Unilateral → low SI (smirk probe: 0.43); symmetric → ~1. Exercises without a pair (EX_PUCKER, open decision) → `VALIDATION_FAILED`, never a silent fallback. The geometry formula (`(min/max)·max(0,cosθ)` over mirrored displacement vectors) remains documented for the retained geometry modules but is no longer the MetricSample source.
-3. `effortIndex = max(mL,mR) / comfortableMax[exerciseId]` (from baseline).
+3. `effortIndex = max(0, max(mL,mR) − neutralActivation[exerciseId]) / (comfortableMax[exerciseId] − neutralActivation[exerciseId])` (both from baseline; a missing `neutralActivation` behaves as 0 — ARCHITECTURE §7 documents why the resting rebase is required for pairs with nonzero neutral reads like `browOuterUp`/`eyeBlink`).
 4. Smooth both with a **trailing** 5-frame median (frames `t−4..t` only).
 5. **Gap rule:** if `timestampMs` gap from previous sample > `metrics.gapResetMs` (250): reset smoothing window + ease-off sustain; if `RepDetector` is `active`, abort the rep without emitting an event.
 
@@ -127,8 +127,8 @@ State machine per exercise: `DEMO → REPS → REST`; transitions: `advance()` (
 ### 1.7 `CalibrationFlow` (`src/session/calibration.ts`)
 
 ```typescript
-captureNeutral(): Promise<NeutralCaptureResult>                 // 3×3 s, measureAbsolute + median; throws QUALITY_TOO_LOW
-captureComfortableMax(exerciseId: ExerciseId): Promise<number>  // 3 gentle reps, median peak blendshape activation max(L,R), 0..1 units; throws QUALITY_TOO_LOW (also when the median peak < thresholds.blendshapes.activationFloor — a held-still capture yields a noise-level comfortableMax that makes effortIndex read any facial motion, incl. cross-activation bleed from unrelated movements, as a full-effort rep); no blendshapePair → VALIDATION_FAILED
+captureNeutral(): Promise<NeutralCaptureResult>                 // 3×3 s, measureAbsolute + median; also records neutralActivation[exerciseId] = median resting max(L,R) per assigned exercise (the effort rebase, ARCHITECTURE §7); throws QUALITY_TOO_LOW
+captureComfortableMax(exerciseId: ExerciseId): Promise<number>  // 3 gentle reps, median peak blendshape activation max(L,R), 0..1 units; throws QUALITY_TOO_LOW (also when the median peak − neutralActivation[exerciseId] < thresholds.blendshapes.activationFloor — the peak must clear the RESTING read, since an absolute floor passes pairs whose neutral read is already nonzero, e.g. eyeBlink/browOuterUp; a held-still capture yields a noise-level comfortableMax that makes effortIndex read any facial motion, incl. cross-activation bleed from unrelated movements, as a full-effort rep); no blendshapePair → VALIDATION_FAILED
 runNoiseFloorSelfTest(): Promise<number>                        // noiseFloorSymmetry (API §11): std of smoothed SI during held comfortable-max
 // noiseFloorDisplacement (activation std at neutral, B1a) is computed inside captureNeutral;
 // both floors are written onto calibration_baseline by saveBaseline — never into app_settings (DG-4)

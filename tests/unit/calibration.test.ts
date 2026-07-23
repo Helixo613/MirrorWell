@@ -239,6 +239,45 @@ describe('CalibrationFlow', () => {
     await expect(CalibrationFlow.runNoiseFloorSelfTest()).rejects.toMatchObject({ code: 'NO_BASELINE' });
   });
 
+  it('rejects a comfortable-max that never clears the RESTING activation (nonzero neutral read)', async () => {
+    // Pairs like eyeBlink/browOuterUp read well above zero on a neutral face; a peak barely
+    // above that resting read is a held-still capture, not a gentle rep. The floor is applied
+    // to (median peak − neutralActivation), never to the absolute peak.
+    await captureThree(CalibrationFlow.captureNeutral(), [
+      frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }),
+      frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }),
+      frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }),
+    ]);
+    const result = CalibrationFlow.captureComfortableMax('EX_SMILE');
+    await captureThree(result.then(() => undefined, () => undefined), [
+      frame({ mouthSmileLeft: 0.33, mouthSmileRight: 0.33 }),
+      frame({ mouthSmileLeft: 0.32, mouthSmileRight: 0.32 }),
+      frame({ mouthSmileLeft: 0.34, mouthSmileRight: 0.34 }),
+    ]);
+    await expect(result).rejects.toMatchObject({ code: 'QUALITY_TOO_LOW' });
+  });
+
+  it('persists neutralActivation from the neutral windows on the saved baseline', async () => {
+    await captureThree(CalibrationFlow.captureNeutral(), [
+      frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.1 }),
+      frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.1 }),
+      frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.1 }),
+    ]);
+    await captureThree(CalibrationFlow.captureComfortableMax('EX_SMILE'), [
+      frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }),
+      frame({ mouthSmileLeft: 0.7, mouthSmileRight: 0.7 }),
+      frame({ mouthSmileLeft: 0.9, mouthSmileRight: 0.9 }),
+    ]);
+    const noise = CalibrationFlow.runNoiseFloorSelfTest();
+    await waitForSubscriber();
+    emit(frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }), 0);
+    emit(frame({ mouthSmileLeft: 0.5, mouthSmileRight: 0.5 }), thresholds.calibration.captureSeconds * 1000);
+    await noise;
+
+    // Median resting max(mL,mR) over the neutral frames: max(0.3, 0.1) = 0.3 on every frame.
+    expect((await StorageService.getActiveBaseline())?.neutralActivation).toEqual({ EX_SMILE: 0.3 });
+  });
+
   it('rejects EX_PUCKER without a blendshape pair', async () => {
     await expect(CalibrationFlow.captureComfortableMax('EX_PUCKER')).rejects.toMatchObject({
       code: 'VALIDATION_FAILED',

@@ -17,6 +17,12 @@ let neutralStats: NeutralStats | null = null;
 let neutralQualityScore: number | null = null;
 let noiseFloorDisplacement = 0;
 let comfortableMax: Partial<Record<ExerciseId, number>> = {};
+// Median NEUTRAL max(mL,mR) per assigned exercise (ARCHITECTURE §7). MediaPipe reports nonzero
+// resting activation for some pairs (browOuterUp, eyeBlink), so raw act/comfortableMax keeps a
+// resting face permanently above the rep start/end thresholds: a "rep" opens on its own and can
+// only close when the user forces the signal to zero with the OPPOSITE movement (furrowing for
+// brow raise, eyes wide open for eye closure). effortIndex rebases on this value.
+let neutralActivation: Partial<Record<ExerciseId, number>> = {};
 let comfortableExercise: ExerciseId | null = null;
 
 function median(values: number[]): number {
@@ -127,6 +133,7 @@ async function makeBaseline(noiseFloorSymmetry: number): Promise<CalibrationBase
     capturedAt: new Date().toISOString(),
     neutralStats,
     comfortableMax,
+    neutralActivation,
     qualityScore: neutralQualityScore!,
     noiseFloorSymmetry,
     noiseFloorDisplacement,
@@ -136,6 +143,7 @@ async function makeBaseline(noiseFloorSymmetry: number): Promise<CalibrationBase
 
 async function captureNeutral(): Promise<{ neutralStats: NeutralStats; qualityScore: number }> {
   comfortableMax = {};
+  neutralActivation = {};
   comfortableExercise = null;
   await assertGated();
   const profile = await StorageService.getProfile();
@@ -147,7 +155,16 @@ async function captureNeutral(): Promise<{ neutralStats: NeutralStats; qualitySc
   }
   neutralStats = aggregateNeutral(capture.approved.map(measureAbsolute));
   neutralQualityScore = qualityScore;
-  noiseFloorDisplacement = standardDeviation(neutralActivations(capture.approved, profile?.assignedExercises ?? []));
+  const assigned = profile?.assignedExercises ?? [];
+  noiseFloorDisplacement = standardDeviation(neutralActivations(capture.approved, assigned));
+  for (const exerciseId of assigned) {
+    if (!assignableExercises.includes(exerciseId)) continue;
+    // Median (not mean) of per-frame resting activation — robust to blink/expression spikes
+    // inside the neutral windows, mirroring the median discipline of comfortableMax.
+    neutralActivation[exerciseId] = median(
+      capture.approved.map((frame) => activation(frame, exerciseId)),
+    );
+  }
   return { neutralStats, qualityScore };
 }
 
@@ -166,13 +183,14 @@ async function captureComfortableMax(exerciseId: ExerciseId): Promise<number> {
   }
   const result = median(peaks);
   // Same invariant the demo quick setup enforces (demoComfortableMax): a user who held still
-  // through the "gentle movements" windows yields a noise-level median peak, and
-  // effortIndex = activation / comfortableMax then reads ANY facial motion — including
-  // cross-activation from an unrelated movement (e.g. an eye squeeze bleeding into the brow
-  // blendshapes) — as a full-effort rep. activationFloor is the documented "below this is
-  // noise" boundary (API §15). QUALITY_TOO_LOW (not NO_BASELINE): CalibrationScreen coaches
-  // and offers a retry on this code, which is the right recovery here.
-  if (result < thresholds.blendshapes.activationFloor) {
+  // through the "gentle movements" windows yields a noise-level median peak, and effortIndex
+  // then reads ANY facial motion — including cross-activation from an unrelated movement (e.g.
+  // an eye squeeze bleeding into the brow blendshapes) — as a full-effort rep. The peak must
+  // clear the exercise's RESTING activation (captured in the neutral windows) by at least
+  // activationFloor, the documented "below this is noise" boundary (API §15): an absolute
+  // check misses pairs whose resting read is already nonzero (eyeBlink, browOuterUp).
+  // QUALITY_TOO_LOW (not NO_BASELINE): CalibrationScreen coaches and retries on this code.
+  if (result - (neutralActivation[exerciseId] ?? 0) < thresholds.blendshapes.activationFloor) {
     throw new MirrorWellError('QUALITY_TOO_LOW', 'comfortable-max capture measured no movement');
   }
   comfortableMax = { ...comfortableMax, [exerciseId]: result };

@@ -128,6 +128,7 @@ Persists a new calibration and atomically deactivates the previous active baseli
     "REGION_LIP":          { "left": { "u": 0.0, "v": 0.231 }, "right": { "u": 0.0, "v": 0.229 } }
   },
   "comfortableMax": { "EX_SMILE": 0.62, "EX_BROW_RAISE": 0.41 },
+  "neutralActivation": { "EX_SMILE": 0.02, "EX_BROW_RAISE": 0.11 },
   "qualityScore": 0.91,
   "noiseFloorSymmetry": 0.041,
   "noiseFloorDisplacement": 0.008,
@@ -135,7 +136,7 @@ Persists a new calibration and atomically deactivates the previous active baseli
 }
 ```
 **Response:** `"0b7e4d2a-1c3f-4a8b-b6d9-5e2f8a7c4d10"`
-**Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (missing region keys, non-finite vector components, missing noise fields, `comfortableMax` keys ⊄ `assignedExercises`); `QUALITY_TOO_LOW` (`qualityScore < 0.7` — distinct code so `CalibrationScreen` can show capture coaching, not a generic error)
+**Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (missing region keys, non-finite vector components, missing noise fields, `comfortableMax` keys ⊄ `assignedExercises`; `neutralActivation` — optional field, DATABASE §3 — keys ⊄ `assignedExercises`, values outside `[0, 1)`, or value ≥ `comfortableMax[key]`); `QUALITY_TOO_LOW` (`qualityScore < 0.7` — distinct code so `CalibrationScreen` can show capture coaching, not a generic error)
 
 > **Rule:** the isActive flip (old → 0, new → 1) happens inside the same Dexie transaction as the insert. Two active baselines must be impossible at any observable instant.
 

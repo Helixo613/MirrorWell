@@ -45,6 +45,7 @@ export interface CalibrationBaseline {
   // projections — legitimately negative; do NOT require > 0.
   neutralStats: Record<RegionId, { left: { u: number; v: number }; right: { u: number; v: number } }>;
   comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max peak blendshape activation max(L,R), 0..1 score units (was IOD-units displacement — blendshape-si-v1, pre-release reset per DG-5), keys = assignedExercises
+  neutralActivation?: Partial<Record<ExerciseId, number>>; // median RESTING max(L,R) per assigned exercise, from the neutral windows; effortIndex rebases on it (ARCHITECTURE §7). Optional: rows saved before this field behave as 0
   qualityScore: number;           // [0..1] = fraction of QUALITY_OK capture frames; >= 0.7 enforced
   noiseFloorSymmetry: number;     // std of smoothed SI over held comfortable-max captures (B1b)
   noiseFloorDisplacement: number; // std of blendshape activation max(L,R) over neutral OK frames (B1a, 0..1 score units — blendshape-si-v1)
@@ -129,6 +130,7 @@ export const db = new MirrorWellDB();
 | `calibration_baseline.qualityScore` | `[0..1]`; **`< 0.7` rejected with `QUALITY_TOO_LOW` (not VALIDATION_FAILED)** |
 | `calibration_baseline.neutralStats` | All four `RegionId` keys present; each side has `{u, v}`; **all components finite only — NOT required `> 0`** (signed face-local projections are legitimately negative) |
 | `calibration_baseline.comfortableMax` | Keys ⊆ profile's `assignedExercises`; values finite `> 0` |
+| `calibration_baseline.neutralActivation` | Optional; keys ⊆ profile's `assignedExercises`; values finite in `[0, 1)` and `< comfortableMax[key]` where both present (effort's denominator `comfortableMax − neutralActivation` must stay positive) |
 | `calibration_baseline.noiseFloorSymmetry` | Finite `≥ 0` (held-SI noise; B1b) |
 | `calibration_baseline.noiseFloorDisplacement` | Finite `≥ 0` (rest activation noise; B1a) |
 | `calibration_baseline.isActive` | `saveBaseline` sets new row to `1` and all others to `0` in one transaction — the "exactly one active" invariant |
@@ -160,7 +162,7 @@ There is no server; **100% of data is on-device**. Per-category privacy reasonin
 | Category | Tables/fields | Why on-device only |
 |---|---|---|
 | Condition-adjacent identity | `affectedSide`, `assignedExercises` | Reveals a medical condition; combined with any identifier off-device it becomes regulated health data. Locally it never joins an identity — the app stores no name, email, or account. |
-| Face-derived calibration geometry | `neutralStats`, `comfortableMax`, `noiseFloorSymmetry`, `noiseFloorDisplacement` | Derived from the user's face at rest / held gentle max. Deliberately reduced to a handful of region offsets (not a biometric template, not landmarks), but face-derived data leaving the device would demand consent and security machinery a student project cannot honestly operate. |
+| Face-derived calibration geometry | `neutralStats`, `comfortableMax`, `neutralActivation`, `noiseFloorSymmetry`, `noiseFloorDisplacement` | Derived from the user's face at rest / held gentle max. Deliberately reduced to a handful of region offsets (not a biometric template, not landmarks), but face-derived data leaving the device would demand consent and security machinery a student project cannot honestly operate. |
 | Exercise performance | `session_record`, `exercise_result`, `rep_metric` | Longitudinal health-behavior data. The clinician gets it via user-initiated export files; a server copy would add breach risk and zero product value. |
 | Preferences/consents | `app_settings`, attestation fields | Low sensitivity, but no reason to exist anywhere else. |
 

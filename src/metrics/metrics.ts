@@ -99,16 +99,25 @@ function smoothedSymmetry(window: (number | null)[]): number | null {
  *   L/R = per-side blendshape scores; act = max(L,R)
  *   if act < blendshapes.activationFloor → null
  *   else SI = min(L,R)/max(L,R). Unilateral → 0; symmetric → 1.
- * effortIndex = act / comfortableMax (0..1 activation units).
+ * effortIndex = max(0, act − neutralActivation) / (comfortableMax − neutralActivation).
+ *
+ * The neutral rebase (ARCHITECTURE §7): MediaPipe reports nonzero RESTING activation for some
+ * pairs (browOuterUp, eyeBlink commonly read 0.1–0.3 on a neutral face). Raw act/comfortableMax
+ * therefore held resting effort above repStartThreshold/repEndThreshold for those exercises —
+ * a "rep" opened by itself at rest and could only close when the user drove the signal to zero
+ * with the OPPOSITE movement (furrowing for brow raise, eyes wide open for eye closure), while
+ * the actual movement pinned effort over the ease-off ceiling. SI stays on the raw per-side
+ * scores: it is a ratio of the two sides, not a magnitude against the calibrated span.
  */
 function rawSymmetryAndEffort(
   left: number,
   right: number,
   comfortableMax: number,
+  neutral: number,
 ): { symmetryIndex: number | null; effortIndex: number } {
   const act = Math.max(left, right);
   const symmetryIndex = act < activationFloor ? null : Math.min(left, right) / act;
-  const effortIndex = act / comfortableMax;
+  const effortIndex = Math.max(0, act - neutral) / (comfortableMax - neutral);
   return { symmetryIndex, effortIndex };
 }
 
@@ -140,10 +149,18 @@ function compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample {
   if (comfortableMax === undefined || !Number.isFinite(comfortableMax) || comfortableMax <= 0) {
     throw new MirrorWellError('NO_BASELINE', `comfortableMax missing or invalid for ${exerciseId}`);
   }
+  // Pre-field baselines (no neutralActivation) behave as neutral = 0 — the exact old formula.
+  // StorageService enforces neutral < comfortableMax at write time; re-check here so a corrupt
+  // span can never flip effort's sign or divide by zero (this drives the ease-off SAFETY cue).
+  const neutral = activeBaseline.neutralActivation?.[exerciseId] ?? 0;
+  if (!Number.isFinite(neutral) || neutral < 0 || neutral >= comfortableMax) {
+    throw new MirrorWellError('NO_BASELINE', `neutralActivation invalid for ${exerciseId}`);
+  }
   const raw = rawSymmetryAndEffort(
     nf.blendshapes[pair.left] ?? 0,
     nf.blendshapes[pair.right] ?? 0,
     comfortableMax,
+    neutral,
   );
 
   lastRaw = { symmetryIndex: raw.symmetryIndex, effortIndex: raw.effortIndex };

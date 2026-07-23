@@ -27,6 +27,11 @@ export interface CalibrationBaseline {
   // projections — legitimately negative; do NOT require > 0.
   neutralStats: Record<RegionId, { left: { u: number; v: number }; right: { u: number; v: number } }>;
   comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max peak max(mL,mR), keys = assignedExercises
+  // Median NEUTRAL max(mL,mR) per assigned exercise, captured during the neutral windows.
+  // MediaPipe reports nonzero resting activation for some blendshapes (browOuterUp, eyeBlink),
+  // so effortIndex rebases: (act − neutralActivation) / (comfortableMax − neutralActivation)
+  // (ARCHITECTURE §7). Optional: baselines saved before this field behave as neutral = 0.
+  neutralActivation?: Partial<Record<ExerciseId, number>>;
   qualityScore: number;           // [0..1] = fraction of QUALITY_OK capture frames; >= 0.7 enforced
   noiseFloorSymmetry: number;     // std of smoothed SI over held comfortable-max captures (B1b)
   noiseFloorDisplacement: number; // std of pre-floor max(mL,mR) over neutral OK frames (B1a)

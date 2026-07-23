@@ -197,6 +197,36 @@ describe('StorageService.saveBaseline', () => {
     expect(await StorageService.getActiveBaseline()).toEqual(baseline);
   });
 
+  it('validates neutralActivation: keys in assignedExercises, values in [0,1) and < comfortableMax', async () => {
+    await StorageService.saveProfile(makeProfile({ assignedExercises: ['EX_SMILE'] }));
+    await expect(
+      StorageService.saveBaseline(
+        makeBaseline({ comfortableMax: { EX_SMILE: 0.5 }, neutralActivation: { EX_BROW_RAISE: 0.1 } }),
+      ),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    await expect(
+      StorageService.saveBaseline(
+        makeBaseline({ comfortableMax: { EX_SMILE: 0.5 }, neutralActivation: { EX_SMILE: -0.1 } }),
+      ),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    // neutral >= comfortableMax would make effort's denominator non-positive.
+    await expect(
+      StorageService.saveBaseline(
+        makeBaseline({ comfortableMax: { EX_SMILE: 0.5 }, neutralActivation: { EX_SMILE: 0.5 } }),
+      ),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+
+    const ok = makeBaseline({ comfortableMax: { EX_SMILE: 0.5 }, neutralActivation: { EX_SMILE: 0.12 } });
+    await StorageService.saveBaseline(ok);
+    expect(await StorageService.getActiveBaseline()).toEqual(ok);
+  });
+
+  it('accepts a baseline without neutralActivation (pre-field rows behave as neutral = 0)', async () => {
+    await StorageService.saveProfile(makeProfile());
+    await StorageService.saveBaseline(makeBaseline());
+    expect((await StorageService.getActiveBaseline())?.neutralActivation).toBeUndefined();
+  });
+
   it('rejects missing or negative baseline noise floors', async () => {
     await StorageService.saveProfile(makeProfile());
     await expect(
