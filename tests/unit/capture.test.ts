@@ -68,6 +68,32 @@ describe('CaptureService — getUserMedia error mapping', () => {
   });
 });
 
+describe('CaptureService — requestVideoFrameCallback timestamp source', () => {
+  it('delivers the performance-clock `now`, never metadata.mediaTime (which resets per stream)', async () => {
+    // mediaTime restarts near 0 on every camera restart while the FaceLandmarker singleton
+    // survives — one backwards timestamp poisons the MediaPipe graph (BACKEND §1.1).
+    type RvfcCb = (now: number, metadata: { mediaTime: number }) => void;
+    const rvfcCallbacks: RvfcCb[] = [];
+    (fakeVideo as unknown as { requestVideoFrameCallback: (cb: RvfcCb) => number }).requestVideoFrameCallback = (
+      cb: RvfcCb,
+    ) => {
+      rvfcCallbacks.push(cb);
+      return rvfcCallbacks.length;
+    };
+
+    const { CaptureService } = await import('../../src/sensing/capture.ts');
+    await CaptureService.start();
+    const cb = vi.fn();
+    CaptureService.onFrame(cb);
+
+    // Simulate a frame where the two clocks disagree (fresh stream: mediaTime ~0).
+    rvfcCallbacks[0]!(98_765.4, { mediaTime: 0.033 });
+    expect(cb).toHaveBeenCalledWith(expect.anything(), 98_765.4);
+
+    CaptureService.stop();
+  });
+});
+
 describe('CaptureService — frame subscription', () => {
   it('unsubscribe stops callbacks', async () => {
     const { CaptureService } = await import('../../src/sensing/capture.ts');

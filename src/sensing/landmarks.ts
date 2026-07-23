@@ -18,6 +18,12 @@ export interface LandmarkFrame {
 }
 
 let landmarker: FaceLandmarker | null = null;
+// Last timestamp actually passed to detectForVideo. MediaPipe requires strictly increasing
+// timestamps for the LIFETIME of the landmarker instance; a violation poisons the graph
+// unrecoverably (google-ai-edge/mediapipe#5743). CaptureService already supplies a monotonic
+// performance-clock timestamp, so this guard is belt-and-braces against any caller regression —
+// a non-increasing input is nudged forward by 1 ms rather than fed through (docs/BACKEND.md §1.2).
+let lastDetectTimestampMs: number | null = null;
 
 async function createLandmarker(fileset: Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>) {
   const baseLandmarkerOptions = {
@@ -55,6 +61,7 @@ async function init(): Promise<void> {
     // Bundled runtime only — never a CDN (AGENTS.md non-negotiable, verified fact #2).
     const fileset = await FilesetResolver.forVisionTasks('/wasm');
     landmarker = await createLandmarker(fileset);
+    lastDetectTimestampMs = null; // fresh graph, no timestamp history
   } catch (err) {
     landmarker = null;
     throw new MirrorWellError('MODEL_LOAD_FAILED', err instanceof Error ? err.message : String(err));
@@ -66,9 +73,21 @@ function detect(video: HTMLVideoElement, timestampMs: number): LandmarkFrame {
     throw new MirrorWellError('NOT_INITIALIZED', 'LandmarkEngine.detect called before init()');
   }
 
+  // Strictly-increasing clamp: the graph must never see a timestamp <= the previous one. The
+  // returned LandmarkFrame keeps the CALLER's timestamp — the clamped value exists only for
+  // MediaPipe's ingest clock and drifts from real time by at most 1 ms per clamped frame.
+  const detectTimestampMs =
+    lastDetectTimestampMs !== null && timestampMs <= lastDetectTimestampMs
+      ? lastDetectTimestampMs + 1
+      : timestampMs;
+
+  // Recorded BEFORE the call: even a throwing detect may have delivered its packet to the
+  // graph, so the next call must still move the clock forward.
+  lastDetectTimestampMs = detectTimestampMs;
+
   let result: ReturnType<FaceLandmarker['detectForVideo']>;
   try {
-    result = landmarker.detectForVideo(video, timestampMs);
+    result = landmarker.detectForVideo(video, detectTimestampMs);
   } catch (err) {
     // Never crashes a session — QualityMonitor absorbs this as FACE_LOST (docs/API.md §16).
     throw new MirrorWellError('INFERENCE_FAILED', err instanceof Error ? err.message : String(err));

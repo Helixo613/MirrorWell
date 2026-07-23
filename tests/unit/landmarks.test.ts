@@ -135,6 +135,48 @@ describe('LandmarkEngine.detect — after init', () => {
     expect(frame.landmarks).toEqual([]);
   });
 
+  it('feeds detectForVideo strictly increasing timestamps even when caller timestamps repeat or go backwards', async () => {
+    // The MediaPipe graph is poisoned unrecoverably by a non-increasing timestamp
+    // (google-ai-edge/mediapipe#5743) — e.g. a camera restart resetting the clock a caller
+    // derives timestamps from. detect() must clamp forward, and the returned LandmarkFrame
+    // must keep the CALLER's timestamp (window/deadline logic runs on the caller clock).
+    const detectForVideo = vi.fn().mockReturnValue(makeFakeResult());
+    createFromOptions.mockResolvedValueOnce({ detectForVideo });
+    const { LandmarkEngine } = await import('../../src/sensing/landmarks.ts');
+    await LandmarkEngine.init();
+
+    LandmarkEngine.detect({} as HTMLVideoElement, 1000);
+    LandmarkEngine.detect({} as HTMLVideoElement, 1000); // repeat
+    const backwards = LandmarkEngine.detect({} as HTMLVideoElement, 40); // camera-restart reset
+
+    const fed = detectForVideo.mock.calls.map((call) => call[1] as number);
+    expect(fed).toEqual([1000, 1001, 1002]);
+    for (let i = 1; i < fed.length; i++) expect(fed[i]!).toBeGreaterThan(fed[i - 1]!);
+    expect(backwards.timestampMs).toBe(40); // caller clock preserved on the frame
+  });
+
+  it('advances the clamp clock past a throwing detect (the packet may still have been ingested)', async () => {
+    const detectForVideo = vi
+      .fn()
+      .mockReturnValueOnce(makeFakeResult())
+      .mockImplementationOnce(() => {
+        throw new Error('inference crashed');
+      })
+      .mockReturnValue(makeFakeResult());
+    createFromOptions.mockResolvedValueOnce({ detectForVideo });
+    const { LandmarkEngine } = await import('../../src/sensing/landmarks.ts');
+    await LandmarkEngine.init();
+
+    LandmarkEngine.detect({} as HTMLVideoElement, 500);
+    expect(() => LandmarkEngine.detect({} as HTMLVideoElement, 500)).toThrow(
+      expect.objectContaining({ code: 'INFERENCE_FAILED' }),
+    );
+    LandmarkEngine.detect({} as HTMLVideoElement, 500);
+
+    const fed = detectForVideo.mock.calls.map((call) => call[1] as number);
+    expect(fed).toEqual([500, 501, 502]);
+  });
+
   it('never exposes faceBlendshapes on the returned LandmarkFrame', async () => {
     const detectForVideo = vi.fn().mockReturnValue({ ...makeFakeResult(), faceBlendshapes: [{ categories: [] }] });
     createFromOptions.mockResolvedValueOnce({ detectForVideo });

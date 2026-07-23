@@ -45,7 +45,14 @@ function detectFrameLoopStrategy(video: HTMLVideoElement): void {
 function scheduleNext(video: HTMLVideoElement): void {
   if (!running) return;
   if (useVideoFrameCallback) {
-    scheduledHandle = video.requestVideoFrameCallback!((_now, metadata) => tick(video, metadata.mediaTime * 1000));
+    // `now` (performance-clock), NEVER metadata.mediaTime: mediaTime restarts near 0 with every
+    // new MediaStream, and LandmarkEngine's FaceLandmarker is a singleton that outlives camera
+    // restarts. detectForVideo requires monotonically increasing timestamps for the lifetime of
+    // the landmarker — one backwards timestamp poisons the MediaPipe graph unrecoverably
+    // ("Packet timestamp mismatch", google-ai-edge/mediapipe#5743), turning every later frame
+    // into FACE_LOST until page reload. performance.now() is monotonic across restarts, same
+    // clock as the requestAnimationFrame fallback below (docs/BACKEND.md §1.1).
+    scheduledHandle = video.requestVideoFrameCallback!((now) => tick(video, now));
   } else {
     scheduledHandle = requestAnimationFrame((now) => tick(video, now));
   }
