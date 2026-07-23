@@ -52,9 +52,14 @@ export default {
           from: { opacity: '0' },
           to: { opacity: '1' },
         },
+        breathe: {
+          '0%, 100%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.15)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 200ms ease-out',
+        breathe: 'breathe 4s ease-in-out infinite',
       },
       minHeight: {
         touch: '3rem',

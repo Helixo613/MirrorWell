@@ -28,6 +28,7 @@ import type { SummaryLocationState } from '@/types/summary';
 export type SessionScreenPhase =
   | 'loading'
   | 'quickSetup'
+  | 'arrival'
   | 'active'
   | 'paused'
   | 'error'
@@ -86,6 +87,7 @@ export interface UseSessionScreenResult {
   openStopDialog: () => void;
   closeStopDialog: () => void;
   handleQuickSetup: () => void;
+  handleBeginArrival: () => void;
   handleAdvance: () => void;
   handleExtendRest: () => void;
   handleJustStop: () => void;
@@ -196,7 +198,10 @@ export function useSessionScreen(): UseSessionScreenResult {
           CaptureService.stop();
           return;
         }
-        setPhase('active');
+        // Real sessions land on the breathing arrival moment first (FRONTEND §2.4); the camera is
+        // already live behind it. Demo keeps its quick-setup flow, which goes straight to 'active'
+        // from handleQuickSetup below.
+        setPhase('arrival');
       } catch (err) {
         if (mountedRef.current) applyStartError(err);
       }
@@ -362,6 +367,10 @@ export function useSessionScreen(): UseSessionScreenResult {
     })();
   }, [applyStartError]);
 
+  const handleBeginArrival = useCallback(() => {
+    setPhase('active');
+  }, []);
+
   const handleAdvance = useCallback(() => {
     SessionController.advance();
   }, []);
@@ -486,6 +495,7 @@ export function useSessionScreen(): UseSessionScreenResult {
     openStopDialog,
     closeStopDialog,
     handleQuickSetup,
+    handleBeginArrival,
     handleAdvance,
     handleExtendRest,
     handleJustStop,

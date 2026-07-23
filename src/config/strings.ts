@@ -379,6 +379,14 @@ export const strings = Object.freeze({
       phaseNeutral: 'Relax your face and look at the camera…',
       phaseGentle: 'Now — one gentle smile, about half of what feels possible.',
     },
+    // Arrival moment (real sessions only, FRONTEND §2.4): shown once start() resolves and before
+    // the first exercise, camera already live behind it — never auto-dismisses (FRONTEND §4 no
+    // time pressure), user taps Begin when ready.
+    arrival: {
+      message: "Take a slow breath… we'll begin when you're ready.",
+      begin: 'Begin',
+      beginAriaLabel: 'Begin the exercise session',
+    },
     demo: {
       ready: "I'm ready",
       readyAriaLabel: 'Begin exercise reps',

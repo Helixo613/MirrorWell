@@ -6,6 +6,7 @@ import { CameraPreview } from '@/components/camera/CameraPreview';
 import { FeedbackCanvas } from '@/components/session/FeedbackCanvas';
 import { DemoWatermark } from '@/components/session/DemoWatermark';
 import { QuickSetupOverlay } from '@/components/session/QuickSetupOverlay';
+import { ArrivalOverlay } from '@/components/session/ArrivalOverlay';
 import { SessionStatusStrip } from '@/components/session/SessionStatusStrip';
 import { SessionRepCounter } from '@/components/session/SessionRepCounter';
 import { SessionRestPanel } from '@/components/session/SessionRestPanel';
@@ -116,6 +117,13 @@ export function SessionScreen() {
                   : null
             }
             onStart={s.handleQuickSetup}
+          />
+          <ArrivalOverlay
+            visible={s.phase === 'arrival'}
+            message={strings.session.arrival.message}
+            beginLabel={strings.session.arrival.begin}
+            beginAriaLabel={strings.session.arrival.beginAriaLabel}
+            onBegin={s.handleBeginArrival}
           />
         </div>
 
