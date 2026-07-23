@@ -31,6 +31,8 @@ export interface OnboardingStepContentProps {
   onExerciseToggle: (id: ExerciseId, checked: boolean) => void;
   nickname: string;
   onNicknameChange: (value: string) => void;
+  motivation: string;
+  onMotivationChange: (value: string) => void;
   disabled?: boolean;
 }
 
@@ -42,6 +44,8 @@ export function OnboardingStepContent({
   onExerciseToggle,
   nickname,
   onNicknameChange,
+  motivation,
+  onMotivationChange,
   disabled = false,
 }: OnboardingStepContentProps) {
   const attestationOptions = useAttestationOptions();
@@ -122,6 +126,23 @@ export function OnboardingStepContent({
             />
             <p id="onboarding-nickname-hint" className="text-sm text-muted-foreground">
               {strings.onboarding.nickname.hint}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="onboarding-motivation">
+              {strings.onboarding.motivation.label}
+            </Label>
+            <Input
+              id="onboarding-motivation"
+              value={motivation}
+              maxLength={thresholds.profile.motivationMaxLength}
+              placeholder={strings.onboarding.motivation.placeholder}
+              aria-describedby="onboarding-motivation-hint"
+              disabled={disabled}
+              onChange={(event) => onMotivationChange(event.target.value)}
+            />
+            <p id="onboarding-motivation-hint" className="text-sm text-muted-foreground">
+              {strings.onboarding.motivation.hint}
             </p>
           </div>
         </OnboardingStepFrame>

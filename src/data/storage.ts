@@ -98,8 +98,16 @@ function normalizeProfile(p: UserProfile): UserProfile {
   if (nickname !== undefined && nickname.length > thresholds.profile.nicknameMaxLength) {
     throw new MirrorWellError('VALIDATION_FAILED', 'nickname is too long');
   }
-  const { nickname: _nickname, ...profile } = p;
-  return nickname ? { ...profile, nickname } : profile;
+  const motivation = p.motivation?.trim();
+  if (motivation !== undefined && motivation.length > thresholds.profile.motivationMaxLength) {
+    throw new MirrorWellError('VALIDATION_FAILED', 'motivation is too long');
+  }
+  const { nickname: _nickname, motivation: _motivation, ...profile } = p;
+  return {
+    ...profile,
+    ...(nickname ? { nickname } : {}),
+    ...(motivation ? { motivation } : {}),
+  };
 }
 
 function isFiniteVec(v: unknown): v is { u: number; v: number } {

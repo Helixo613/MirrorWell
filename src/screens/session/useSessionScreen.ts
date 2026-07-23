@@ -59,6 +59,7 @@ export interface UseSessionScreenResult {
   reducedFacePreview: boolean;
   exerciseName: string;
   instruction: string;
+  motivation: string | undefined;
   quality: QualityState;
   status: SessionStatusMessage | null;
   repSummary: string;
@@ -447,6 +448,7 @@ export function useSessionScreen(): UseSessionScreenResult {
     reducedFacePreview: settings.reducedFacePreview,
     exerciseName,
     instruction,
+    motivation: isDemo ? undefined : profile?.motivation,
     quality,
     status,
     repSummary: strings.session.repCounter(repDone, repTotal),

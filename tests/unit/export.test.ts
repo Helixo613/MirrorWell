@@ -180,6 +180,16 @@ beforeEach(async () => {
 });
 
 describe('ExportService.generateSummary — schema validation', () => {
+  it('never exports the local-only motivation anywhere in the JSON', async () => {
+    await seedAttestedExportFixture();
+    const profile = await StorageService.getProfile();
+    await StorageService.saveProfile({ ...profile!, motivation: 'Keep going for family time.' });
+
+    const { json } = await ExportService.generateSummary(RANGE);
+
+    expect(await json.text()).not.toContain('"motivation"');
+  });
+
   it('never exports the local-only nickname anywhere in the JSON', async () => {
     await seedAttestedExportFixture();
     const profile = await StorageService.getProfile();

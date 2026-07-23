@@ -44,6 +44,7 @@ export function OnboardingScreen() {
     useState<AttestationState>(INITIAL_ATTESTATIONS);
   const [selectedExercises, setSelectedExercises] = useState<ExerciseId[]>([]);
   const [nickname, setNickname] = useState('');
+  const [motivation, setMotivation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [blockingError, setBlockingError] = useState<{
     title: string;
@@ -156,6 +157,7 @@ export function OnboardingScreen() {
         affectedSide: existing?.affectedSide ?? ('left' as const),
         assignedExercises: selectedExercises,
         nickname,
+        motivation,
         attestedAt: null,
         consentVersion: null,
       };
@@ -189,6 +191,7 @@ export function OnboardingScreen() {
     goNext,
     selectedExercises,
     nickname,
+    motivation,
     setProfile,
     setGate,
     navigate,
@@ -236,6 +239,8 @@ export function OnboardingScreen() {
           onExerciseToggle={toggleExercise}
           nickname={nickname}
           onNicknameChange={setNickname}
+          motivation={motivation}
+          onMotivationChange={setMotivation}
           disabled={isSubmitting}
         />
       </FadeIn>

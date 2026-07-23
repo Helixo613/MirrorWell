@@ -175,6 +175,11 @@ export const strings = Object.freeze({
       placeholder: 'Your nickname',
       hint: 'This stays on this device and is never included in exports.',
     },
+    motivation: {
+      label: 'What makes this worth it for you? (optional, stays on this device)',
+      placeholder: 'Your reason for practicing',
+      hint: 'Your words stay on this device and are never included in exports.',
+    },
     steps: {
       intendedUse: {
         title: 'Exercise support for facial retraining',
@@ -399,6 +404,7 @@ export const strings = Object.freeze({
     rest: {
       title: 'Rest',
       remaining: (seconds: number) => `${seconds} seconds left`,
+      motivation: (motivation: string) => `Remember your why: ${motivation}`,
       extend: '+30 s',
       extendAriaLabel: 'Add thirty seconds of rest',
       skip: 'Continue',

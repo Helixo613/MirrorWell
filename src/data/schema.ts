@@ -1,7 +1,8 @@
 // src/data/schema.ts — canonical schema for mirrorwell_db, version 1.
 // RULE (non-negotiable): only derived numeric data. Never images, video,
 // raw landmark arrays, audio, emails, or free-text health notes. The narrow
-// nickname exception is optional, user-chosen, local-only, and never exported.
+// nickname/motivation exceptions are optional, user-authored, local-only, and
+// never exported.
 // RULE: the type exports below (ExerciseId, RegionId, EndReason, row types)
 // are the single canonical definitions. src/config/exercises.ts and all
 // services IMPORT them from here — never redeclare them anywhere.
@@ -15,6 +16,7 @@ export interface UserProfile {
   profileId: string;              // PK, uuid v4
   createdAt: string;              // UTC ISO 8601
   nickname?: string;              // optional user-chosen display name, local-only
+  motivation?: string;            // optional user-authored "why", local-only
   affectedSide: 'left' | 'right' | 'unknown';  // display orientation ONLY, never scoring
   assignedExercises: ExerciseId[];// therapist-assigned subset, length 1..4
   attestedAt: string | null;      // UTC ISO 8601; null until onboarding attestation

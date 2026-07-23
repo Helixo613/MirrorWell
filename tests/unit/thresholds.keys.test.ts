@@ -64,8 +64,12 @@ describe('thresholds', () => {
   });
 
   it('profile exposes local-only text limits', () => {
-    expect(Object.keys(thresholds.profile)).toEqual(['nicknameMaxLength']);
+    expect(Object.keys(thresholds.profile)).toEqual([
+      'nicknameMaxLength',
+      'motivationMaxLength',
+    ]);
     expect(thresholds.profile.nicknameMaxLength).toBe(30);
+    expect(thresholds.profile.motivationMaxLength).toBe(120);
   });
 
   it('v1Protocol exposes MODEL_AND_DATA §7 capture tunables', () => {

@@ -120,7 +120,13 @@ export function HomeScreen() {
           <HomeHeader
             title={greetingFor(new Date().getHours(), profile?.nickname)}
             subtitle={strings.home.subtitle}
-          />
+          >
+            {profile?.motivation ? (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {profile.motivation}
+              </p>
+            ) : null}
+          </HomeHeader>
         </StaggerFadeIn>
 
         <div className="flex flex-col gap-8">

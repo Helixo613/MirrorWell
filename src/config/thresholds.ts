@@ -71,6 +71,7 @@ export const thresholds = Object.freeze({
   // Optional local-only profile text. Owning section: docs/DATABASE.md §3.
   profile: Object.freeze({
     nicknameMaxLength: 30,
+    motivationMaxLength: 120,
   }),
 
   // Live V1 protocol harness (dev-only). Owning section: docs/MODEL_AND_DATA.md §7
