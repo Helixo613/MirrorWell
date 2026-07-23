@@ -2,7 +2,7 @@ import { SymmetryBar } from '@/components/feedback/SymmetryBar';
 import { SoftPanel } from '@/components/layout/SoftPanel';
 import { strings } from '@/config/strings';
 import type { ExerciseResultFull } from '@/data/storage';
-import { gentleRepCounts, symmetryPlainLabel } from '@/lib/summaryMetrics';
+import { symmetryPlainLabel } from '@/lib/summaryMetrics';
 import { cn } from '@/lib/utils';
 
 export interface SummaryExerciseCardProps {
@@ -23,7 +23,6 @@ export function SummaryExerciseCard({
   className,
 }: SummaryExerciseCardProps) {
   const plainSymmetry = symmetryPlainLabel(result.meanSymmetryIndex);
-  const { gentle, total } = gentleRepCounts(result.reps);
 
   return (
     <SoftPanel
@@ -59,12 +58,6 @@ export function SummaryExerciseCard({
           {plainSymmetry}
         </p>
       </div>
-
-      {total > 0 ? (
-        <p className="text-base leading-relaxed text-muted-foreground">
-          {strings.summary.easeOffLine(gentle, total)}
-        </p>
-      ) : null}
     </SoftPanel>
   );
 }
