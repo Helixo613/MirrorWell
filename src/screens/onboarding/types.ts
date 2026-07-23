@@ -1,6 +1,6 @@
-export const ONBOARDING_STEP_COUNT = 5;
+export const ONBOARDING_STEP_COUNT = 6;
 
-export type OnboardingStepIndex = 0 | 1 | 2 | 3 | 4;
+export type OnboardingStepIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
 export interface AttestationState {
   diagnosed: boolean;
@@ -30,5 +30,5 @@ export function isAttestationComplete(state: AttestationState): boolean {
 }
 
 export function isOnboardingStepIndex(value: number): value is OnboardingStepIndex {
-  return value >= 0 && value <= 4 && Number.isInteger(value);
+  return value >= 0 && value <= 5 && Number.isInteger(value);
 }

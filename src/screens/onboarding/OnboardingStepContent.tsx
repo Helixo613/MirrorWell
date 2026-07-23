@@ -111,6 +111,20 @@ export function OnboardingStepContent({
             onToggle={onAttestationToggle}
             disabled={disabled}
           />
+        </OnboardingStepFrame>
+      );
+    }
+    case 4: {
+      // Post-consent "About you" — optional nickname + why (FRONTEND §2.1). Consent
+      // checkboxes stay on step 3 alone so the name is not buried under legal boxes.
+      const copy = strings.onboarding.steps.aboutYou;
+      return (
+        <OnboardingStepFrame>
+          <StepHeading
+            id={headingId}
+            title={copy.title}
+            subtitle={copy.subtitle}
+          />
           <div className="space-y-2">
             <Label htmlFor="onboarding-nickname">
               {strings.onboarding.nickname.label}
@@ -148,7 +162,7 @@ export function OnboardingStepContent({
         </OnboardingStepFrame>
       );
     }
-    case 4: {
+    case 5: {
       const copy = strings.onboarding.steps.exercises;
       return (
         <OnboardingStepFrame>

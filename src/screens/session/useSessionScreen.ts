@@ -369,7 +369,10 @@ export function useSessionScreen(): UseSessionScreenResult {
   }, [applyStartError]);
 
   const handleBeginArrival = useCallback(() => {
+    // FRONTEND §2.4: Begin hands off to the first exercise. SessionController.start() leaves
+    // the machine in DEMO; without advance() the user would see a second "I'm ready" gate.
     setPhase('active');
+    SessionController.advance();
   }, []);
 
   const handleAdvance = useCallback(() => {

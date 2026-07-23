@@ -181,6 +181,11 @@ export const strings = Object.freeze({
       hint: 'Your words stay on this device and are never included in exports.',
     },
     steps: {
+      aboutYou: {
+        title: 'A little about you',
+        subtitle:
+          'Optional — skip anytime. We use this only to greet you and remind you why you practice. It never leaves this device.',
+      },
       intendedUse: {
         title: 'Exercise support for facial retraining',
         goodToKnowTitle: 'Good to know',

@@ -82,7 +82,7 @@ export function SessionScreen() {
           <h1 id={HEADING_ID} className="text-lg font-medium text-foreground">
             {s.exerciseName || strings.session.screenTitle}
           </h1>
-          {s.phase === 'active' ? (
+          {s.phase === 'active' || s.phase === 'arrival' ? (
             <SessionStopButton
               label={strings.session.stop.label}
               ariaLabel={strings.session.stop.ariaLabel}

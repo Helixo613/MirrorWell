@@ -200,6 +200,24 @@ describe('ExportService.generateSummary — schema validation', () => {
     expect(await json.text()).not.toContain('"nickname"');
   });
 
+  it('never exports nickname or motivation anywhere in the HTML summary', async () => {
+    await seedAttestedExportFixture();
+    const profile = await StorageService.getProfile();
+    await StorageService.saveProfile({
+      ...profile!,
+      nickname: 'RaviUniqueExportGuard',
+      motivation: 'KeepGoingForFamilyTimeUnique',
+    });
+
+    const { html } = await ExportService.generateSummary(RANGE);
+    const text = await html.text();
+
+    expect(text).not.toContain('RaviUniqueExportGuard');
+    expect(text).not.toContain('KeepGoingForFamilyTimeUnique');
+    expect(text).not.toContain('nickname');
+    expect(text).not.toContain('motivation');
+  });
+
   it('produces a JSON payload that validates against tests/schemas/export.schema.json', async () => {
     await seedAttestedExportFixture();
 
