@@ -55,7 +55,7 @@ Route guard rules (React Router or equivalent): UNATTESTED → everything redire
 ### 2.5 `SummaryScreen`
 
 - **Purpose:** kind session close-out. Reads the `sessionEnded` record only — no new queries.
-- **Layout:** celebration header first: a session-wide gentleness stat framed as control practice; per-exercise cards: reps done, then mean symmetry (as a filled bar, not a number-forward grade); one encouraging line; Done → `HomeScreen`. The celebration card uses a soft one-time CSS reveal and check-mark draw, disabled by reduced-motion preference.
+- **Layout:** celebration header first: a session-wide gentleness stat framed as control practice; per-exercise cards: reps done, then mean symmetry (as a filled bar, not a number-forward grade); a single-session movement note last; Done → `HomeScreen`. The celebration card uses a soft one-time CSS reveal and check-mark draw, disabled by reduced-motion preference.
 - **States:** *success* only (record passed in); DEMO variant watermarked, ends at `OnboardingScreen`.
 - **Rule:** no comparisons to previous sessions here — single-session numbers are inside the noise floor; trends belong to `TrendsScreen` (honesty rule, ARCHITECTURE §4.5).
 

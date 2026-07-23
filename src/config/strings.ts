@@ -457,7 +457,7 @@ export const strings = Object.freeze({
       someGentle: (gentle: number, total: number) =>
         `You kept it gentle ${gentle} of ${total} times — that's exactly the skill.`,
     },
-    encouraging: 'Thank you for practicing today.',
+    qualityNote: 'This is a single-session snapshot of movement.',
     demoWatermark: 'DEMO — not for exercise use',
     symmetry: {
       label: 'Movement symmetry',

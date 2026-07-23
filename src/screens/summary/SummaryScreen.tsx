@@ -59,7 +59,6 @@ export function SummaryScreen() {
         <StaggerFadeIn animationKey="summary-header">
           <HomeHeader
             title={strings.summary.title}
-            subtitle={strings.summary.encouraging}
             headingId={headingId}
           />
         </StaggerFadeIn>
@@ -120,6 +119,10 @@ export function SummaryScreen() {
             </p>
           </StaggerFadeIn>
         )}
+
+        <p className="text-base leading-relaxed text-muted-foreground">
+          {strings.summary.qualityNote}
+        </p>
       </div>
 
       <StickyScreenFooter>

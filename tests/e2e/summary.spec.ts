@@ -118,7 +118,7 @@ test.describe('SummaryScreen', () => {
     await expect(page).toHaveURL(/\/summary$/);
 
     await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-    await expect(page.getByText('Thank you for practicing today.')).toBeVisible();
+    await expect(page.getByText('This is a single-session snapshot of movement.')).toBeVisible();
     await expect(page.getByLabel('Gentle practice')).toHaveText(
       "You kept it gentle 8 of 10 times — that's exactly the skill.",
     );
