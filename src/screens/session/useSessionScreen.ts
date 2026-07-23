@@ -6,6 +6,7 @@ import { useAppState } from '@/context/useAppState';
 import { MirrorWellError } from '@/data/errors';
 import type { ExerciseId } from '@/data/schema';
 import { resolveSessionStatus, type SessionStatusMessage } from '@/lib/sessionStatus';
+import { log } from '@/log';
 import { CaptureService } from '@/sensing/capture';
 import { LandmarkEngine } from '@/sensing/landmarks';
 import type { QualityState } from '@/sensing/quality';
@@ -225,6 +226,7 @@ export function useSessionScreen(): UseSessionScreenResult {
         qualityRef.current = state;
         setQuality(state);
         FeedbackRenderer.render(null, state);
+        log.debug('Session', 'quality', { state });
       }),
       SessionController.on('repCompleted', () => {
         repDoneRef.current += 1;

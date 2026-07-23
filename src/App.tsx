@@ -135,8 +135,7 @@ export function App() {
       <>
         <ProductApp />
         <DevOnly
-          loader={() => import('./dev/DebugHud').then((m) => ({ default: m.DebugHud }))}
-          componentProps={{ cameraControls: false }}
+          loader={() => import('./dev/DebugOverlay').then((m) => ({ default: m.DebugOverlay }))}
         />
       </>
     ) : (

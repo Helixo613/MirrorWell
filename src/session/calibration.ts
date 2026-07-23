@@ -7,6 +7,7 @@ import { aggregateNeutral, measureAbsolute, type NeutralStats } from '../metrics
 import { MetricEngine } from '../metrics/metrics.ts';
 import { NormalizationLayer } from '../metrics/normalize.ts';
 import { QualityMonitor, type ApprovedFrame } from '../sensing/quality.ts';
+import { log } from '../log.ts';
 import { openFrameSource, type FrameHandler } from './frames.ts';
 import { SafetyGate } from './safety.ts';
 
@@ -68,6 +69,14 @@ async function captureFor(durationMs: number): Promise<Capture> {
     capture.total++;
     const result = QualityMonitor.evaluate(video, lf);
     if (result.state === 'QUALITY_OK') capture.approved.push(result.frame);
+    // Dev-only visibility into the one window that decides QUALITY_TOO_LOW. The screen's own
+    // preview loop stands down while capturing, so without this a failing capture is silent.
+    // Stripped from production builds (src/log.ts).
+    log.debug('Capture', 'frame', {
+      state: result.state,
+      approved: capture.approved.length,
+      total: capture.total,
+    });
     if (timestampMs - windowStartMs >= durationMs) {
       // Tear down synchronously, inside the closing frame, so no later frame is counted.
       closed = true;

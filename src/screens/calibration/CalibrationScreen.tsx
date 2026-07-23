@@ -13,6 +13,7 @@ import { strings } from '@/config/strings';
 import { useAppState } from '@/context/useAppState';
 import { MirrorWellError } from '@/data/errors';
 import { StorageService } from '@/data/storage';
+import { log } from '@/log';
 import { CaptureService } from '@/sensing/capture';
 import { LandmarkEngine, type LandmarkFrame } from '@/sensing/landmarks';
 import { QualityMonitor, type QualityState } from '@/sensing/quality';
@@ -156,7 +157,9 @@ export function CalibrationScreen() {
       } catch {
         lf = null; // INFERENCE_FAILED is absorbed as FACE_LOST, same as frames.ts.
       }
-      setQuality(QualityMonitor.evaluate(video, lf).state);
+      const state = QualityMonitor.evaluate(video, lf).state;
+      setQuality(state);
+      log.debug('Calibration', 'quality', { state });
     });
   }, [ready, paused]);
 
