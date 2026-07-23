@@ -250,7 +250,15 @@ function mount(canvas: HTMLCanvasElement, video: HTMLVideoElement): void {
   barTarget = 0;
   barValue = 0;
   arcPhase = 0;
-  prevRepDone = repDone;
+  // These are module globals and no event ever clears them: SessionController.start() resets its
+  // easeOffWasActive flag WITHOUT emitting, so no easeOff{active:false} reaches the renderer. Left
+  // unreset, session 2 opened drawing the bar and arc in amber EASE_COLOR at ARC_SPEED_EASE while
+  // the DOM chip (fresh React state) said nothing — canvas and DOM contradicting each other on a
+  // safety-relevant cue. mount() is the session boundary, so it is where they reset.
+  easeOff = false;
+  repDone = 0;
+  repTotal = 0;
+  prevRepDone = 0;
   if (rafId === null) rafId = requestAnimationFrame(tick);
 }
 

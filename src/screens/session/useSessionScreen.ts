@@ -25,6 +25,21 @@ export type SessionScreenPhase =
 
 export type SessionSubState = 'DEMO' | 'REPS' | 'REST';
 
+// Memoizes an in-flight CaptureService.start(), same shape as src/session/frames.ts and
+// CalibrationScreen. capture.ts only flips `running` AFTER getUserMedia resolves, so two
+// overlapping starts each acquire a MediaStream and the second overwrites the first in
+// capture.ts — orphaning the first stream's tracks where no stop() can ever reach them
+// (camera light on for the life of the page). The resume path was the one caller in the
+// codebase that reached for CaptureService.start() raw.
+let startInFlight: Promise<void> | null = null;
+
+function startCamera(): Promise<void> {
+  startInFlight ??= CaptureService.start().finally(() => {
+    startInFlight = null;
+  });
+  return startInFlight;
+}
+
 interface ErrorNotice {
   title: string;
   body: string;
@@ -48,6 +63,8 @@ export interface UseSessionScreenResult {
   stopDialogOpen: boolean;
   qualityOfferOpen: boolean;
   quickSetupRunning: boolean;
+  resuming: boolean;
+  errorExitIsCalibration: boolean;
   error: ErrorNotice | null;
   liveAnnouncement: string;
   mountFeedbackCanvas: (canvas: HTMLCanvasElement) => void;
@@ -86,6 +103,8 @@ export function useSessionScreen(): UseSessionScreenResult {
   const [stopDialogOpen, setStopDialogOpen] = useState(false);
   const [qualityOfferOpen, setQualityOfferOpen] = useState(false);
   const [quickSetupRunning, setQuickSetupRunning] = useState(false);
+  const [resuming, setResuming] = useState(false);
+  const [errorExit, setErrorExit] = useState<string>('/');
   const [error, setError] = useState<ErrorNotice | null>(null);
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
 
@@ -99,6 +118,7 @@ export function useSessionScreen(): UseSessionScreenResult {
   const isDemoRef = useRef(isDemo);
   const restDeadlineRef = useRef(0);
   const teardownTimerRef = useRef<number | null>(null);
+  const resumingRef = useRef(false);
   phaseRef.current = phase;
   isDemoRef.current = isDemo;
 
@@ -111,6 +131,12 @@ export function useSessionScreen(): UseSessionScreenResult {
     } else {
       setError(strings.errors.CAMERA_UNAVAILABLE);
     }
+    // API §16: NO_BASELINE and RECALIBRATION_REQUIRED both route to CalibrationScreen. The copy
+    // said "calibrate" while the only button went to /home — a dead end for the exact user the
+    // message is aimed at.
+    setErrorExit(
+      code === 'NO_BASELINE' || code === 'RECALIBRATION_REQUIRED' ? '/calibration' : '/',
+    );
     setPhase('error');
   }, []);
 
@@ -249,7 +275,13 @@ export function useSessionScreen(): UseSessionScreenResult {
   // session state is preserved (no frames arrive, so no progress); resume restarts the camera.
   useEffect(() => {
     const onVisibility = () => {
-      if (document.hidden && phaseRef.current === 'active') {
+      if (!document.hidden) return;
+      // FRONTEND §6: hidden tab → camera off (light off, privacy). This must also fire while a
+      // resume is in flight: phase is still 'paused' then, and gating on 'active' alone left the
+      // camera live on a hidden tab once getUserMedia resolved. Stopping here is safe even if
+      // the start has not resolved — handleResume re-checks document.hidden after its await and
+      // stops again, so whichever ordering wins, the camera ends up off.
+      if (phaseRef.current === 'active' || resumingRef.current) {
         CaptureService.stop();
         setPhase('paused');
       }
@@ -337,13 +369,36 @@ export function useSessionScreen(): UseSessionScreenResult {
   }, []);
 
   const handleResume = useCallback(() => {
+    if (resumingRef.current) return; // belt-and-braces with the disabled button
+    resumingRef.current = true;
+    setResuming(true);
     void (async () => {
       try {
-        await CaptureService.start();
-        if (!mountedRef.current) return;
+        // Memoized (startCamera), so even a double-tap that beats the disabled state shares ONE
+        // getUserMedia and cannot orphan a stream.
+        await startCamera();
+        if (!mountedRef.current) {
+          // Unmounted while getUserMedia was pending. The teardown effect's deferred stop()
+          // already ran as a macrotask while `stream` was still null, so it was a no-op — this
+          // is the only place that can release the stream that arrived afterwards. Same window
+          // the warm-up and quick-setup paths guard; resume was missed.
+          void SessionController.stop('user_stopped').catch(() => {});
+          CaptureService.stop();
+          return;
+        }
+        // FRONTEND §6: the tab may have been hidden AGAIN while this resume was in flight. The
+        // visibility handler could not act on it (phase was still 'paused'), so honour it here
+        // rather than coming back with the camera live on a hidden tab.
+        if (document.hidden) {
+          CaptureService.stop();
+          return;
+        }
         setPhase('active');
       } catch (err) {
         if (mountedRef.current) applyStartError(err);
+      } finally {
+        resumingRef.current = false;
+        if (mountedRef.current) setResuming(false);
       }
     })();
   }, [applyStartError]);
@@ -351,8 +406,8 @@ export function useSessionScreen(): UseSessionScreenResult {
   // Both the red-flag guidance "Done" and the start-error "Back" leave the session; RootRedirect
   // routes to /home (attested) or the demo entry per gate.
   const handleLeave = useCallback(() => {
-    navigate('/');
-  }, [navigate]);
+    navigate(errorExit);
+  }, [navigate, errorExit]);
 
   const exerciseName = exerciseId ? exercises[exerciseId]!.displayName : '';
   const instruction = exerciseId ? exercises[exerciseId]!.instruction : '';
@@ -376,6 +431,8 @@ export function useSessionScreen(): UseSessionScreenResult {
     stopDialogOpen,
     qualityOfferOpen,
     quickSetupRunning,
+    resuming,
+    errorExitIsCalibration: errorExit === '/calibration',
     error,
     liveAnnouncement,
     mountFeedbackCanvas,

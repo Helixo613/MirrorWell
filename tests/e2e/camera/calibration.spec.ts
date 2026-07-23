@@ -24,6 +24,8 @@ declare global {
     __mwTracks?: MediaStreamTrack[];
     /** Drives a fake `document.hidden` — Playwright cannot hide a real tab (test-only). */
     __mwHidden?: boolean;
+    /** Count of in-flight getUserMedia calls, for racing the unmount deterministically. */
+    __mwGumPending?: number;
     /** Flips `document.hidden` and fires the event the screen listens for (test-only). */
     __mwSetHidden?: (hidden: boolean) => void;
   }
@@ -59,6 +61,27 @@ async function recordCameraTracks(page: Page): Promise<void> {
       return stream;
     };
   });
+}
+
+/**
+ * Like `recordCameraTracks`, but also holds getUserMedia open for `delayMs` before resolving.
+ * That turns the unmount-during-start race into a deterministic test instead of a coin flip:
+ * the spec can navigate away while the acquisition is provably still in flight.
+ */
+async function recordCameraTracksWithDelay(page: Page, delayMs: number): Promise<void> {
+  await page.addInitScript((ms) => {
+    window.__mwTracks = [];
+    window.__mwGumPending = 0;
+    const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (constraints) => {
+      window.__mwGumPending = (window.__mwGumPending ?? 0) + 1;
+      await new Promise((resolve) => setTimeout(resolve, ms));
+      const stream = await original(constraints);
+      window.__mwTracks?.push(...stream.getTracks());
+      window.__mwGumPending = (window.__mwGumPending ?? 1) - 1;
+      return stream;
+    };
+  }, delayMs);
 }
 
 /** Onboards, lands on /calibration and waits for warm-up to finish. */
@@ -198,6 +221,100 @@ test.describe('CalibrationScreen', () => {
 
     // Every track handed out to CalibrationScreen must now be stopped — this is the hard
     // camera rule (CLAUDE.md): the stream may be open only while the screen is mounted.
+    await page.waitForFunction(
+      () =>
+        (window.__mwTracks?.length ?? 0) > 0 &&
+        window.__mwTracks!.every((track) => track.readyState === 'ended'),
+      undefined,
+      { timeout: SLOW_MS },
+    );
+  });
+});
+
+test.describe('CalibrationScreen — camera lifecycle regressions', () => {
+  test.slow();
+
+  /**
+   * REGRESSION (fix/s1-camera-lifecycle blocker 3). The resume path — visibilitychange back to
+   * visible while `paused` — awaited startCamera() and then called setPaused(false) with NO
+   * mounted check and NO release. The mount effect's cleanup runs CaptureService.stop()
+   * synchronously at unmount, so when the resume's getUserMedia was still pending that stop hit
+   * a null stream and did nothing; the stream then arrived with the screen gone and the camera
+   * light stayed on. The mount path already guarded this exact window — resume did not.
+   *
+   * The delayed getUserMedia makes the race deterministic rather than timing-dependent.
+   */
+  test('unmounting while a resume acquisition is in flight still releases every track', async ({
+    page,
+  }) => {
+    await makeVisibilityScriptable(page);
+    await recordCameraTracksWithDelay(page, 3000);
+    await reachCalibration(page);
+
+    // Hide → the screen pauses and releases the warm-up stream.
+    await page.evaluate(() => window.__mwSetHidden?.(true));
+
+    // Show → the resume path starts a NEW acquisition, held open by the delay above.
+    // Dispatched in a poll rather than once: the visibility effect re-registers on [paused], so a
+    // `visible` fired before React has committed setPaused(true) reaches the STALE listener (which
+    // still closes over paused === false) and no resume starts at all — the test would then pass
+    // against the unfixed code by never exercising the path. Re-dispatching until a getUserMedia
+    // is actually in flight makes the precondition observed, not assumed. Re-firing once resumed
+    // is harmless (the handler no-ops when `paused` is already false).
+    await expect
+      .poll(
+        async () => {
+          await page.evaluate(() => window.__mwSetHidden?.(false));
+          return page.evaluate(() => window.__mwGumPending ?? 0);
+        },
+        { timeout: 30_000 },
+      )
+      .toBeGreaterThan(0);
+
+    // Navigate away mid-acquisition. Client-side popstate (not goto/reload) so the JS context —
+    // and therefore __mwTracks — survives to be asserted against.
+    await page.evaluate(() => {
+      window.history.pushState({ usr: null, key: 'resume-leak', idx: 1 }, '', '/home');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await expect(page).toHaveURL(/\/home$/);
+
+    // The stream acquired AFTER the unmount must still be released — the whole point of the fix.
+    await page.waitForFunction(
+      () =>
+        (window.__mwGumPending ?? 0) === 0 &&
+        (window.__mwTracks?.length ?? 0) > 0 &&
+        window.__mwTracks!.every((track) => track.readyState === 'ended'),
+      undefined,
+      { timeout: SLOW_MS },
+    );
+  });
+
+  /**
+   * REGRESSION (blocker 2 class). Every camera start in the screens routes through a memoized
+   * helper, so overlapping starts share ONE getUserMedia. Without the memo a second acquisition
+   * overwrites the first in capture.ts, orphaning the first stream's tracks where stop() can
+   * never reach them. Asserted by counting distinct tracks across a hide/show storm.
+   */
+  test('rapid hide/show cycling never orphans a MediaStream', async ({ page }) => {
+    await makeVisibilityScriptable(page);
+    await recordCameraTracks(page);
+    await reachCalibration(page);
+
+    for (let i = 0; i < 3; i += 1) {
+      await page.evaluate(() => window.__mwSetHidden?.(true));
+      await page.evaluate(() => window.__mwSetHidden?.(false));
+    }
+    // Settle, then leave the screen.
+    await expect(page.getByRole('heading', { name: NEUTRAL_HEADING })).toBeVisible();
+    await page.evaluate(() => {
+      window.history.pushState({ usr: null, key: 'memo-storm', idx: 1 }, '', '/home');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await expect(page).toHaveURL(/\/home$/);
+
+    // Whatever number of streams were acquired, EVERY track must be stopped. An orphaned stream
+    // (the un-memoized double-start bug) leaves one live forever and fails here.
     await page.waitForFunction(
       () =>
         (window.__mwTracks?.length ?? 0) > 0 &&

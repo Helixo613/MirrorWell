@@ -421,16 +421,20 @@ export const strings = Object.freeze({
       body: 'Ready to continue when you are.',
       resume: 'Continue',
       resumeAriaLabel: 'Resume the session',
+      resuming: 'Starting the camera…',
     },
     errorBack: 'Back to home',
     errorBackAriaLabel: 'Leave the session and return to home',
+    errorCalibrate: 'Go to calibration',
+    errorCalibrateAriaLabel: 'Leave the session and start calibration',
     a11y: {
       repCompleted: (done: number, total: number) =>
         `Rep ${done} of ${total} complete`,
       easeOffActive: 'Ease off — stay gentle',
     },
     errors: {
-      noBaseline: 'Please recalibrate before starting a session.',
+      // noBaseline removed: strings.errors.NO_BASELINE (added with the shared error copy) is what
+      // applyStartError now renders, so this key was unreachable.
       notAttested: 'Please complete onboarding first.',
     },
   },

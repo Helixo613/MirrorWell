@@ -78,6 +78,9 @@ export function CalibrationScreen() {
   const capturingRef = useRef(false);
   // Set when the tab is hidden mid-capture; the stop is deferred until the capture settles.
   const pendingHideRef = useRef(false);
+  // True while a resume's getUserMedia is in flight — the window in which `paused` is still true
+  // so the hide branch cannot see an 'active' screen to stop.
+  const resumingRef = useRef(false);
 
   const exerciseList = useMemo(
     () => calibrationExercises(profile?.assignedExercises),
@@ -168,15 +171,39 @@ export function CalibrationScreen() {
           pendingHideRef.current = true;
           return;
         }
+        // Also covers a hide that lands while a resume's getUserMedia is still pending: stopping
+        // now is a no-op, but the resume's own post-await document.hidden check then releases the
+        // stream that arrives afterwards, so the camera ends up off either way.
         CaptureService.stop();
         setPaused(true);
         return;
       }
       pendingHideRef.current = false;
-      if (paused) {
+      if (paused && !resumingRef.current) {
+        resumingRef.current = true;
         void startCamera()
-          .then(() => setPaused(false))
-          .catch(applyError);
+          .then(() => {
+            // Unmounted while getUserMedia was pending: the mount effect's cleanup already ran
+            // its CaptureService.stop() synchronously, before this stream existed, so it was a
+            // no-op. Release here or the camera stays on with the screen gone (hard camera rule,
+            // CLAUDE.md). The mount path guards this same window; resume did not.
+            if (!mountedRef.current) {
+              CaptureService.stop();
+              return;
+            }
+            // The tab may have been hidden AGAIN during this resume. Previously this branch
+            // unconditionally cleared `paused`, which re-enabled the quality loop below and ran
+            // LandmarkEngine.detect on a backgrounded tab with the camera live (FRONTEND §6).
+            if (document.hidden) {
+              CaptureService.stop();
+              return;
+            }
+            setPaused(false);
+          })
+          .catch(applyError)
+          .finally(() => {
+            resumingRef.current = false;
+          });
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);

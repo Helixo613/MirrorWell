@@ -42,10 +42,16 @@ export function SessionScreen() {
               variant="outline"
               size="lg"
               className="mt-2 w-full sm:w-auto"
-              aria-label={strings.session.errorBackAriaLabel}
+              aria-label={
+                s.errorExitIsCalibration
+                  ? strings.session.errorCalibrateAriaLabel
+                  : strings.session.errorBackAriaLabel
+              }
               onClick={s.handleLeave}
             >
-              {strings.session.errorBack}
+              {s.errorExitIsCalibration
+                ? strings.session.errorCalibrate
+                : strings.session.errorBack}
             </Button>
           </BlockingNotice>
         </div>
@@ -179,9 +185,10 @@ export function SessionScreen() {
           size="lg"
           className="w-full"
           aria-label={strings.session.paused.resumeAriaLabel}
+          disabled={s.resuming}
           onClick={s.handleResume}
         >
-          {strings.session.paused.resume}
+          {s.resuming ? strings.session.paused.resuming : strings.session.paused.resume}
         </Button>
       </AccessibleDialog>
     </ScreenShell>

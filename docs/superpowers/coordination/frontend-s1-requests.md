@@ -126,6 +126,51 @@ on the start-time `QUALITY_TOO_LOW` screen instead of only "Back") is possible i
 measure right now" at the `checkBaselineDrift` boundary — belongs to the backend/Reconvergence owner.
 Flagging so the real-hardware matrix (Task 17) exercises a calibrated-user start in marginal light.
 
+## S1-REQ-3 → integration owner / Reconvergence (`src/sensing/capture.ts`) — `stop()` never clears the subscriber set
+
+**Origin:** independent review of Stream S1 (branch `fix/s1-camera-lifecycle`). Root fix is in frozen
+backend, so it is filed rather than fixed.
+
+**Verified mechanism.** Three facts, each read from the shipped code:
+1. `CaptureService.stop()` (`src/sensing/capture.ts`) releases tracks and clears `stream`/`videoEl`,
+   but does **not** clear the module-level `subscribers` Set — that Set lives for the page lifetime.
+2. `captureFor()` (`src/session/calibration.ts`) and `captureWindow()`
+   (`src/screens/session/demoQuickSetup.ts`) close their capture window only on an **arriving
+   frame**. Stop the camera mid-capture and no frame ever arrives, so the window never closes and
+   `openFrameSource`'s unsubscribe teardown never runs.
+3. Every `openFrameSource` subscriber calls `LandmarkEngine.detect()` independently
+   (`src/session/frames.ts`).
+
+Together: unmounting `CalibrationScreen` mid-capture (the unmount cleanup calls
+`CaptureService.stop()` unconditionally) orphans a live subscriber. The next camera session then has
+**two** subscribers calling `detect()` on the same frame with the same timestamp.
+
+**Honest limit on the symptom.** The orphaned subscriber and the resulting double-`detect()` per
+frame are **verified by reading the code**. MediaPipe's actual response to a repeated timestamp in
+`runningMode: 'VIDEO'` was **NOT observed** — it is *inferred* that `detectForVideo` rejects a
+non-increasing timestamp, which `frames.ts` would absorb as `lf = null` → `FACE_LOST`. The
+inference is consistent with the documented requirement, but do not treat "permanent FACE_LOST" as
+measured. What is certain is that the one-detect-per-frame invariant this stream was engineered
+around is broken.
+
+**Requested change (owner's choice):** either have `CaptureService.stop()` clear `subscribers`, or
+give the capture windows an abort path that settles when the camera stops. A screen-level palliative
+was deliberately not attempted — it would duplicate ownership logic the seam already owns.
+
+## S1-NOTE-3 → deferred minors from the same review (no action requested yet)
+
+Filed for Reconvergence; each is real but non-blocking:
+- **Canvas animates while paused.** `phase === 'paused'` stops the camera but nothing tells
+  `FeedbackRenderer`, so the rAF loop keeps easing the bar and sweeping the arc against a stale
+  `QUALITY_OK` — a pacing arc moving with the camera off. Not a frozen-bar violation (that rule is
+  about non-OK quality states, and it holds), but motion without input.
+- **Quality state surfaced only in `REPS`.** `SessionStatusStrip` sits inside the REPS branch, so
+  during `DEMO`/`REST` no quality message reaches anyone. Affects sighted and screen-reader users
+  equally, so it is not an a11y-parity defect — but a user framing themselves during `DEMO` gets no
+  feedback.
+- **`mountFeedbackCanvas` silently no-ops** when `previewRef.current` is null; ordering currently
+  guarantees it is set, so this is latent, not live.
+
 <!-- Append requests below. Template:
 
 ## S1-REQ-N → <owner or "integration owner (frozen shell)"> (`<path>`) — <one-line summary>
