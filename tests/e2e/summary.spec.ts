@@ -57,8 +57,8 @@ const SESSION_ID = '33333333-3333-4333-8333-333333333333';
 /**
  * Numbers chosen to pin behaviour, not to be pretty:
  *  - smile: meanSymmetryIndex 0.86 >= thresholds.summary.symmetryMostlyEvenMin (0.85) -> "Mostly even";
- *    8 of 10 reps with easeOffTriggered 0 -> "You kept it gentle 8 of 10 times".
- *  - brow: meanSymmetryIndex null -> "Minimal movement recorded"; no reps -> no ease-off line.
+ *    8 of 10 reps with easeOffTriggered 0 -> session-wide gentleness celebration.
+ *  - brow: meanSymmetryIndex null -> "Minimal movement recorded"; no reps.
  * repsCompleted (7) is deliberately NOT reps.length (10) so a screen that re-derived the rep
  * count from the rep array instead of reading the stored field would fail.
  */
@@ -118,19 +118,19 @@ test.describe('SummaryScreen', () => {
     await expect(page).toHaveURL(/\/summary$/);
 
     await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
-    await expect(page.getByText('Thank you for practicing today.')).toBeVisible();
+    await expect(page.getByText('This is a single-session snapshot of movement.')).toBeVisible();
+    await expect(page.getByLabel('Gentle practice')).toHaveText(
+      "You kept it gentle 8 of 10 times — that's exactly the skill.",
+    );
 
     const smile = page.getByRole('article').filter({ hasText: 'Gentle smile' });
     // repsCompleted verbatim — not reps.length (10), not rounded, not recomputed.
     await expect(smile.getByText('7 reps completed')).toBeVisible();
     await expect(smile.getByText('Mostly even')).toBeVisible();
-    await expect(smile.getByText('You kept it gentle 8 of 10 times')).toBeVisible();
 
     const brow = page.getByRole('article').filter({ hasText: 'Gentle brow raise' });
     await expect(brow.getByText('0 reps completed')).toBeVisible();
     await expect(brow.getByText('Minimal movement recorded')).toBeVisible();
-    // No reps -> no control-practice line at all (never "0 of 0").
-    await expect(brow.getByText(/kept it gentle/)).toHaveCount(0);
 
     // Non-demo close-out.
     await expect(page.getByRole('button', { name: 'Return to home' })).toBeVisible();

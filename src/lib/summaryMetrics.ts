@@ -1,6 +1,6 @@
 import { strings } from '@/config/strings';
 import { thresholds } from '@/config/thresholds';
-import type { RepMetric } from '@/data/schema';
+import type { SessionRecordFull } from '@/data/storage';
 
 /** Plain-language symmetry label for summary bars — no numeric grades. */
 export function symmetryPlainLabel(value: number | null): string {
@@ -32,11 +32,19 @@ export function symmetryBarFill(value: number | null): number {
 }
 
 /** Reps completed without an ease-off cue — positive control-practice framing. */
-export function gentleRepCounts(reps: RepMetric[]): {
+export function gentlenessStat(results: SessionRecordFull['results']): {
   gentle: number;
   total: number;
 } {
-  const total = reps.length;
-  const gentle = reps.filter((rep) => rep.easeOffTriggered === 0).length;
+  let gentle = 0;
+  let total = 0;
+  for (const result of results) {
+    for (const rep of result.reps) {
+      total += 1;
+      if (rep.easeOffTriggered === 0) {
+        gentle += 1;
+      }
+    }
+  }
   return { gentle, total };
 }

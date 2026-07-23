@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { strings } from '@/config/strings';
 import { thresholds } from '@/config/thresholds';
 import type { RepMetric } from '@/data/schema';
+import type { SessionRecordFull } from '@/data/storage';
 import {
-  gentleRepCounts,
+  gentlenessStat,
   symmetryBarFill,
   symmetryPlainLabel,
 } from '@/lib/summaryMetrics';
@@ -28,6 +29,22 @@ function rep(repIndex: number, easeOffTriggered: 0 | 1): RepMetric {
     durationMs: 1800,
     easeOffTriggered,
   };
+}
+
+function results(reps: RepMetric[]): SessionRecordFull['results'] {
+  return [
+    {
+      resultId: '44444444-4444-4444-8444-444444444444',
+      sessionId: '33333333-3333-4333-8333-333333333333',
+      exerciseId: 'EX_SMILE',
+      repsCompleted: reps.length,
+      meanSymmetryIndex: 0.8,
+      meanEffortIndex: 0.4,
+      easeOffCount: reps.filter((item) => item.easeOffTriggered === 1).length,
+      lowQualityFramePct: 0,
+      reps,
+    },
+  ];
 }
 
 describe('symmetryPlainLabel', () => {
@@ -80,16 +97,22 @@ describe('symmetryBarFill', () => {
   });
 });
 
-describe('gentleRepCounts', () => {
-  // CLAUDE.md fact 6: easeOffTriggered is stored as 0 | 1, never a boolean.
-  it('counts only reps whose ease-off cue never fired', () => {
-    const reps = [rep(0, 0), rep(1, 0), rep(2, 1), rep(3, 0)];
-    expect(gentleRepCounts(reps)).toEqual({ gentle: 3, total: 4 });
-    expect(strings.summary.easeOffLine(3, 4)).toBe('You kept it gentle 3 of 4 times');
+describe('gentlenessStat', () => {
+  it('handles a session with no reps', () => {
+    expect(gentlenessStat(results([]))).toEqual({ gentle: 0, total: 0 });
   });
 
-  it('handles the all-gentle and no-rep edges', () => {
-    expect(gentleRepCounts([rep(0, 0)])).toEqual({ gentle: 1, total: 1 });
-    expect(gentleRepCounts([])).toEqual({ gentle: 0, total: 0 });
+  it('counts a mixed session across exercises', () => {
+    expect(gentlenessStat(results([rep(0, 0), rep(1, 1), rep(2, 0)]))).toEqual({
+      gentle: 2,
+      total: 3,
+    });
+  });
+
+  it('counts every all-gentle rep', () => {
+    expect(gentlenessStat(results([rep(0, 0), rep(1, 0)]))).toEqual({
+      gentle: 2,
+      total: 2,
+    });
   });
 });

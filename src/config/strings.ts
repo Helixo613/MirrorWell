@@ -451,9 +451,13 @@ export const strings = Object.freeze({
     demoDone: 'Back to onboarding',
     demoDoneAriaLabel: 'Return to onboarding',
     repsDone: (count: number) => `${count} reps completed`,
-    easeOffLine: (gentle: number, total: number) =>
-      `You kept it gentle ${gentle} of ${total} times`,
-    encouraging: 'Thank you for practicing today.',
+    celebration: {
+      label: 'Gentle practice',
+      allGentle: 'Every single rep gentle. Perfect restraint.',
+      someGentle: (gentle: number, total: number) =>
+        `You kept it gentle ${gentle} of ${total} times — that's exactly the skill.`,
+    },
+    qualityNote: 'This is a single-session snapshot of movement.',
     demoWatermark: 'DEMO — not for exercise use',
     symmetry: {
       label: 'Movement symmetry',
