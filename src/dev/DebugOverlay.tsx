@@ -137,7 +137,10 @@ export function DebugOverlay() {
                 // import SafetyGate — the import-graph invariant in app-debug-hud.test.ts) — the
                 // reload still exits demo (in-memory flag), so a second click then wipes the DB.
                 void StorageService.deleteAllData()
-                  .then(() => window.location.reload())
+                  // Full navigation (not just reload) so RootRedirect / GateRoute re-run on a
+                  // wiped DB → UNATTESTED → /onboarding. A bare reload while still on
+                  // /calibration|/home can feel like "delete did nothing" if the URL sticks.
+                  .then(() => window.location.assign('/onboarding'))
                   .catch((err: unknown) => {
                     setActionError(err instanceof Error ? err.message : String(err));
                     setClearing(false);
