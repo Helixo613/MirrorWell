@@ -74,6 +74,11 @@ export const thresholds = Object.freeze({
     motivationMaxLength: 120,
   }),
 
+  // Caregiver-authored text (SAFETY §5 narrow carve-out). Owning section: docs/DATABASE.md §3.
+  caregiver: Object.freeze({
+    noteMaxLength: 200,
+  }),
+
   // Live V1 protocol harness (dev-only). Owning section: docs/MODEL_AND_DATA.md §7
   // (B1a/B1b/B2/B3 statistical protocol: 2 trials × 6 phases, ≥70% OK, yaw band [7°,13°]).
   v1Protocol: Object.freeze({

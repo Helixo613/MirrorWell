@@ -1,8 +1,10 @@
-// src/data/schema.ts — canonical schema for mirrorwell_db, version 1.
+// src/data/schema.ts — canonical schema for mirrorwell_db, version 2.
 // RULE (non-negotiable): only derived numeric data. Never images, video,
 // raw landmark arrays, audio, emails, or free-text health notes. The narrow
 // nickname/motivation exceptions are optional, user-authored, local-only, and
-// never exported.
+// never exported. encouragement_note is a third narrow exception (SAFETY §5/§6):
+// caregiver-authored, about the patient rather than by them, local-only, never
+// exported, never parsed — display-only text that can never gate exercise behavior.
 // RULE: the type exports below (ExerciseId, RegionId, EndReason, row types)
 // are the single canonical definitions. src/config/exercises.ts and all
 // services IMPORT them from here — never redeclare them anywhere.
@@ -74,6 +76,16 @@ export interface RepMetric {
   easeOffTriggered: 0 | 1;
 }
 
+// The caregiver's single free-text encouragement note (SAFETY §5 narrow carve-out — the sole
+// mutating control on CaregiverScreen). Singleton semantics: StorageService.saveEncouragementNote
+// replaces any existing row in one transaction. Never parsed, never referenced by gating logic —
+// display-only text — and never included in ExportService.
+export interface EncouragementNote {
+  noteId: string;                 // PK, uuid v4
+  text: string;                   // trimmed length 1..200
+  createdAt: string;              // UTC ISO 8601
+}
+
 export interface AppSettings {
   settingsId: 'singleton';        // PK, always the literal 'singleton'
   highContrast: boolean;          // default false
@@ -94,6 +106,7 @@ export class MirrorWellDB extends Dexie {
   exercise_result!: Table<ExerciseResult, string>;
   rep_metric!: Table<RepMetric, string>;
   app_settings!: Table<AppSettings, string>;
+  encouragement_note!: Table<EncouragementNote, string>;
 
   constructor() {
     super('mirrorwell_db');
@@ -105,6 +118,12 @@ export class MirrorWellDB extends Dexie {
       exercise_result:      'resultId, sessionId, exerciseId',
       rep_metric:           'repId, resultId',
       app_settings:         'settingsId',
+    });
+    // Additive-only migration (DATABASE §7): version 1 is never edited post-release. This adds
+    // one new, empty table — no .upgrade() needed (nothing to backfill), and every table left
+    // unlisted here (all six from version(1)) carries forward unchanged per Dexie semantics.
+    this.version(2).stores({
+      encouragement_note: 'noteId',
     });
   }
 }

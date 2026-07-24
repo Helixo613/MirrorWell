@@ -16,11 +16,13 @@ Two properties IndexedDB does not give us, and how we compensate:
 This file is the schema. Copy verbatim to `src/data/schema.ts`.
 
 ```typescript
-// src/data/schema.ts — canonical schema for mirrorwell_db, version 1.
+// src/data/schema.ts — canonical schema for mirrorwell_db, version 2.
 // RULE (non-negotiable): only derived numeric data. Never images, video,
 // raw landmark arrays, audio, emails, or free-text health notes. The narrow
 // nickname/motivation exceptions are optional, user-authored, local-only, and
-// never exported.
+// never exported. encouragement_note is a third narrow exception (SAFETY §5/§6):
+// caregiver-authored, about the patient rather than by them, local-only, never
+// exported, never parsed — display-only text that can never gate exercise behavior.
 // RULE: the type exports below (ExerciseId, RegionId, EndReason, row types)
 // are the single canonical definitions. src/config/exercises.ts and all
 // services IMPORT them from here — never redeclare them anywhere.
@@ -86,6 +88,16 @@ export interface RepMetric {
   easeOffTriggered: 0 | 1;
 }
 
+// The caregiver's single free-text encouragement note (SAFETY §5 narrow carve-out — the sole
+// mutating control on CaregiverScreen). Singleton semantics: StorageService.saveEncouragementNote
+// replaces any existing row in one transaction. Never parsed, never referenced by gating logic —
+// display-only text — and never included in ExportService.
+export interface EncouragementNote {
+  noteId: string;                 // PK, uuid v4
+  text: string;                   // trimmed length 1..200
+  createdAt: string;              // UTC ISO 8601
+}
+
 export interface AppSettings {
   settingsId: 'singleton';        // PK, always the literal 'singleton'
   highContrast: boolean;          // default false
@@ -106,6 +118,7 @@ export class MirrorWellDB extends Dexie {
   exercise_result!: Table<ExerciseResult, string>;
   rep_metric!: Table<RepMetric, string>;
   app_settings!: Table<AppSettings, string>;
+  encouragement_note!: Table<EncouragementNote, string>;
 
   constructor() {
     super('mirrorwell_db');
@@ -117,6 +130,12 @@ export class MirrorWellDB extends Dexie {
       exercise_result:      'resultId, sessionId, exerciseId',
       rep_metric:           'repId, resultId',
       app_settings:         'settingsId',
+    });
+    // Additive-only migration (§7): version 1 is never edited post-release. This adds one new,
+    // empty table — no .upgrade() needed (nothing to backfill), and every table left unlisted
+    // here (all six from version(1)) carries forward unchanged per Dexie semantics.
+    this.version(2).stores({
+      encouragement_note: 'noteId',
     });
   }
 }
@@ -145,6 +164,9 @@ export const db = new MirrorWellDB();
 | `exercise_result.*Index` fields | `meanSymmetryIndex` null or `[0..1]`; `lowQualityFramePct` `[0..1]`; counts non-negative integers |
 | `rep_metric.durationMs` | Integer `> 0` |
 | `app_settings.textScale` | `[1.0..2.0]` |
+| `encouragement_note.text` | Required non-empty string; trimmed before storage; trimmed length `1..200`; free text only — never parsed as an instruction, never referenced by `SessionController`/gating logic; excluded from `ExportService` entirely (SAFETY §5) |
+| `encouragement_note.noteId` / `createdAt` | uuid v4 / valid UTC ISO 8601 |
+| `encouragement_note` (table) | Singleton semantics: `saveEncouragementNote` clears any existing row before inserting the new one, in one transaction |
 | Demo read access to `app_settings` | Allowed as API §17's non-sensitive static-config exception so Demo Mode retains accessibility settings; writes remain blocked. |
 | All string PKs/FKs | Non-empty uuid v4 format |
 
@@ -158,6 +180,7 @@ export const db = new MirrorWellDB();
 | `exercise_result` | Per-exercise aggregates within a session | Same transaction as parent | Same readers | Until user deletes |
 | `rep_metric` | Per-rep peaks and timing | Same transaction as parent | `SummaryScreen` (detail), `ExportService` | Until user deletes |
 | `app_settings` | Accessibility + consent-toggle settings singleton (no noise-floor field) | `SettingsService.update` | Every screen; `TrendsService` (granularity only — noise floor comes from active baseline); `SafetyGate` indirectly | Until user deletes |
+| `encouragement_note` | The caregiver's single free-text encouragement note (singleton; saving replaces) | `CaregiverScreen` via `StorageService.saveEncouragementNote` — the sole mutating control on that screen (SAFETY §5) | `SessionScreen` (pre-session arrival display only); never read by `ExportService` | Until replaced, dismissed by the patient (`StorageService.deleteEncouragementNote`), or `deleteAllData` |
 
 **Global retention rules:** no automatic deletion or expiry — the data is the user's exercise history on their own device; `StorageService.deleteAllData()` (typed-confirmation in `SettingsScreen`) drops every table in one transaction; Demo Mode writes **nothing** to any table (structural rule, ARCHITECTURE §11).
 
@@ -169,6 +192,7 @@ There is no server; **100% of data is on-device**. Per-category privacy reasonin
 |---|---|---|
 | Optional display identity | `nickname` | User-chosen display name used only for an on-device greeting. It is never included in JSON or HTML exports. |
 | Optional practice motivation | `motivation` | The user's own words shown back on Home and during rest. The prompt does not solicit diagnosis or symptom details; the value never appears in JSON or HTML exports. |
+| Caregiver encouragement text | `encouragement_note` | The caregiver's own words about the patient, written on the patient's device (SAFETY §5 narrow carve-out); deletable by the patient any time; never leaves the device — same local-only reasoning as nickname/motivation, authored by a different person. |
 | Condition-adjacent identity | `affectedSide`, `assignedExercises` | Reveals a medical condition; combined with any identifier off-device it becomes regulated health data. Locally it never joins an identity — the app stores no name, email, or account. |
 | Face-derived calibration geometry | `neutralStats`, `comfortableMax`, `neutralActivation`, `noiseFloorSymmetry`, `noiseFloorDisplacement` | Derived from the user's face at rest / held gentle max. Deliberately reduced to a handful of region offsets (not a biometric template, not landmarks), but face-derived data leaving the device would demand consent and security machinery a student project cannot honestly operate. |
 | Exercise performance | `session_record`, `exercise_result`, `rep_metric` | Longitudinal health-behavior data. The clinician gets it via user-initiated export files; a server copy would add breach risk and zero product value. |
@@ -194,3 +218,4 @@ Camera fixtures (masters `tests/fixtures/masters/*.{webm,mp4}` + Playwright repl
 - Additive-only policy (post-release): add fields with defaults in `upgrade()`; never rename or repurpose a field (add new + backfill + deprecate in comments instead). Removing a table requires an explicit data-export prompt to the user first — silently dropping health history is forbidden.
 - Every migration ships with a Vitest test: open a fixture DB at version *n−1* (JSON dump checked into `tests/unit/migrations/`), run the upgrade, assert row-level equality with expected output.
 - `consentVersion` (env `VITE_CONSENT_VERSION`) is **not** a schema version — bumping it re-runs onboarding but never migrates data.
+- **V3 Task 4 (`encouragement_note`):** the first additive migration since the v1.0/v2.0 tags — `version(2).stores({ encouragement_note: 'noteId' })` adds one new, empty table; every store left unlisted (all six from `version(1)`) carries forward unchanged per Dexie semantics, so no `.upgrade()` is needed. Verified in `tests/unit/migrations/v1-to-v2.test.ts` (in-line store definitions rather than a JSON fixture dump — there is nothing yet to backfill).

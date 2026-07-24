@@ -340,6 +340,86 @@ describe('StorageService.deleteAllData', () => {
   });
 });
 
+const NOTE_ID = '55555555-5555-4555-8555-555555555555';
+const NOTE_ID_2 = '66666666-6666-4666-8666-666666666666';
+
+function makeNote(overrides: Partial<{ noteId: string; text: string; createdAt: string }> = {}) {
+  return {
+    noteId: NOTE_ID,
+    text: 'So proud of the work you are putting in.',
+    createdAt: '2026-07-10T09:00:00.000Z',
+    ...overrides,
+  };
+}
+
+describe('StorageService.saveEncouragementNote / getEncouragementNote / deleteEncouragementNote', () => {
+  it('round-trips a note', async () => {
+    await StorageService.saveEncouragementNote(makeNote());
+    expect(await StorageService.getEncouragementNote()).toEqual(makeNote());
+  });
+
+  it('returns null when no note has been saved', async () => {
+    expect(await StorageService.getEncouragementNote()).toBeNull();
+  });
+
+  it('trims surrounding whitespace before storing', async () => {
+    await StorageService.saveEncouragementNote(makeNote({ text: '  Keep going!  ' }));
+    expect(await StorageService.getEncouragementNote()).toMatchObject({ text: 'Keep going!' });
+  });
+
+  it('accepts exactly 200 characters', async () => {
+    const text = 'a'.repeat(200);
+    await StorageService.saveEncouragementNote(makeNote({ text }));
+    expect(await StorageService.getEncouragementNote()).toMatchObject({ text });
+  });
+
+  it('rejects text over 200 characters', async () => {
+    await expect(
+      StorageService.saveEncouragementNote(makeNote({ text: 'a'.repeat(201) })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    expect(await StorageService.getEncouragementNote()).toBeNull();
+  });
+
+  it('rejects empty (or whitespace-only) text', async () => {
+    await expect(
+      StorageService.saveEncouragementNote(makeNote({ text: '   ' })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('rejects a malformed noteId or createdAt', async () => {
+    await expect(
+      StorageService.saveEncouragementNote(makeNote({ noteId: 'not-a-uuid' })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+    await expect(
+      StorageService.saveEncouragementNote(makeNote({ createdAt: 'not-a-date' })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
+  it('singleton semantics: saving a second note replaces the first, never accumulates', async () => {
+    await StorageService.saveEncouragementNote(makeNote());
+    await StorageService.saveEncouragementNote(
+      makeNote({ noteId: NOTE_ID_2, text: 'A different note entirely.' }),
+    );
+    expect(await db.encouragement_note.count()).toBe(1);
+    expect(await StorageService.getEncouragementNote()).toEqual(
+      makeNote({ noteId: NOTE_ID_2, text: 'A different note entirely.' }),
+    );
+  });
+
+  it('dismiss (delete) removes the note; calling it again is a no-op', async () => {
+    await StorageService.saveEncouragementNote(makeNote());
+    await StorageService.deleteEncouragementNote();
+    expect(await StorageService.getEncouragementNote()).toBeNull();
+    await expect(StorageService.deleteEncouragementNote()).resolves.toBeUndefined();
+  });
+
+  it('is cleared by deleteAllData', async () => {
+    await StorageService.saveEncouragementNote(makeNote());
+    await StorageService.deleteAllData();
+    expect(await db.encouragement_note.count()).toBe(0);
+  });
+});
+
 describe('Demo Mode isolation', () => {
   it('blocks every sensitive read and leaves seeded history unchanged when writes are attempted', async () => {
     import.meta.env.VITE_CONSENT_VERSION = '1';
@@ -358,6 +438,7 @@ describe('Demo Mode isolation', () => {
       () => StorageService.getProfile(),
       () => StorageService.getActiveBaseline(),
       () => StorageService.getSessions({ from: '1970-01-01T00:00:00.000Z', to: new Date().toISOString() }),
+      () => StorageService.getEncouragementNote(),
     ]) {
       await expect(read()).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
     }
@@ -377,6 +458,8 @@ describe('Demo Mode isolation', () => {
       }),
       () => StorageService.saveBaseline(baseline),
       () => StorageService.saveSession({ ...sessions[0]!, results: sessions[0]!.results.map((result) => ({ ...result, reps: result.reps })) }),
+      () => StorageService.saveEncouragementNote(makeNote()),
+      () => StorageService.deleteEncouragementNote(),
       () => StorageService.deleteAllData(),
     ]) {
       await expect(write()).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
