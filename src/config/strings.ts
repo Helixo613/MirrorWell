@@ -264,53 +264,57 @@ export const strings = Object.freeze({
     },
     QUALITY_TOO_LOW: {
       title: 'That capture did not meet quality',
-      body: 'Try again with more light, a steady position, and your face centered. There is no rush.',
+      body: 'Try again with more light, a steady position, and your whole face centered — eyebrows and forehead in view. There is no rush.',
     },
     // API §16: NO_BASELINE and RECALIBRATION_REQUIRED both route to CalibrationScreen. Without
     // their own copy they fell back to the VALIDATION_FAILED "something went wrong" text, which
     // tells an attested-but-uncalibrated user nothing about what to do (S3-REQ-4).
     NO_BASELINE: {
       title: 'Calibration comes first',
-      body: 'MirrorWell measures movement against your own calibration, so we need to capture that before this can work. It takes about a minute.',
+      body: 'MirrorWell measures movement against your own calibration, so we need to capture that before this can work. Keep your whole face visible, including eyebrows and forehead. It takes about a minute.',
     },
     RECALIBRATION_REQUIRED: {
       title: 'Time to calibrate again',
-      body: 'Your camera setup has shifted since last time. A fresh calibration keeps your measurements comparable.',
+      body: 'Your camera setup has shifted since last time. A fresh calibration keeps your measurements comparable. Keep eyebrows and forehead in view.',
     },
   },
   quality: {
     QUALITY_OK: '',
     LOW_LIGHT: 'More light needed',
-    FACE_LOST: "I can't see you — adjust the camera",
+    FACE_LOST: "I can't see your whole face — include eyebrows and forehead",
     TOO_FAR: 'Come a little closer',
     POSE_OUT_OF_RANGE: 'Face the camera straight on',
     LOW_CONFIDENCE: 'Hold steady for a moment',
   },
   calibration: {
     loading: 'Warming up the camera — about 3 seconds',
+    // Shown on every calibration capture phase — brow/forehead landmarks need a full face frame.
+    framingTip:
+      'Keep your whole face visible in the oval — including your eyebrows and forehead.',
     journey: {
       progressLabel: 'Calibration progress',
       labels: ['Relax your face', 'Gentle movements', 'Quiet moment'] as const,
     },
     phaseAnnouncement: {
       neutral: (current: number, total: number) =>
-        `Relax your face. Neutral capture ${current} of ${total}.`,
+        `Relax your face with eyebrows and forehead in view. Neutral capture ${current} of ${total}.`,
       comfortableMax: (exercise: string, current: number, total: number) =>
-        `${exercise}. Gentle rep ${current} of ${total}.`,
-      noiseFloor: 'One more quiet moment. Relax your face.',
+        `${exercise}. Gentle rep ${current} of ${total}. Keep eyebrows and forehead visible.`,
+      noiseFloor: 'One more quiet moment. Keep your whole face in view, then relax.',
       complete: 'Calibration complete.',
       saving: 'Saving your calibration.',
     },
     helpers: {
       captureRemaining: (seconds: number) =>
         `${seconds} seconds remaining — hold still`,
-      qualityNotReady: 'Adjust your position until the banner clears, then tap Capture.',
+      qualityNotReady:
+        'Move closer or tilt the camera so eyebrows and forehead stay in the oval, then tap Capture.',
       capturing: 'Capturing…',
     },
     neutral: {
       title: 'Relax your face',
       instruction:
-        'Sit comfortably and relax your face, like you are daydreaming. Tap Capture when you are ready.',
+        'Sit comfortably and relax your face, like you are daydreaming. Keep your whole face visible — including eyebrows and forehead — inside the oval. Tap Capture when you are ready.',
       captureLabel: 'Capture',
       redoLabel: 'Redo this capture',
       captureProgress: (current: number, total: number) =>
@@ -318,7 +322,7 @@ export const strings = Object.freeze({
     },
     comfortableMax: {
       instruction:
-        'Gentle — do not strain. Make a small, slow movement, then relax.',
+        'Gentle — do not strain. Keep eyebrows and forehead in the oval, make a small slow movement, then relax.',
       captureLabel: 'Capture rep',
       redoLabel: 'Redo this rep',
       repProgress: (current: number, total: number) =>
@@ -327,7 +331,7 @@ export const strings = Object.freeze({
     noiseFloor: {
       title: 'One more quiet moment',
       instruction:
-        'Relax your face again for a few seconds. This helps us tell real change from small natural wobble.',
+        'Keep your whole face in the oval — eyebrows and forehead included — and relax again for a few seconds. This helps us tell real change from small natural wobble.',
     },
     saving: 'Saving your calibration…',
     complete: 'Calibration complete',
@@ -361,7 +365,7 @@ export const strings = Object.freeze({
     },
     needsCalibration: {
       title: 'Finish calibration first',
-      body: 'Each assigned exercise needs a gentle baseline before practice. Calibration stays on this device.',
+      body: 'Each assigned exercise needs a gentle baseline before practice. Keep your whole face — eyebrows and forehead — in the oval. Calibration stays on this device.',
       action: 'Continue calibration',
       actionAriaLabel: 'Continue calibration for your assigned exercises',
     },
@@ -425,12 +429,12 @@ export const strings = Object.freeze({
     demoWatermark: 'DEMO — not for exercise use',
     quickSetup: {
       title: 'Quick setup',
-      body: 'Relax your face for a few seconds, then one gentle smile. This stays on your device only.',
+      body: 'Keep your whole face in view — including eyebrows and forehead. Relax for a few seconds, then one gentle smile. This stays on your device only.',
       action: 'Start quick setup',
       running: 'Setting up…',
       // Live phase prompts shown WHILE capturing (preview stays visible) — the user cannot time
       // the gentle rep without being told when the second window starts (FRONTEND §2.4).
-      phaseNeutral: 'Relax your face and look at the camera…',
+      phaseNeutral: 'Relax your face with eyebrows and forehead visible…',
       phaseGentle: 'Now — one gentle smile, about half of what feels possible.',
     },
     // Arrival moment (real sessions only, FRONTEND §2.4): shown once start() resolves and before

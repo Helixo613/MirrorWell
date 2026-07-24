@@ -13,7 +13,7 @@ const SLOW_MS = 120_000;
 const CAPTURE_MS = 60_000;
 
 const NEUTRAL_HEADING = 'Relax your face';
-const FACE_LOST_BANNER = "I can't see you — adjust the camera";
+const FACE_LOST_BANNER = "I can't see your whole face — include eyebrows and forehead";
 const CAPTURE_LABEL = 'Capture';
 const REDO_LABEL = 'Redo this capture';
 const QUALITY_TOO_LOW_TITLE = 'That capture did not meet quality';
@@ -122,7 +122,7 @@ test.describe('CalibrationScreen', () => {
     await expect(page.getByRole('heading', { name: NEUTRAL_HEADING })).toBeVisible();
     await expect(
       page.getByText(
-        'Sit comfortably and relax your face, like you are daydreaming. Tap Capture when you are ready.',
+        'Sit comfortably and relax your face, like you are daydreaming. Keep your whole face visible — including eyebrows and forehead — inside the oval. Tap Capture when you are ready.',
       ),
     ).toBeVisible();
     // Capture progress:
@@ -132,7 +132,11 @@ test.describe('CalibrationScreen', () => {
       timeout: SLOW_MS,
     });
     // Advisory helper, NOT a gate — Capture stays operable at bad quality.
-    await expect(page.getByText('Adjust your position until the banner clears, then tap Capture.')).toBeVisible();
+    await expect(
+      page.getByText(
+        'Move closer or tilt the camera so eyebrows and forehead stay in the oval, then tap Capture.',
+      ),
+    ).toBeVisible();
 
     const capture = page.getByRole('button', { name: CAPTURE_LABEL, exact: true });
     await expect(capture).toBeEnabled();
