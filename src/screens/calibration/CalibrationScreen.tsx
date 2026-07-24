@@ -350,37 +350,49 @@ export function CalibrationScreen() {
   const copy = phaseCopy(phase, exerciseList[step.exerciseIndex] ?? null, completed);
 
   return (
-    <ScreenShell textScale={settings.textScale} ariaLabelledBy={HEADING_ID}>
-      <CalibrationJourneyBar phase={step.phase} />
-      <CameraPreview
-        ref={previewRef}
-        isCapturing={isCapturing}
-        dimmed={settings.reducedFacePreview}
-      />
-      <QualityBanner quality={quality} className="mt-4" />
-      <InstructionCard
-        id={HEADING_ID}
-        variant="inline"
-        className="mt-6"
-        title={copy.title}
-        body={copy.body}
-        subtitle={copy.subtitle}
-      />
-      <CaptureProgress
-        className="mt-6"
-        total={total}
-        completed={completed}
-        label={copy.progressLabel}
-      />
-      {coaching ? (
-        <BlockingNotice
-          className="mt-6"
-          title={strings.errors.QUALITY_TOO_LOW.title}
-          body={strings.errors.QUALITY_TOO_LOW.body}
+    <ScreenShell
+      variant="wide"
+      textScale={settings.textScale}
+      ariaLabelledBy={HEADING_ID}
+      className="mx-auto h-dvh max-w-standalone overflow-hidden py-xs sm:py-sm"
+    >
+      <CalibrationJourneyBar phase={step.phase} className="mb-3 shrink-0" />
+      <div className="flex min-h-0 flex-1 items-center justify-center [container-type:size]">
+        <div className="capture-frame relative overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
+          <CameraPreview
+            ref={previewRef}
+            isCapturing={isCapturing}
+            dimmed={settings.reducedFacePreview}
+            className="h-full max-h-none aspect-auto rounded-none border-0"
+          />
+          <QualityBanner
+            quality={quality}
+            className="absolute inset-x-3 top-3 z-10 shadow-sm"
+          />
+        </div>
+      </div>
+      <div className="shrink-0 space-y-3 pt-3">
+        <InstructionCard
+          id={HEADING_ID}
+          variant="inline"
+          title={copy.title}
+          body={copy.body}
+          subtitle={copy.subtitle}
         />
-      ) : null}
+        <CaptureProgress
+          total={total}
+          completed={completed}
+          label={copy.progressLabel}
+        />
+        {coaching ? (
+          <BlockingNotice
+            title={strings.errors.QUALITY_TOO_LOW.title}
+            body={strings.errors.QUALITY_TOO_LOW.body}
+          />
+        ) : null}
+      </div>
       <CalibrationActionBar
-        className="mt-6"
+        className="mt-3 shrink-0"
         helperText={helperText(isCapturing, quality === 'QUALITY_OK')}
       >
         <Button

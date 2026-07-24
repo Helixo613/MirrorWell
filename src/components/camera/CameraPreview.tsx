@@ -47,7 +47,7 @@ export const CameraPreview = forwardRef<HTMLVideoElement, CameraPreviewProps>(
           >
             <div
               className={cn(
-                'h-[55%] w-[45%] rounded-[50%] border-2 border-dashed border-primary/40 transition-opacity duration-200',
+                'h-[68%] w-[42%] rounded-[50%] border-2 border-dashed border-primary/40 transition-opacity duration-200',
                 dimmed && 'opacity-60',
               )}
             />

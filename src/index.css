@@ -119,4 +119,13 @@
   .fluid-grid > * {
     min-width: 0;
   }
+
+  /* Capture stages yield their height to critical chrome. Size the focused
+     square camera frame from that available height instead of stretching it
+     into a desktop-wide webcam strip. */
+  .capture-frame {
+    width: 100%;
+    width: min(100%, 100cqh);
+    aspect-ratio: 1;
+  }
 }
