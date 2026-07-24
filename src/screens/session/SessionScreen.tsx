@@ -97,7 +97,8 @@ export function SessionScreen() {
           ) : null}
         </div>
 
-        <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
+        <div className="flex min-h-0 flex-1 items-center justify-center [container-type:size]">
+          <div className="capture-frame relative overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
           <CameraPreview
             ref={s.previewRef}
             dimmed={s.reducedFacePreview}
@@ -159,6 +160,7 @@ export function SessionScreen() {
             closeAriaLabel={strings.session.teach.closeAriaLabel}
             onClose={s.hideTeach}
           />
+          </div>
         </div>
 
         {s.phase === 'active' ? (

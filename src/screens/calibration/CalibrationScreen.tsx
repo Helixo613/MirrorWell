@@ -357,17 +357,19 @@ export function CalibrationScreen() {
       className="mx-auto h-dvh max-w-standalone overflow-hidden py-xs sm:py-sm"
     >
       <CalibrationJourneyBar phase={step.phase} className="mb-3 shrink-0" />
-      <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
-        <CameraPreview
-          ref={previewRef}
-          isCapturing={isCapturing}
-          dimmed={settings.reducedFacePreview}
-          className="h-full max-h-none aspect-auto rounded-none border-0"
-        />
-        <QualityBanner
-          quality={quality}
-          className="absolute inset-x-3 top-3 z-10 shadow-sm"
-        />
+      <div className="flex min-h-0 flex-1 items-center justify-center [container-type:size]">
+        <div className="capture-frame relative overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
+          <CameraPreview
+            ref={previewRef}
+            isCapturing={isCapturing}
+            dimmed={settings.reducedFacePreview}
+            className="h-full max-h-none aspect-auto rounded-none border-0"
+          />
+          <QualityBanner
+            quality={quality}
+            className="absolute inset-x-3 top-3 z-10 shadow-sm"
+          />
+        </div>
       </div>
       <div className="shrink-0 space-y-3 pt-3">
         <InstructionCard
