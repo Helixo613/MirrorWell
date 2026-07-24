@@ -377,7 +377,13 @@ export const strings = Object.freeze({
     },
     garden: {
       title: 'Your practice garden',
+      subtitle: 'Each week’s growth stays with you.',
       label: 'Your practice garden',
+      growingWeeks: (weeks: number) =>
+        `${weeks} ${weeks === 1 ? 'week' : 'weeks'} growing`,
+      weekLabel: (week: number) => `Week ${week}`,
+      stageLabel: (stage: number) =>
+        ['Seed', 'Sprout', 'Leaf', 'Bloom'][stage],
       ariaLabel: (growingWeeks: number, totalWeeks: number) =>
         `Your practice garden: ${growingWeeks} of ${totalWeeks} weeks growing`,
       weekAriaLabel: (week: number, stage: number) =>
