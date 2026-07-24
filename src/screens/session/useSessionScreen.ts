@@ -5,6 +5,7 @@ import { strings } from '@/config/strings';
 import { useAppState } from '@/context/useAppState';
 import { MirrorWellError } from '@/data/errors';
 import type { ExerciseId } from '@/data/schema';
+import type { MetricSample } from '@/metrics/metrics';
 import { StorageService } from '@/data/storage';
 import { resolveSessionStatus, type SessionStatusMessage } from '@/lib/sessionStatus';
 import { log } from '@/log';
@@ -14,17 +15,19 @@ import type { QualityState } from '@/sensing/quality';
 import { SessionController } from '@/session/controller';
 import { FeedbackRenderer } from '@/session/renderer';
 import { VoiceCoach } from '@/session/voice';
+import { thresholds } from '@/config/thresholds';
 import {
   DEMO_EXERCISE_ID,
   runDemoQuickSetup,
   type QuickSetupPhase,
 } from '@/screens/session/demoQuickSetup';
+import { REST_EXTEND_SECONDS, restRemainingSeconds } from '@/screens/session/sessionHelpers';
 import {
-  coachPhaseFor,
-  REST_EXTEND_SECONDS,
-  restRemainingSeconds,
-  type CoachPhase,
-} from '@/screens/session/sessionHelpers';
+  holdGuide,
+  shouldShowTeach,
+  updateZoneTimer,
+  type HoldGuide,
+} from '@/screens/session/holdGuide';
 import type { SummaryLocationState } from '@/types/summary';
 
 export type SessionScreenPhase =
@@ -72,12 +75,17 @@ export interface UseSessionScreenResult {
    *  text, never parsed. null once dismissed or when none exists (never fetched in demo). */
   encouragementNote: string | null;
   handleDismissNote: () => void;
+  hideTeach: () => void;
+  showTeach: () => void;
   quality: QualityState;
   status: SessionStatusMessage | null;
   repSummary: string;
   /** Live coaching copy over the preview during REPS, or null while another message owns the
    *  screen (non-OK quality / ease-off) or outside REPS. */
   coachText: string | null;
+  holdText: string | null;
+  feedbackAnnouncement: string;
+  teachVisible: boolean;
   easeOffActive: boolean;
   restSecondsRemaining: number;
   restRemainingLabel: string;
@@ -123,7 +131,9 @@ export function useSessionScreen(): UseSessionScreenResult {
   const [repDone, setRepDone] = useState(0);
   const [repTotal, setRepTotal] = useState(0);
   const [easeOffActive, setEaseOffActive] = useState(false);
-  const [coachPhase, setCoachPhase] = useState<CoachPhase | null>(null);
+  const [guide, setGuide] = useState<HoldGuide | null>(null);
+  const [latestSample, setLatestSample] = useState<MetricSample | null>(null);
+  const [teachVisible, setTeachVisible] = useState(false);
   const [restSecondsRemaining, setRestSecondsRemaining] = useState(0);
   const [stopDialogOpen, setStopDialogOpen] = useState(false);
   const [qualityOfferOpen, setQualityOfferOpen] = useState(false);
@@ -143,7 +153,10 @@ export function useSessionScreen(): UseSessionScreenResult {
   const repTotalRef = useRef(0);
   const isDemoRef = useRef(isDemo);
   const restDeadlineRef = useRef(0);
-  const coachPhaseRef = useRef<CoachPhase | null>(null);
+  const guideRef = useRef<HoldGuide | null>(null);
+  const seenExercisesRef = useRef(new Set<ExerciseId>());
+  const enteredZoneAtRef = useRef<number | null>(null);
+  const lastMetricTimestampRef = useRef<number | null>(null);
   const teardownTimerRef = useRef<number | null>(null);
   const resumingRef = useRef(false);
   phaseRef.current = phase;
@@ -259,23 +272,40 @@ export function useSessionScreen(): UseSessionScreenResult {
         setRepDone(0);
         setRepTotal(total);
         FeedbackRenderer.setRepCount(0, total);
+        enteredZoneAtRef.current = null;
+        lastMetricTimestampRef.current = null;
+        guideRef.current = null;
+        setGuide(null);
+        setLatestSample(null);
+        if (shouldShowTeach(seenExercisesRef.current, id)) {
+          seenExercisesRef.current.add(id);
+          setTeachVisible(true);
+        }
         if (state === 'REST') {
           restDeadlineRef.current = performance.now() + exercises[id]!.restSeconds * 1000;
         }
       }),
       SessionController.on('metricUpdate', ({ sample }) => {
         FeedbackRenderer.render(sample, qualityRef.current);
-        // metricUpdate is already throttled (~15 Hz) and only fires during REPS; setState with
-        // an unchanged value is a no-op re-render-wise, so no extra guard is needed.
-        const nextCoachPhase = coachPhaseFor(sample.effortIndex);
-        setCoachPhase(nextCoachPhase);
-        if (nextCoachPhase !== coachPhaseRef.current) {
-          coachPhaseRef.current = nextCoachPhase;
-          VoiceCoach.speak(strings.session.voice[nextCoachPhase]);
+        setLatestSample(sample);
+        const zoneTimer = updateZoneTimer(
+          sample.effortIndex,
+          sample.timestampMs,
+          enteredZoneAtRef.current,
+          lastMetricTimestampRef.current,
+        );
+        enteredZoneAtRef.current = zoneTimer.enteredAtMs;
+        lastMetricTimestampRef.current = sample.timestampMs;
+        const nextGuide = holdGuide(sample.effortIndex, zoneTimer.elapsedInZoneMs);
+        setGuide(nextGuide);
+        if (nextGuide.phase !== guideRef.current?.phase) {
+          guideRef.current = nextGuide;
+          VoiceCoach.speak(strings.session.voice[nextGuide.phase]);
         }
       }),
       SessionController.on('qualityUpdate', ({ state }) => {
         qualityRef.current = state;
+        if (state !== 'QUALITY_OK') enteredZoneAtRef.current = null;
         setQuality(state);
         FeedbackRenderer.render(null, state);
         log.debug('Session', 'quality', { state });
@@ -505,9 +535,35 @@ export function useSessionScreen(): UseSessionScreenResult {
   // The coach line yields to anything with higher authority: quality problems and the ease-off
   // safety cue (both carried by SessionStatusStrip). It exists only during live REPS frames.
   const coachText =
-    subState === 'REPS' && quality === 'QUALITY_OK' && !easeOffActive && coachPhase !== null
-      ? strings.session.coach[coachPhase]
+    subState === 'REPS' && quality === 'QUALITY_OK' && !easeOffActive && guide !== null
+      ? strings.session.coach[guide.phase]
       : null;
+  const holdSeconds = Math.ceil(
+    (guide?.holdRemainingMs ?? thresholds.reps.minDurationMs) /
+      thresholds.session.holdCountdownTickMs,
+  );
+  const holdText =
+    coachText && guide?.phase === 'hold'
+      ? strings.session.hold.remaining(holdSeconds)
+      : coachText && guide?.phase === 'release'
+        ? strings.session.hold.release
+        : null;
+  const [zoneLow, zoneHigh] = thresholds.metrics.effortTargetZone;
+  const feedbackAnnouncement =
+    guide === null || latestSample === null
+      ? ''
+      : strings.session.hold.feedback(
+          latestSample.effortIndex,
+          latestSample.symmetryIndex,
+          zoneLow,
+          zoneHigh,
+          guide.phase,
+          holdSeconds,
+          quality === 'QUALITY_OK'
+            ? strings.session.hold.motionActive
+            : strings.session.hold.motionPaused,
+          settings.showAffectedSideMarker ? (profile?.affectedSide ?? null) : null,
+        );
 
   return {
     previewRef,
@@ -521,10 +577,15 @@ export function useSessionScreen(): UseSessionScreenResult {
     motivation: isDemo ? undefined : profile?.motivation,
     encouragementNote,
     handleDismissNote,
+    hideTeach: () => setTeachVisible(false),
+    showTeach: () => setTeachVisible(true),
     quality,
     status,
     repSummary: strings.session.repCounter(repDone, repTotal),
     coachText,
+    holdText,
+    feedbackAnnouncement,
+    teachVisible,
     easeOffActive,
     restSecondsRemaining,
     restRemainingLabel: strings.session.rest.remaining(restSecondsRemaining),

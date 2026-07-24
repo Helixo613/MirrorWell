@@ -66,6 +66,7 @@ export const thresholds = Object.freeze({
     // API §15 amended to add session.restExtendSeconds — the pre-remediation frontend read this
     // from thresholds and remediation dropped it, leaving SessionScreen with a bare literal.
     restExtendSeconds: 30,
+    holdCountdownTickMs: 1000,
   }),
 
   // VoiceCoach pacing. Owning section: docs/FRONTEND.md §2.4.

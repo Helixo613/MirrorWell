@@ -1,13 +1,13 @@
 // src/session/renderer.ts — FeedbackRenderer (docs/API.md §18). All in-session output.
 //
 // Responsibility split (API §18): the CANVAS layer (redrawn every animation frame) owns the
-// symmetry bar, the guide arc and the focus-side dot; the AUDIO/HAPTIC channels for cues. The
-// DOM layer (quality banners, ease-off chip, rep counter, rest timer, watermark) is React and
-// lives in SessionScreen — this module never composes user-facing text.
+// GentleTarget, optional symmetry context and focus-side dot; the AUDIO/HAPTIC channels for cues.
+// The DOM layer (quality banners, ease-off chip, rep counter, rest timer, watermark) is React
+// and lives in SessionScreen — this module never composes user-facing text.
 //
 // THE load-bearing rule (API §18 / FRONTEND §5 / TESTS.md §3.3): during ANY non-`QUALITY_OK`
-// state the symmetry bar is frozen and visibly labeled. A bar that moves on a bad frame is a
-// critical defect. Here that is guaranteed structurally: the draw loop redraws every frame, but
+// state every live canvas value is frozen and visibly labeled. A target that moves on a bad frame
+// is a critical defect. Here that is guaranteed structurally: the draw loop redraws every frame, but
 // on a non-OK state it advances neither the bar value nor the arc phase — so successive frames
 // are pixel-identical (a pure function of frozen inputs), while still being drawn (immune to a
 // late canvas-resize blanking the last skipped frame).
@@ -27,16 +27,19 @@ import {
 // constants (like the pixel sizes throughout src/components/**), not metric or session tunables —
 // they do not belong in thresholds.ts (API §15) and the canvas is aria-hidden/decorative (every
 // value a user reads off it also exists as DOM live-text). Tune on real hardware.
-const BAR_MAX_HALF_FRAC = 0.4; // half-width of a fully-symmetric bar, as a fraction of canvas width
-const BAR_HEIGHT_PX = 22;
+const BAR_MAX_HALF_FRAC = 0.22; // symmetry is secondary context, not the patient-primary hero
+const BAR_HEIGHT_PX = 6;
 const BAR_EASE = 0.2; // per-frame approach of the displayed bar toward its target (OK frames only)
-// Effort meter (API §18): vertical gauge at the left edge. Reps are DETECTED on effortIndex,
-// so without this gauge the one value that decides "did that count?" was invisible — users
-// steered by the symmetry bar, which can move on movements that never cross repStartThreshold.
-const METER_X_FRAC = 0.05; // meter centreline, as a fraction of canvas width (clear of the bar track at 0.1)
-const METER_WIDTH_PX = 24;
-const METER_TOP_FRAC = 0.18;
-const METER_BOTTOM_FRAC = 0.82;
+const TARGET_RADIUS_FRAC = 0.18;
+const TARGET_Y_FRAC = 0.48;
+const TARGET_DOT_RADIUS_PX = 8;
+const TARGET_TRACK_WIDTH_PX = 10;
+const TARGET_ZONE_WIDTH_PX = 16;
+const TARGET_GUIDE_WIDTH_PX = 4;
+const TARGET_GUIDE_GAP_PX = 13;
+const TARGET_GUIDE_SWEEP_FRAC = 0.22;
+const SYMMETRY_Y_FRAC = 0.78;
+const SYMMETRY_CENTER_HALF_HEIGHT_PX = 8;
 const ZONE_COLOR = 'rgba(22, 163, 74, 0.5)'; // effortTargetZone band — visible on both video and scrim
 const ARC_SPEED = 0.012; // guide-arc sweep per frame (calm pace)
 const ARC_SPEED_EASE = 0.005; // slower sweep while easing off (FRONTEND §5: "arc slows")
@@ -114,34 +117,80 @@ function draw(frozen: boolean): void {
   if (!ctx) return;
   const g = ctx;
   const cx = cssW / 2;
-  const barY = cssH * 0.62;
+  const targetY = cssH * TARGET_Y_FRAC;
+  const barY = cssH * SYMMETRY_Y_FRAC;
   const maxHalf = cssW * BAR_MAX_HALF_FRAC;
   const fill = frozen ? FROZEN_COLOR : easeOff ? EASE_COLOR : CALM_COLOR;
 
   g.clearRect(0, 0, cssW, cssH);
 
-  // Reduced-preview scrim (API §18 "camera-preview dimming"): with the face preview dimmed the
-  // bar is the primary visual, so lift it off the (still-visible) video behind the canvas.
+  // Reduced-preview scrim (API §18 "camera-preview dimming"): lift the target off the
+  // still-visible video behind the canvas.
   if (settings?.reducedFacePreview && videoEl) {
     g.globalAlpha = 1;
     g.fillStyle = 'rgba(0, 0, 0, 0.15)';
     g.fillRect(0, 0, cssW, cssH);
   }
 
-  // Track + centre anchor (always drawn → the bar region is never blank).
+  // GentleTarget: the same smoothed effortIndex the rep FSM receives, shown as one calm
+  // semicircular path with a fixed target-zone segment. The moving dot and pacing highlight
+  // both freeze through advanceBar/advanceArcPhase on every non-OK frame.
+  const targetRadius = Math.min(cssW, cssH) * TARGET_RADIUS_FRAC;
+  const [zoneLow, zoneHigh] = thresholds.metrics.effortTargetZone;
+  g.globalAlpha = 1;
+  g.strokeStyle = TRACK_COLOR;
+  g.lineWidth = TARGET_TRACK_WIDTH_PX;
+  g.beginPath();
+  g.arc(cx, targetY, targetRadius, Math.PI, Math.PI * 2);
+  g.stroke();
+  g.strokeStyle = ZONE_COLOR;
+  g.lineWidth = TARGET_ZONE_WIDTH_PX;
+  g.beginPath();
+  g.arc(
+    cx,
+    targetY,
+    targetRadius,
+    Math.PI + Math.PI * zoneLow,
+    Math.PI + Math.PI * zoneHigh,
+  );
+  g.stroke();
+
+  const effortAngle = Math.PI + Math.PI * clamp01(effortValue);
+  g.globalAlpha = frozen ? FROZEN_ALPHA : 1;
+  g.fillStyle = fill;
+  g.beginPath();
+  g.arc(
+    cx + Math.cos(effortAngle) * targetRadius,
+    targetY + Math.sin(effortAngle) * targetRadius,
+    TARGET_DOT_RADIUS_PX,
+    0,
+    Math.PI * 2,
+  );
+  g.fill();
+
+  if (exerciseId !== null) {
+    const sweep = Math.PI * TARGET_GUIDE_SWEEP_FRAC;
+    const guideStart = Math.PI + arcPhase * (Math.PI - sweep);
+    g.strokeStyle = fill;
+    g.lineWidth = TARGET_GUIDE_WIDTH_PX;
+    g.beginPath();
+    g.arc(cx, targetY, targetRadius + TARGET_GUIDE_GAP_PX, guideStart, guideStart + sweep);
+    g.stroke();
+  }
+
+  // Optional symmetry context: a restrained lower indicator, no longer the hero.
   g.globalAlpha = 1;
   g.strokeStyle = TRACK_COLOR;
   g.lineWidth = 2;
   g.beginPath();
-  g.moveTo(cssW * 0.1, barY);
-  g.lineTo(cssW * 0.9, barY);
+  g.moveTo(cx - maxHalf, barY);
+  g.lineTo(cx + maxHalf, barY);
   g.stroke();
   g.strokeStyle = CENTER_COLOR;
   g.beginPath();
-  g.moveTo(cx, barY - 12);
-  g.lineTo(cx, barY + 12);
+  g.moveTo(cx, barY - SYMMETRY_CENTER_HALF_HEIGHT_PX);
+  g.lineTo(cx, barY + SYMMETRY_CENTER_HALF_HEIGHT_PX);
   g.stroke();
-
   const half = maxHalf * clamp01(barValue);
   g.globalAlpha = frozen ? FROZEN_ALPHA : 1;
   g.fillStyle = fill;
@@ -161,55 +210,6 @@ function draw(frozen: boolean): void {
     g.globalAlpha = frozen ? FROZEN_ALPHA : 1;
     g.fillStyle = fill;
     g.fillRect(cx - track / 2, barY + BAR_HEIGHT_PX, track * progress, 3);
-  }
-
-  // Effort meter (left) — the gauge reps are actually detected on. Fill rises with smoothed
-  // effortIndex; the translucent green band marks effortTargetZone ("raise into the band, hold,
-  // then relax back down — that's one rep"). Same freeze discipline as the bar: on a non-OK
-  // frame the fill is held and dimmed, never advanced.
-  {
-    const meterX = cssW * METER_X_FRAC;
-    const meterTop = cssH * METER_TOP_FRAC;
-    const meterBottom = cssH * METER_BOTTOM_FRAC;
-    const meterSpan = meterBottom - meterTop;
-    const [zoneLow, zoneHigh] = thresholds.metrics.effortTargetZone;
-
-    g.globalAlpha = 1;
-    g.strokeStyle = TRACK_COLOR;
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(meterX, meterTop);
-    g.lineTo(meterX, meterBottom);
-    g.stroke();
-
-    // Target-zone band (always visible, even frozen — it is a fixed landmark, not live data).
-    g.fillStyle = ZONE_COLOR;
-    g.fillRect(
-      meterX - METER_WIDTH_PX,
-      meterBottom - meterSpan * zoneHigh,
-      METER_WIDTH_PX * 2,
-      meterSpan * (zoneHigh - zoneLow),
-    );
-
-    const fillH = meterSpan * clamp01(effortValue);
-    g.globalAlpha = frozen ? FROZEN_ALPHA : 1;
-    g.fillStyle = fill;
-    g.fillRect(meterX - METER_WIDTH_PX / 2, meterBottom - fillH, METER_WIDTH_PX, fillH);
-  }
-
-  // Guide arc (top) — only once an exercise sets the pacing. Frozen → held at a static
-  // mid-sweep; motion is paused, not the drawing.
-  if (exerciseId !== null) {
-    const arcY = cssH * 0.28;
-    const arcR = Math.min(cssW, cssH) * 0.16;
-    const phase = frozen ? 0.5 : arcPhase;
-    const sweep = Math.PI * (0.15 + 0.7 * phase);
-    g.globalAlpha = frozen ? FROZEN_ALPHA : 1;
-    g.strokeStyle = fill;
-    g.lineWidth = 6;
-    g.beginPath();
-    g.arc(cx, arcY, arcR, Math.PI - sweep, Math.PI, false);
-    g.stroke();
   }
 
   // Demo canvas mark (reinforces the DOM DEMO watermark strip on the feedback surface itself).

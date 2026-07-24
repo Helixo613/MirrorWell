@@ -449,14 +449,42 @@ export const strings = Object.freeze({
     coach: {
       raise: 'Raise gently into the green band',
       hold: 'Lovely — hold it gently',
+      release: 'Now relax gently to complete the rep',
       easeBack: 'A little less — settle back toward the band',
       legend: 'The green band is your gentle target: rise into it, hold, then relax to count a rep.',
     },
     voice: {
       raise: 'Gently up',
       hold: 'Hold there',
+      release: 'Now relax gently',
       easeBack: 'A little less',
       rep: (done: number) => `That's ${done}`,
+    },
+    teach: {
+      show: 'Show me how',
+      showAriaLabel: 'Show exercise guidance',
+      title: 'A gentle way to begin',
+      body: (exerciseName: string) => `Let's practice ${exerciseName.toLowerCase()} together.`,
+      steps: 'Raise gently into the target, hold for a moment, then relax.',
+      close: 'I understand',
+      closeAriaLabel: 'Close exercise guidance',
+    },
+    hold: {
+      remaining: (seconds: number) => `Hold gently: ${seconds} seconds`,
+      release: 'Hold complete. Now relax gently.',
+      feedback: (
+        effortIndex: number,
+        symmetryIndex: number | null,
+        zoneLow: number,
+        zoneHigh: number,
+        phase: string,
+        seconds: number,
+        motion: string,
+        focusSide: string | null,
+      ) =>
+        `Gentle target effort ${effortIndex}; target zone ${zoneLow} to ${zoneHigh}; symmetry ${symmetryIndex ?? 'not available'}; coaching ${phase}; hold time remaining ${seconds} seconds; guide motion ${motion}; focus side ${focusSide ?? 'not shown'}.`,
+      motionActive: 'active',
+      motionPaused: 'paused',
     },
     rest: {
       title: 'Rest',

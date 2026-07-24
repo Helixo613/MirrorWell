@@ -62,7 +62,9 @@ describe('thresholds', () => {
   });
 
   it('session exposes the quality-problem stop-offer and metric-throttle tunables', () => {
-    expect(Object.keys(thresholds.session).sort()).toEqual(['metricEventMinIntervalMs', 'qualityProblemOfferStopMs', 'restExtendSeconds'].sort());
+    expect(Object.keys(thresholds.session).sort()).toEqual(
+      ['holdCountdownTickMs', 'metricEventMinIntervalMs', 'qualityProblemOfferStopMs', 'restExtendSeconds'].sort(),
+    );
   });
 
   it('feedback exposes the VoiceCoach minimum gap', () => {
