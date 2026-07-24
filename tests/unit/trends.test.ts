@@ -205,6 +205,7 @@ describe('TrendsService.getTrend', () => {
       textScale: 1.0,
       hapticsEnabled: true,
       audioCuesEnabled: true,
+      voiceCoachEnabled: false,
       reducedFacePreview: false,
       trendGranularity: 'monthly',
       showAffectedSideMarker: true,

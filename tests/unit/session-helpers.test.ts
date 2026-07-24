@@ -22,6 +22,7 @@ function settings(overrides: Partial<AppSettings>): AppSettings {
     textScale: 1,
     hapticsEnabled: true,
     audioCuesEnabled: true,
+    voiceCoachEnabled: false,
     reducedFacePreview: false,
     trendGranularity: 'monthly',
     showAffectedSideMarker: true,

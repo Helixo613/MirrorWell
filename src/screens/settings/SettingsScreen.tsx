@@ -205,6 +205,16 @@ export function SettingsScreen() {
               void settingsScreen.updateSetting('audioCuesEnabled', checked)
             }
           />
+          <ToggleSettingRow
+            id="settings-voice-coach"
+            label={strings.settings.cues.voiceCoach.label}
+            description={strings.settings.cues.voiceCoach.description}
+            checked={settingsScreen.settings.voiceCoachEnabled}
+            disabled={disabled}
+            onCheckedChange={(checked) =>
+              void settingsScreen.updateSetting('voiceCoachEnabled', checked)
+            }
+          />
         </SettingsSection>
 
         <SettingsSection

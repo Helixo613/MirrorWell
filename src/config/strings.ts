@@ -429,6 +429,12 @@ export const strings = Object.freeze({
       easeBack: 'A little less — settle back toward the band',
       legend: 'The green band is your gentle target: rise into it, hold, then relax to count a rep.',
     },
+    voice: {
+      raise: 'Gently up',
+      hold: 'Hold there',
+      easeBack: 'A little less',
+      rep: (done: number) => `That's ${done}`,
+    },
     rest: {
       title: 'Rest',
       remaining: (seconds: number) => `${seconds} seconds left`,
@@ -737,6 +743,10 @@ export const strings = Object.freeze({
       audio: {
         label: 'Sound cues',
         description: 'Soft tones for reps and quality reminders',
+      },
+      voiceCoach: {
+        label: 'Voice coach',
+        description: 'Short spoken cues during exercises',
       },
     },
     trends: {

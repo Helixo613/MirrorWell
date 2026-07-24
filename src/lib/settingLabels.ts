@@ -20,6 +20,8 @@ export function settingLabelFor(key: EditableAppSettingKey): string {
       return strings.settings.cues.haptics.label;
     case 'audioCuesEnabled':
       return strings.settings.cues.audio.label;
+    case 'voiceCoachEnabled':
+      return strings.settings.cues.voiceCoach.label;
     case 'trendGranularity':
       return strings.settings.trends.granularityLabel;
     case 'caregiverViewEnabled':

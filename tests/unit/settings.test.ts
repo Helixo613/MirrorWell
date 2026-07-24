@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   textScale: 1.0,
   hapticsEnabled: true,
   audioCuesEnabled: true,
+  voiceCoachEnabled: false,
   reducedFacePreview: false,
   trendGranularity: 'monthly',
   showAffectedSideMarker: true,
@@ -32,9 +33,18 @@ describe('SettingsService', () => {
   });
 
   it('merges a partial update and persists it', async () => {
-    const updated = await SettingsService.update({ caregiverViewEnabled: true, textScale: 1.5 });
+    const updated = await SettingsService.update({
+      caregiverViewEnabled: true,
+      textScale: 1.5,
+      voiceCoachEnabled: true,
+    });
 
-    expect(updated).toEqual({ ...DEFAULT_SETTINGS, caregiverViewEnabled: true, textScale: 1.5 });
+    expect(updated).toEqual({
+      ...DEFAULT_SETTINGS,
+      caregiverViewEnabled: true,
+      textScale: 1.5,
+      voiceCoachEnabled: true,
+    });
     expect(await SettingsService.get()).toEqual(updated);
   });
 

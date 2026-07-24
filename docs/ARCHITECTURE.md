@@ -221,6 +221,10 @@ All values live in `src/config/thresholds.ts`, each commented with its owning do
 - `POSE_OUT_OF_RANGE` — |yaw| / |pitch| / |roll| > `poseMaxDeg` 15°
 - `LOW_CONFIDENCE` — resting jitter (RMS second difference of landmarks / IOD) > `jitterMaxPct` 0.005
 
+### Feedback thresholds
+
+- `VoiceCoach` utterances are separated by at least `feedback.voiceMinGapMs` (2500 ms).
+
 ## 8. Fail-safe sensing (canonical)
 
 `QualityMonitor.evaluate` returns exactly one `QualityResult` per frame. States: `QUALITY_OK`, `LOW_LIGHT`, `FACE_LOST`, `TOO_FAR`, `POSE_OUT_OF_RANGE`, `LOW_CONFIDENCE`. Hard rules: metrics are computed **only** on `QUALITY_OK` frames, enforced by a compile-time type barrier — `ApprovedFrame` is constructible only inside `quality.ts`; `normalize` / `measureAbsolute` accept only `ApprovedFrame`, so bad-frame metrics are a **compile error**, not a runtime policy. A rep with < 60% `QUALITY_OK` frames is discarded and gently explained; problems persisting > 30 s offer session end (`endReason: 'quality_abandoned'`, excluded from trends). The app never shows a confident number derived from bad input — the UX for each state is specified in FRONTEND.md §5.
