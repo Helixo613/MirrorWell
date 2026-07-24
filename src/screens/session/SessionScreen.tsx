@@ -7,6 +7,7 @@ import { FeedbackCanvas } from '@/components/session/FeedbackCanvas';
 import { DemoWatermark } from '@/components/session/DemoWatermark';
 import { QuickSetupOverlay } from '@/components/session/QuickSetupOverlay';
 import { ArrivalOverlay } from '@/components/session/ArrivalOverlay';
+import { ExerciseTeachOverlay } from '@/components/session/ExerciseTeachOverlay';
 import { SessionStatusStrip } from '@/components/session/SessionStatusStrip';
 import { SessionRepCounter } from '@/components/session/SessionRepCounter';
 import { SessionRestPanel } from '@/components/session/SessionRestPanel';
@@ -110,7 +111,7 @@ export function SessionScreen() {
           {s.phase === 'active' && s.coachText ? (
             <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-4">
               <p className="rounded-lg bg-background/90 px-5 py-2.5 text-center text-xl font-semibold shadow-md">
-                {s.coachText}
+                {s.coachText}{s.holdText ? ` ${s.holdText}` : ''}
               </p>
             </div>
           ) : null}
@@ -145,6 +146,15 @@ export function SessionScreen() {
             dismissNoteAriaLabel={strings.session.arrival.note.dismissAriaLabel}
             onDismissNote={s.handleDismissNote}
           />
+          <ExerciseTeachOverlay
+            visible={s.phase === 'active' && s.teachVisible}
+            title={strings.session.teach.title}
+            body={strings.session.teach.body(s.exerciseName)}
+            steps={strings.session.teach.steps}
+            closeLabel={strings.session.teach.close}
+            closeAriaLabel={strings.session.teach.closeAriaLabel}
+            onClose={s.hideTeach}
+          />
         </div>
 
         {s.phase === 'active' ? (
@@ -170,6 +180,15 @@ export function SessionScreen() {
                   <SessionStatusStrip message={s.status.message} variant={s.status.variant} />
                 ) : null}
                 <SessionRepCounter summary={s.repSummary} label={strings.session.repCounterLabel} />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full text-muted-foreground"
+                  aria-label={strings.session.teach.showAriaLabel}
+                  onClick={s.showTeach}
+                >
+                  {strings.session.teach.show}
+                </Button>
                 <p className="text-center text-sm text-muted-foreground">{strings.session.coach.legend}</p>
               </div>
             ) : null}
@@ -193,6 +212,9 @@ export function SessionScreen() {
             ) : null}
 
             <SessionLiveAnnouncer message={s.liveAnnouncement} />
+            <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+              {s.feedbackAnnouncement}
+            </p>
           </div>
         ) : null}
       </div>

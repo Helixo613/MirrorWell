@@ -53,10 +53,12 @@ async function enterDemoSession(page: Page): Promise<void> {
   });
 }
 
-/** Reads the canvas's bar band: a coarse signature (for frame-to-frame equality) and whether any
- *  pixel is actually drawn there (so the frozen-bar equality check can never pass on a blank
- *  canvas — a bar that never renders would be caught). */
-async function barBand(page: Page): Promise<{ signature: string; nonBlank: boolean; sized: boolean }> {
+/** Reads the full feedback canvas: a coarse signature (for frame-to-frame equality) and whether
+ *  any pixel is actually drawn (so the frozen-feedback equality check can never pass vacuously
+ *  on a blank canvas). */
+async function canvasFrame(
+  page: Page,
+): Promise<{ signature: string; nonBlank: boolean; sized: boolean }> {
   return page.evaluate(() => {
     const canvas = document.querySelector('canvas');
     if (!(canvas instanceof HTMLCanvasElement) || canvas.width === 0 || canvas.height === 0) {
@@ -64,18 +66,17 @@ async function barBand(page: Page): Promise<{ signature: string; nonBlank: boole
     }
     const ctx = canvas.getContext('2d');
     if (!ctx) return { signature: '', nonBlank: false, sized: false };
-    const bandY = Math.max(0, Math.floor(canvas.height * 0.62) - 20);
-    const band = ctx.getImageData(0, bandY, canvas.width, 40);
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
     let nonBlank = false;
-    for (let i = 3; i < band.data.length; i += 4) {
-      if (band.data[i] !== 0) {
+    for (let i = 3; i < pixels.data.length; i += 4) {
+      if (pixels.data[i] !== 0) {
         nonBlank = true;
         break;
       }
     }
     let signature = '';
-    for (let i = 0; i < band.data.length; i += 617) {
-      signature += band.data[i]!.toString(16);
+    for (let i = 0; i < pixels.data.length; i += 617) {
+      signature += pixels.data[i]!.toString(16);
     }
     return { signature, nonBlank, sized: true };
   });
@@ -96,19 +97,19 @@ test.describe('SessionScreen — Demo Mode on a faceless device', () => {
       return c instanceof HTMLCanvasElement && c.width > 0;
     }), { timeout: SLOW_MS }).toBe(true);
 
-    const first = await barBand(page);
+    const first = await canvasFrame(page);
     expect(first.sized).toBe(true);
-    // Non-vacuous: the bar band actually has drawn pixels (track + centre anchor), so the equality
+    // Non-vacuous: the canvas actually has drawn pixels, so the equality
     // assertion below cannot green-pass on a blank canvas.
     expect(first.nonBlank).toBe(true);
 
     // THE load-bearing assertion (TESTS.md §3.3 / FRONTEND §5): every frame is FACE_LOST, so the
     // renderer never advances the bar or arc — successive frames are pixel-identical.
     await page.waitForTimeout(400); // several animation frames
-    const second = await barBand(page);
+    const second = await canvasFrame(page);
     expect(second.signature).toBe(first.signature);
     await page.waitForTimeout(400);
-    const third = await barBand(page);
+    const third = await canvasFrame(page);
     expect(third.signature).toBe(first.signature);
   });
 
@@ -120,8 +121,10 @@ test.describe('SessionScreen — Demo Mode on a faceless device', () => {
     const before = await readCounts(page);
 
     await page.getByRole('button', { name: 'Start quick setup' }).click();
-    // Capturing state is text, not just a spinner.
-    await expect(page.getByRole('button', { name: 'Setting up…' })).toBeVisible();
+    // Capturing state is an aria-live phase prompt, not just a spinner.
+    await expect(
+      page.getByRole('status').filter({ hasText: /Relax your face|Setting up/ }),
+    ).toBeVisible();
 
     // Zero approved neutral / gentle-rep frames → NO_BASELINE, surfaced at build time (not a
     // phantom FACE_LOST that pretends the demo is running while detecting nothing).
