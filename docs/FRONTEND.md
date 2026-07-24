@@ -45,7 +45,8 @@ One dynamic, responsive app — no separate mobile build, no separate "mobile la
 ### 2.2 `CalibrationScreen`
 
 - **Purpose:** capture baseline (ARCHITECTURE §4 steps 3–5) with live coaching.
-- **Layout:** camera preview (mirrored) top; instruction card center ("relax your face, like you're daydreaming"); progress dots for the 3 captures; live quality banner driven by §5 states; large Capture/Redo buttons; secondary **Not now** (outline) leaves to `HomeScreen` and stops the camera — never traps the user on a live preview.
+- **Layout:** camera preview (mirrored) top; instruction card center ("relax your face…"; keep whole face — eyebrows and forehead — in the oval); progress dots for the 3 captures; live quality banner driven by §5 states; large Capture/Redo buttons; secondary **Not now** (outline) leaves to `HomeScreen` and stops the camera — never traps the user on a live preview.
+
 - **Viewport composition:** the interactive calibration surface is a viewport-locked flex stage. The journey bar, current instruction, `CaptureProgress`, and primary action band never shrink below the fold on laptop/desktop viewports; the camera preview takes and yields the remaining height (`min-height: 0`) instead of forcing those controls off-screen. The same continuous hierarchy remains usable at phone widths.
 - **States:** *loading* — `LandmarkEngine.init()` with progress ("warming up the camera — about 3 seconds"); *error* — `CAMERA_DENIED`/`CAMERA_UNAVAILABLE` guidance with retry, `QUALITY_TOO_LOW` → coaching + redo (never a dead end), `MODEL_LOAD_FAILED` → blocking retry; *success* — per-step confirmation, then comfortable-max flow per assigned exercise ("gentle — do not strain" in the copy, API §11 rule), then noise-floor self-test (invisible to the user beyond "one more quiet moment"), then `HomeScreen`.
 - **Calls:** `LandmarkEngine.init`, `CaptureService.start/stop`, `CalibrationFlow.captureNeutral/captureComfortableMax/runNoiseFloorSelfTest`, `StorageService.saveBaseline`.
@@ -155,7 +156,7 @@ What the user sees/hears at each level. **Never blame the user; describe conditi
 | `QUALITY_OK` + ease-off (`easeOff {active:true}`) | Amber tint, "ease off — stay gentle" chip, arc slows | soft descending tone | double pulse | ✅ (easeOffTriggered recorded) |
 | `symmetryIndex: null` (< movementFloor) | Bar rests at center, no judgment | — | — | sample null, no score |
 | `LOW_LIGHT` | Banner "More light needed", bar frozen + dimmed | single soft chime on state entry | — | ❌ paused |
-| `FACE_LOST` | "I can't see you — adjust the camera" | chime | — | ❌ paused |
+| `FACE_LOST` | "I can't see your whole face — include eyebrows and forehead" | chime | — | ❌ paused |
 | `TOO_FAR` | "Come a little closer" | chime | — | ❌ paused |
 | `POSE_OUT_OF_RANGE` | "Face the camera straight on" | chime | — | ❌ paused |
 | `LOW_CONFIDENCE` | "Hold steady for a moment" | chime | — | ❌ paused |

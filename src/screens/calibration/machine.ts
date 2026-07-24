@@ -150,14 +150,14 @@ export function phaseCopy(
     return {
       title: strings.calibration.noiseFloor.title,
       body: strings.calibration.noiseFloor.instruction,
-      subtitle: null,
+      subtitle: strings.calibration.framingTip,
       progressLabel: strings.calibration.phaseAnnouncement.noiseFloor,
     };
   }
   return {
     title: strings.calibration.neutral.title,
     body: strings.calibration.neutral.instruction,
-    subtitle: null,
+    subtitle: strings.calibration.framingTip,
     progressLabel: strings.calibration.neutral.captureProgress(current, total),
   };
 }
