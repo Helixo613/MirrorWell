@@ -72,7 +72,7 @@ export default {
       },
       maxWidth: {
         shell: 'var(--shell-width)',
-        'shell-wide': 'var(--shell-width-wide)',
+        standalone: 'var(--shell-width-standalone)',
       },
       keyframes: {
         'fade-in': {

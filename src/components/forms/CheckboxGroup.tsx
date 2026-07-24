@@ -26,10 +26,7 @@ export function CheckboxGroup<T extends string>({
   disabled = false,
 }: CheckboxGroupProps<T>) {
   return (
-    <fieldset
-      className={cn('space-y-4 md:grid md:grid-cols-2 md:items-start md:gap-4 md:space-y-0', className)}
-      disabled={disabled}
-    >
+    <fieldset className={cn('fluid-grid', className)} disabled={disabled}>
       <legend className="sr-only">{name}</legend>
       {options.map((option) => {
         const checked = values.has(option.id);

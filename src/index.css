@@ -47,13 +47,24 @@
     --space-lg: clamp(2rem, 1.6rem + 1.6vw, 3rem);
     --space-xl: clamp(2.5rem, 2rem + 2vw, 4rem);
 
-    /* Shell content widths — fluid instead of a hard max-w-lg cap, so hub
-       screens stop looking like a phone column floating on a desktop screen.
-       `shell` keeps a readable measure for text-heavy screens (onboarding,
-       settings); `shell-wide` is the opt-in cap for dashboard-style hub
-       screens (home/trends/summary/caregiver/export) with cards/charts. */
-    --shell-width: clamp(20rem, 92vw, 38rem);
-    --shell-width-wide: clamp(20rem, 94vw, 64rem);
+    /* Reading measure — the ONLY capped ScreenShell variant (onboarding text/
+       steps). Widened past strict prose (38rem) to ~44rem so the auto-fit
+       checklist steps (attestation/exercises) can actually reach 2 columns
+       before the cap bites — still reads fine as a single paragraph column.
+       `wide` (hub/data/session screens) applies NO max-width at all — it
+       fills AppShell's fluid flex-1 main beside the sidebar; content spread
+       is the job of .fluid-grid below, not a container cap (owner feedback
+       2026-07-24: a re-imposed max-width here was "mobile app stretched onto
+       desktop" regardless of how fluid the cap's clamp() was). */
+    --shell-width: clamp(20rem, 92vw, 44rem);
+
+    /* Standalone screens — Session/Summary are never AppShell-wrapped (no
+       sidebar to fill beside; the session flow is chrome-free by design), so
+       ScreenShell's `wide` (zero cap) would run the full viewport width with
+       nothing to stop it. These need "wide but sane" — fluid, no hard
+       breakpoint, but capped so a celebration message or the capture stage
+       doesn't stretch edge-to-edge at 1920px. */
+    --shell-width-standalone: clamp(20rem, 92vw, 64rem);
   }
 
   .dark {
@@ -92,5 +103,20 @@
 @layer utilities {
   .motion-safe-animate-fade-in {
     @apply motion-safe:animate-fade-in motion-reduce:animate-none;
+  }
+
+  /* Continuous fluid grid — replaces md:/lg: grid-cols swaps. Columns of
+     minmax(min(100%,20rem), 1fr) appear/vanish continuously as the
+     container widens/narrows (CSS auto-fit), never a discrete "mobile
+     layout" vs "desktop layout" snap. Stretch so uneven-height siblings
+     (e.g. a short card next to a tall one) still align per row. */
+  .fluid-grid {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    align-items: stretch;
+  }
+  .fluid-grid > * {
+    min-width: 0;
   }
 }

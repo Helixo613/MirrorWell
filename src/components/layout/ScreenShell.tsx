@@ -9,6 +9,16 @@ export interface ScreenShellProps {
   /** id of the primary heading for aria-labelledby */
   ariaLabelledBy?: string;
   style?: React.CSSProperties;
+  /**
+   * `reading` (default): centered, capped at a comfortable prose measure —
+   * onboarding text/steps, the only screen where a narrow column is correct.
+   * `wide`: NO max-width — fills AppShell's fluid flex-1 main beside the
+   * sidebar. Hub/data/session screens. Content spread at that width is
+   * `.fluid-grid`'s job (auto-fit columns), not a container cap — re-capping
+   * every screen here is exactly the "phone app stretched onto desktop" bug
+   * (owner feedback 2026-07-24).
+   */
+  variant?: 'reading' | 'wide';
 }
 
 export function ScreenShell({
@@ -17,12 +27,14 @@ export function ScreenShell({
   textScale = 1,
   ariaLabelledBy,
   style,
+  variant = 'reading',
 }: ScreenShellProps) {
   return (
     <main
       aria-labelledby={ariaLabelledBy}
       className={cn(
-        'mx-auto flex min-h-dvh w-full max-w-shell flex-col px-xs py-sm sm:px-sm sm:py-md',
+        'flex min-h-dvh w-full flex-col px-xs py-sm sm:px-sm sm:py-md',
+        variant === 'reading' && 'mx-auto max-w-shell',
         className,
       )}
       style={

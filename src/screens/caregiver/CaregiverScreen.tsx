@@ -67,9 +67,10 @@ export function CaregiverScreen() {
 
   return (
     <ScreenShell
+      variant="wide"
       textScale={settings.textScale}
       ariaLabelledBy={CAREGIVER_HEADING_ID}
-      className="gap-6 md:max-w-shell-wide"
+      className="gap-6"
     >
       <p className="sr-only" role="status" aria-live="polite">
         {caregiver.liveAnnouncement}
@@ -89,79 +90,121 @@ export function CaregiverScreen() {
         </p>
       </StaggerFadeIn>
 
-      <StaggerFadeIn animationKey="caregiver-note" delayMs={STAGGER_MS * 2}>
-        <SoftPanel aria-labelledby="caregiver-note-heading" className="flex flex-col gap-3 p-4">
-          <h2 id="caregiver-note-heading" className="text-lg font-semibold text-foreground">
-            {copy.note.heading}
-          </h2>
-          <div className="space-y-2">
-            <Label htmlFor="caregiver-note-input">{copy.note.label}</Label>
-            <Input
-              id="caregiver-note-input"
-              value={caregiver.noteText}
-              maxLength={thresholds.caregiver.noteMaxLength}
-              disabled={caregiver.noteSaving}
-              onChange={(event) => caregiver.setNoteText(event.target.value)}
-            />
-            <p className="text-sm text-muted-foreground">{copy.note.hint}</p>
-          </div>
-          {caregiver.noteSaveFeedback ? (
-            <p className="text-sm font-medium text-foreground" role="status" aria-live="polite">
-              {caregiver.noteSaveFeedback}
-            </p>
-          ) : null}
-          {caregiver.noteErrorMessage ? (
-            <p className="text-sm text-destructive" role="alert">
-              {caregiver.noteErrorMessage}
-            </p>
-          ) : null}
-          <Button
-            type="button"
-            disabled={caregiver.noteSaving || caregiver.noteText.trim().length === 0}
-            aria-label={copy.note.saveAriaLabel}
-            onClick={() => void caregiver.saveNote()}
-          >
-            {caregiver.noteSaving ? copy.note.saving : copy.note.save}
-          </Button>
-        </SoftPanel>
-      </StaggerFadeIn>
-
-      {caregiver.status === 'empty' ? (
-        <StaggerFadeIn animationKey="caregiver-empty" delayMs={STAGGER_MS * 2}>
-          <SoftPanel>
-            <h2 className="text-lg font-semibold text-foreground">
-              {copy.empty.title}
+      {/* Note compose + the short single-topic status cards below are same-kind tiles —
+          auto-fit spreads them 1/2/3-up as the wide shell widens. The (wider) trends-chart
+          panels stay their own full section, gridded separately below. */}
+      <div className="fluid-grid">
+        <StaggerFadeIn animationKey="caregiver-note" delayMs={STAGGER_MS * 2}>
+          <SoftPanel aria-labelledby="caregiver-note-heading" className="flex h-full flex-col gap-3 p-4">
+            <h2 id="caregiver-note-heading" className="text-lg font-semibold text-foreground">
+              {copy.note.heading}
             </h2>
-            <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-              {copy.empty.body}
-            </p>
+            <div className="space-y-2">
+              <Label htmlFor="caregiver-note-input">{copy.note.label}</Label>
+              <Input
+                id="caregiver-note-input"
+                value={caregiver.noteText}
+                maxLength={thresholds.caregiver.noteMaxLength}
+                disabled={caregiver.noteSaving}
+                onChange={(event) => caregiver.setNoteText(event.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">{copy.note.hint}</p>
+            </div>
+            {caregiver.noteSaveFeedback ? (
+              <p className="text-sm font-medium text-foreground" role="status" aria-live="polite">
+                {caregiver.noteSaveFeedback}
+              </p>
+            ) : null}
+            {caregiver.noteErrorMessage ? (
+              <p className="text-sm text-destructive" role="alert">
+                {caregiver.noteErrorMessage}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              className="mt-auto"
+              disabled={caregiver.noteSaving || caregiver.noteText.trim().length === 0}
+              aria-label={copy.note.saveAriaLabel}
+              onClick={() => void caregiver.saveNote()}
+            >
+              {caregiver.noteSaving ? copy.note.saving : copy.note.save}
+            </Button>
           </SoftPanel>
         </StaggerFadeIn>
-      ) : (
-        <>
-          {caregiver.adherence ? (
-            <StaggerFadeIn animationKey="caregiver-adherence" delayMs={STAGGER_MS * 2}>
-              <SoftPanel aria-labelledby="caregiver-adherence-heading">
+
+        {caregiver.status === 'empty' ? (
+          <StaggerFadeIn animationKey="caregiver-empty" delayMs={STAGGER_MS * 2}>
+            <SoftPanel>
+              <h2 className="text-lg font-semibold text-foreground">
+                {copy.empty.title}
+              </h2>
+              <p className="mt-2 text-base leading-relaxed text-muted-foreground">
+                {copy.empty.body}
+              </p>
+            </SoftPanel>
+          </StaggerFadeIn>
+        ) : (
+          <>
+            {caregiver.adherence ? (
+              <StaggerFadeIn animationKey="caregiver-adherence" delayMs={STAGGER_MS * 2}>
+                <SoftPanel aria-labelledby="caregiver-adherence-heading">
+                  <h2
+                    id="caregiver-adherence-heading"
+                    className="text-lg font-semibold text-foreground"
+                  >
+                    {copy.adherence.heading}
+                  </h2>
+                  <p className="mt-2 text-base text-foreground">
+                    {copy.adherence.completionRate(
+                      Math.round(caregiver.adherence.completionRate * 100),
+                    )}
+                  </p>
+                  <p className="mt-1 text-base text-muted-foreground">
+                    {copy.adherence.sessionsPerWeek(
+                      caregiver.adherence.sessionsPerWeek.join(', ') || '0',
+                    )}
+                  </p>
+                </SoftPanel>
+              </StaggerFadeIn>
+            ) : null}
+
+            {caregiver.lastSessionSummary ? (
+              <StaggerFadeIn animationKey="caregiver-last" delayMs={STAGGER_MS * 4}>
+                <SoftPanel aria-labelledby="caregiver-last-heading">
+                  <h2
+                    id="caregiver-last-heading"
+                    className="text-lg font-semibold text-foreground"
+                  >
+                    {copy.lastSessionHeading}
+                  </h2>
+                  <p className="mt-2 text-base text-foreground">
+                    {caregiver.lastSessionSummary}
+                  </p>
+                </SoftPanel>
+              </StaggerFadeIn>
+            ) : null}
+
+            <StaggerFadeIn animationKey="caregiver-quality" delayMs={STAGGER_MS * 5}>
+              <SoftPanel aria-labelledby="caregiver-quality-heading">
                 <h2
-                  id="caregiver-adherence-heading"
+                  id="caregiver-quality-heading"
                   className="text-lg font-semibold text-foreground"
                 >
-                  {copy.adherence.heading}
+                  {copy.measurementQuality.heading}
                 </h2>
-                <p className="mt-2 text-base text-foreground">
-                  {copy.adherence.completionRate(
-                    Math.round(caregiver.adherence.completionRate * 100),
-                  )}
-                </p>
-                <p className="mt-1 text-base text-muted-foreground">
-                  {copy.adherence.sessionsPerWeek(
-                    caregiver.adherence.sessionsPerWeek.join(', ') || '0',
-                  )}
+                <p className="mt-2 text-base text-muted-foreground">
+                  {caregiver.clearlyCapturedPct === null
+                    ? copy.measurementQuality.unavailable
+                    : copy.measurementQuality.value(caregiver.clearlyCapturedPct)}
                 </p>
               </SoftPanel>
             </StaggerFadeIn>
-          ) : null}
+          </>
+        )}
+      </div>
 
+      {caregiver.status !== 'empty' ? (
+        <>
           {trendsWithData.length > 0 ? (
             <StaggerFadeIn animationKey="caregiver-trends" delayMs={STAGGER_MS * 3}>
               <section aria-labelledby="caregiver-trends-heading" className="space-y-4">
@@ -171,68 +214,38 @@ export function CaregiverScreen() {
                 >
                   {copy.trendsHeading}
                 </h2>
-                {trendsWithData.map((trend) => (
-                  <SoftPanel key={trend.exerciseId}>
-                    <h3 className="mb-2 text-base font-medium text-foreground">
-                      {exercises[trend.exerciseId].displayName}
-                    </h3>
-                    {/* Visual chart for sighted users; the SVG carries no data a screen
-                        reader can read, so it is hidden and the same series is exposed as an
-                        sr-only data table (FRONTEND §4 — trend data must be AT-reachable). */}
-                    <div aria-hidden="true">
-                      <TrendsChart
-                        exerciseName={exercises[trend.exerciseId].displayName}
+                <div className="fluid-grid">
+                  {trendsWithData.map((trend) => (
+                    <SoftPanel key={trend.exerciseId}>
+                      <h3 className="mb-2 text-base font-medium text-foreground">
+                        {exercises[trend.exerciseId].displayName}
+                      </h3>
+                      {/* Visual chart for sighted users; the SVG carries no data a screen
+                          reader can read, so it is hidden and the same series is exposed as an
+                          sr-only data table (FRONTEND §4 — trend data must be AT-reachable). */}
+                      <div aria-hidden="true">
+                        <TrendsChart
+                          exerciseName={exercises[trend.exerciseId].displayName}
+                          points={trend.points}
+                          granularity={trend.granularity}
+                          highContrast={settings.highContrast}
+                        />
+                      </div>
+                      <TrendsDataTable
                         points={trend.points}
                         granularity={trend.granularity}
-                        highContrast={settings.highContrast}
+                        className="sr-only"
                       />
-                    </div>
-                    <TrendsDataTable
-                      points={trend.points}
-                      granularity={trend.granularity}
-                      className="sr-only"
-                    />
-                  </SoftPanel>
-                ))}
+                    </SoftPanel>
+                  ))}
+                </div>
               </section>
             </StaggerFadeIn>
           ) : null}
-
-          {caregiver.lastSessionSummary ? (
-            <StaggerFadeIn animationKey="caregiver-last" delayMs={STAGGER_MS * 4}>
-              <SoftPanel aria-labelledby="caregiver-last-heading">
-                <h2
-                  id="caregiver-last-heading"
-                  className="text-lg font-semibold text-foreground"
-                >
-                  {copy.lastSessionHeading}
-                </h2>
-                <p className="mt-2 text-base text-foreground">
-                  {caregiver.lastSessionSummary}
-                </p>
-              </SoftPanel>
-            </StaggerFadeIn>
-          ) : null}
-
-          <StaggerFadeIn animationKey="caregiver-quality" delayMs={STAGGER_MS * 5}>
-            <SoftPanel aria-labelledby="caregiver-quality-heading">
-              <h2
-                id="caregiver-quality-heading"
-                className="text-lg font-semibold text-foreground"
-              >
-                {copy.measurementQuality.heading}
-              </h2>
-              <p className="mt-2 text-base text-muted-foreground">
-                {caregiver.clearlyCapturedPct === null
-                  ? copy.measurementQuality.unavailable
-                  : copy.measurementQuality.value(caregiver.clearlyCapturedPct)}
-              </p>
-            </SoftPanel>
-          </StaggerFadeIn>
         </>
-      )}
+      ) : null}
 
-      <div className="mt-auto flex flex-col gap-1 border-t border-border/60 pt-6">
+      <div className="mt-auto max-w-shell flex flex-col gap-1 border-t border-border/60 pt-6">
         <QuietNavLink
           to="/export"
           label={copy.exportLink}

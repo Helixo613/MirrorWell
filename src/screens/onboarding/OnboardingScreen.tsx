@@ -216,7 +216,7 @@ export function OnboardingScreen() {
   ]);
 
   return (
-    <ScreenShell textScale={settings.textScale}>
+    <ScreenShell variant="reading" textScale={settings.textScale}>
       <OnboardingHeader
         showBack={canGoBack}
         backLabel={strings.onboarding.actions.back}

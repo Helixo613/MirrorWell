@@ -30,6 +30,7 @@ export function ExportScreen() {
 
   return (
     <ScreenShell
+      variant="wide"
       textScale={settings.textScale}
       ariaLabelledBy={EXPORT_HEADING_ID}
       className="gap-6"
@@ -46,93 +47,100 @@ export function ExportScreen() {
         />
       </StaggerFadeIn>
 
-      {/* Mandatory non-diagnostic notice (SAFETY §8) — always visible. */}
-      <StaggerFadeIn animationKey="export-notice" delayMs={STAGGER_MS}>
-        <SoftPanel aria-labelledby="export-notice-heading">
-          <h2
-            id="export-notice-heading"
-            className="text-base font-semibold text-foreground"
-          >
-            {copy.scopeNoticeHeading}
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {copy.nonDiagnosticNotice}
-          </p>
-        </SoftPanel>
-      </StaggerFadeIn>
-
-      {exportScreen.status === 'success' && exportScreen.preview ? (
-        <StaggerFadeIn animationKey="export-success" delayMs={STAGGER_MS * 2}>
-          <ExportSuccessSection
-            preview={exportScreen.preview}
-            onDownloadJson={exportScreen.downloadJson}
-            onDownloadHtml={exportScreen.downloadHtml}
-            onDownloadWeeklyCard={() => void exportScreen.downloadWeeklyCard()}
-            weeklyCardBusy={cardBusy}
-          />
+      {/* Export is a single linear form flow (notice -> setup -> generate -> card), not a
+          multi-item collection — .fluid-grid doesn't apply. A reading-width cap on just this
+          inner column (no breakpoint, so still continuous) keeps form fields from stretching
+          edge-to-edge in the wide sidebar-adjacent shell, without re-imposing the old
+          screen-wide cap the wide variant exists to remove. */}
+      <div className="flex max-w-shell flex-col gap-6">
+        {/* Mandatory non-diagnostic notice (SAFETY §8) — always visible. */}
+        <StaggerFadeIn animationKey="export-notice" delayMs={STAGGER_MS}>
+          <SoftPanel aria-labelledby="export-notice-heading">
+            <h2
+              id="export-notice-heading"
+              className="text-base font-semibold text-foreground"
+            >
+              {copy.scopeNoticeHeading}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {copy.nonDiagnosticNotice}
+            </p>
+          </SoftPanel>
         </StaggerFadeIn>
-      ) : (
-        <>
-          <StaggerFadeIn animationKey="export-setup" delayMs={STAGGER_MS * 2}>
-            <ExportSetupPanel
-              range={exportScreen.range}
+
+        {exportScreen.status === 'success' && exportScreen.preview ? (
+          <StaggerFadeIn animationKey="export-success" delayMs={STAGGER_MS * 2}>
+            <ExportSuccessSection
+              preview={exportScreen.preview}
+              onDownloadJson={exportScreen.downloadJson}
+              onDownloadHtml={exportScreen.downloadHtml}
+              onDownloadWeeklyCard={() => void exportScreen.downloadWeeklyCard()}
+              weeklyCardBusy={cardBusy}
+            />
+          </StaggerFadeIn>
+        ) : (
+          <>
+            <StaggerFadeIn animationKey="export-setup" delayMs={STAGGER_MS * 2}>
+              <ExportSetupPanel
+                range={exportScreen.range}
+                disabled={isGenerating}
+                onFromChange={exportScreen.setFrom}
+                onToChange={exportScreen.setTo}
+              />
+            </StaggerFadeIn>
+
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              aria-label={copy.generateAriaLabel}
               disabled={isGenerating}
-              onFromChange={exportScreen.setFrom}
-              onToChange={exportScreen.setTo}
-            />
-          </StaggerFadeIn>
+              onClick={() => void exportScreen.generate()}
+            >
+              {copy.generate}
+            </Button>
 
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            aria-label={copy.generateAriaLabel}
-            disabled={isGenerating}
-            onClick={() => void exportScreen.generate()}
-          >
-            {copy.generate}
-          </Button>
+            {isGenerating ? <ExportGeneratingPlaceholder /> : null}
 
-          {isGenerating ? <ExportGeneratingPlaceholder /> : null}
+            {/* Weekly progressCard — available without generating the clinician summary. */}
+            <StaggerFadeIn animationKey="export-weekly-card" delayMs={STAGGER_MS * 3}>
+              <DownloadCard
+                title={card.title}
+                description={card.description}
+                actionLabel={cardBusy ? card.generating : card.download}
+                actionAriaLabel={card.downloadAriaLabel}
+                onDownload={() => void exportScreen.downloadWeeklyCard()}
+                disabled={cardBusy || isGenerating}
+              />
+            </StaggerFadeIn>
 
-          {/* Weekly progressCard — available without generating the clinician summary. */}
-          <StaggerFadeIn animationKey="export-weekly-card" delayMs={STAGGER_MS * 3}>
-            <DownloadCard
-              title={card.title}
-              description={card.description}
-              actionLabel={cardBusy ? card.generating : card.download}
-              actionAriaLabel={card.downloadAriaLabel}
-              onDownload={() => void exportScreen.downloadWeeklyCard()}
-              disabled={cardBusy || isGenerating}
-            />
-          </StaggerFadeIn>
+            {exportScreen.status === 'empty' ? (
+              <SoftPanel aria-labelledby="export-empty-heading">
+                <h2
+                  id="export-empty-heading"
+                  className="text-lg font-semibold text-foreground"
+                >
+                  {copy.empty.title}
+                </h2>
+                <p className="mt-2 text-base leading-relaxed text-muted-foreground">
+                  {copy.empty.body}
+                </p>
+              </SoftPanel>
+            ) : null}
 
-          {exportScreen.status === 'empty' ? (
-            <SoftPanel aria-labelledby="export-empty-heading">
-              <h2
-                id="export-empty-heading"
-                className="text-lg font-semibold text-foreground"
-              >
-                {copy.empty.title}
-              </h2>
-              <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-                {copy.empty.body}
-              </p>
-            </SoftPanel>
-          ) : null}
+            {exportScreen.status === 'error' &&
+            exportScreen.errorTitle &&
+            exportScreen.errorBody ? (
+              <BlockingNotice
+                title={exportScreen.errorTitle}
+                body={exportScreen.errorBody}
+              />
+            ) : null}
+          </>
+        )}
+      </div>
 
-          {exportScreen.status === 'error' &&
-          exportScreen.errorTitle &&
-          exportScreen.errorBody ? (
-            <BlockingNotice
-              title={exportScreen.errorTitle}
-              body={exportScreen.errorBody}
-            />
-          ) : null}
-        </>
-      )}
-
-      <div className="mt-auto border-t border-border/60 pt-6">
+      <div className="mt-auto max-w-shell border-t border-border/60 pt-6">
         <QuietNavLink
           to="/home"
           label={copy.nav.back}

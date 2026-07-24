@@ -68,6 +68,7 @@ export function SettingsScreen() {
 
   return (
     <ScreenShell
+      variant="wide"
       textScale={settingsScreen.settings.textScale}
       ariaLabelledBy={settingsScreen.headingId}
       className="gap-6"
@@ -102,7 +103,10 @@ export function SettingsScreen() {
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-6">
+      {/* The three settings groups are same-kind tiles — auto-fit spreads them 1/2/3-up as
+          the wide shell widens. Recalibrate/Danger-zone below stay full-width standalone
+          bands (not tiles): a destructive action shouldn't compete for a grid cell. */}
+      <div className="fluid-grid">
         <SettingsSection
           title={strings.settings.sections.profile}
           headingId="settings-profile-heading"
@@ -243,7 +247,9 @@ export function SettingsScreen() {
             }
           />
         </SettingsSection>
+      </div>
 
+      <div className="flex max-w-shell flex-col gap-6">
         <nav aria-label={strings.settings.calibration.navLabel}>
           <SoftPanel className="p-0">
             <SettingsLinkRow
@@ -285,7 +291,7 @@ export function SettingsScreen() {
         </section>
       </div>
 
-      <div className="mt-auto border-t border-border/60 pt-6">
+      <div className="mt-auto max-w-shell border-t border-border/60 pt-6">
         <QuietNavLink
           to="/home"
           label={strings.settings.nav.back}
