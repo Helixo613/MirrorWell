@@ -164,7 +164,9 @@ export function SessionScreen() {
         </div>
 
         {s.phase === 'active' ? (
-          <div className="shrink-0">
+          // Cap + scroll the text zone so extra text (a quality banner over the rep box, longer
+          // rest copy) scrolls inside it instead of shrinking the camera stage above.
+          <div className="mt-3 max-h-[34vh] shrink-0 overflow-y-auto">
             {s.subState === 'DEMO' ? (
               <div className="space-y-4 text-center">
                 <p className="text-base leading-relaxed text-muted-foreground">{s.instruction}</p>

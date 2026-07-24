@@ -84,9 +84,11 @@ async function recordCameraTracksWithDelay(page: Page, delayMs: number): Promise
   }, delayMs);
 }
 
-/** Onboards, lands on /calibration and waits for warm-up to finish. */
+/** Onboards, lands on /calibration, taps through the intro, waits for warm-up to finish. */
 async function reachCalibration(page: Page): Promise<void> {
   await completeOnboarding(page);
+  // Pre-capture intro gate: the tips page shows first now; tap Start to reach the capture flow.
+  await page.getByRole('button', { name: 'Start calibration', exact: true }).click();
   await expect(page.getByRole('heading', { name: NEUTRAL_HEADING })).toBeVisible({
     timeout: SLOW_MS,
   });
@@ -120,11 +122,9 @@ test.describe('CalibrationScreen', () => {
     // The <video> is aria-hidden, so every state a sighted user reads off the preview has to
     // exist as text (FRONTEND §4). Phase:
     await expect(page.getByRole('heading', { name: NEUTRAL_HEADING })).toBeVisible();
-    await expect(
-      page.getByText(
-        'Sit comfortably and relax your face, like you are daydreaming. Keep your whole face visible — including eyebrows and forehead — inside the oval. Tap Capture when you are ready.',
-      ),
-    ).toBeVisible();
+    // Camera-primary capture screen: the verbose setup copy now lives on the intro page; the
+    // capture screen states the phase as the heading + the progress label (both readable text).
+    await expect(page.getByText('Neutral capture 1 of 3')).toBeVisible();
     // Capture progress:
     await expect(page.getByText('Neutral capture 1 of 3')).toBeVisible();
     // Quality state (role="status" on QualityBanner — no face in the fake device):
@@ -162,7 +162,7 @@ test.describe('CalibrationScreen', () => {
     await expect(page.getByText(QUALITY_TOO_LOW_TITLE)).toBeVisible({ timeout: CAPTURE_MS });
     await expect(
       page.getByText(
-        'Try again with more light, a steady position, and your face centered. There is no rush.',
+        'Try again with more light, a steady position, and your whole face centered — eyebrows and forehead in view. There is no rush.',
       ),
     ).toBeVisible();
 
