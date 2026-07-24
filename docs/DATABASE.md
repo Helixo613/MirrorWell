@@ -156,7 +156,7 @@ export const db = new MirrorWellDB();
 | `user_profile.profileId` | At most one local profile row. `saveProfile` updates the existing row only when `profileId` matches; a different `profileId` is rejected with `VALIDATION_FAILED`. |
 | `calibration_baseline.qualityScore` | `[0..1]`; **`< 0.7` rejected with `QUALITY_TOO_LOW` (not VALIDATION_FAILED)** |
 | `calibration_baseline.neutralStats` | All four `RegionId` keys present; each side has `{u, v}`; **all components finite only — NOT required `> 0`** (signed face-local projections are legitimately negative) |
-| `calibration_baseline.comfortableMax` | Keys ⊆ profile's `assignedExercises`; values finite `> 0` |
+| `calibration_baseline.comfortableMax` | **Must include every** `assignedExercises` key (complete coverage — partial maps rejected); no keys outside assigned; values finite `> 0` |
 | `calibration_baseline.neutralActivation` | Optional; keys ⊆ profile's `assignedExercises`; values finite in `[0, 1)` and `< comfortableMax[key]` where both present (effort's denominator `comfortableMax − neutralActivation` must stay positive) |
 | `calibration_baseline.noiseFloorSymmetry` | Finite `≥ 0` (held-SI noise; B1b) |
 | `calibration_baseline.noiseFloorDisplacement` | Finite `≥ 0` (rest activation noise; B1a) |

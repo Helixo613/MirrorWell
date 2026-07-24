@@ -271,6 +271,14 @@ describe('SessionController preconditions', () => {
     await expect(SessionController.start(['EX_SMILE'])).rejects.toMatchObject({ code: 'NO_BASELINE' });
   });
 
+  it('rejects a baseline missing comfortableMax for a session exercise', async () => {
+    await seedAttested(['EX_SMILE', 'EX_BROW_RAISE']);
+    vi.spyOn(StorageService, 'getActiveBaseline').mockResolvedValue(makeBaseline({ EX_SMILE: 1 }));
+    await expect(SessionController.start(['EX_SMILE', 'EX_BROW_RAISE'])).rejects.toMatchObject({
+      code: 'NO_BASELINE',
+    });
+  });
+
   it('rejects invalid exercise lists without touching storage', async () => {
     vi.spyOn(SafetyGate, 'isAttested').mockResolvedValue(true);
     vi.spyOn(SafetyGate, 'isDemoMode').mockReturnValue(false);

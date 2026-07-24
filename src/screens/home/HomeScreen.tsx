@@ -23,18 +23,19 @@ export function HomeScreen() {
   const navigate = useNavigate();
   const { profile } = useAppState();
   const profileCreatedAt = profile?.createdAt ?? '';
-  const assignedExerciseCount = profile?.assignedExercises.length ?? 0;
+  const assignedExercises = profile?.assignedExercises ?? [];
 
   const {
     status,
     settings,
     showRecalibration,
+    needsCalibration,
     lastSessionSummary,
     isFirstRun,
     errorTitle,
     errorBody,
     sessions,
-  } = useHomeScreen(profileCreatedAt, assignedExerciseCount);
+  } = useHomeScreen(profileCreatedAt, assignedExercises);
 
   const gardenToday = new Intl.DateTimeFormat('en-CA', {
     year: 'numeric',
@@ -47,13 +48,18 @@ export function HomeScreen() {
   );
   const milestones = milestonesFrom(sessions).filter((milestone) => milestone.achieved);
 
-  const startSession = useCallback(() => {
-    navigate('/session');
-  }, [navigate]);
-
   const goToCalibration = useCallback(() => {
     navigate('/calibration');
   }, [navigate]);
+
+  const startSession = useCallback(() => {
+    // Never open SessionScreen for exercises that lack a gentle-max on the active baseline.
+    if (needsCalibration) {
+      navigate('/calibration');
+      return;
+    }
+    navigate('/session');
+  }, [navigate, needsCalibration]);
 
   useEffect(() => {
     if (status !== 'loading' && status !== 'error') {
@@ -109,8 +115,16 @@ export function HomeScreen() {
           <HomeActionFooter
             primaryAction={
               <PrimaryActionButton
-                label={strings.home.startExercises}
-                aria-label={strings.home.startExercisesAriaLabel}
+                label={
+                  needsCalibration
+                    ? strings.home.calibrateFirst
+                    : strings.home.startExercises
+                }
+                aria-label={
+                  needsCalibration
+                    ? strings.home.calibrateFirstAriaLabel
+                    : strings.home.startExercisesAriaLabel
+                }
                 onClick={startSession}
               />
             }
@@ -159,6 +173,21 @@ export function HomeScreen() {
               <LastSessionLine
                 summary={lastSessionSummary}
                 label={strings.home.lastSession.label}
+              />
+            </StaggerFadeIn>
+          ) : null}
+
+          {needsCalibration ? (
+            <StaggerFadeIn
+              animationKey={`${status}-needs-cal`}
+              delayMs={STAGGER_MS * (lastSessionSummary ? 3 : 2)}
+            >
+              <RecalibrationCard
+                title={strings.home.needsCalibration.title}
+                body={strings.home.needsCalibration.body}
+                actionLabel={strings.home.needsCalibration.action}
+                actionAriaLabel={strings.home.needsCalibration.actionAriaLabel}
+                onRecalibrate={goToCalibration}
               />
             </StaggerFadeIn>
           ) : null}

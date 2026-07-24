@@ -352,10 +352,18 @@ export const strings = Object.freeze({
     },
     startExercises: 'Start my exercises',
     startExercisesAriaLabel: 'Start your assigned exercises',
+    calibrateFirst: 'Calibrate to begin',
+    calibrateFirstAriaLabel: 'Go to calibration before starting exercises',
     loading: 'Loading your home screen…',
     empty: {
       title: 'Ready when you are',
       body: 'Whenever you feel up to it, tap below to begin. There is no schedule, no rush, and nothing to catch up on.',
+    },
+    needsCalibration: {
+      title: 'Finish calibration first',
+      body: 'Each assigned exercise needs a gentle baseline before practice. Calibration stays on this device.',
+      action: 'Continue calibration',
+      actionAriaLabel: 'Continue calibration for your assigned exercises',
     },
     lastSession: {
       label: 'Last session',

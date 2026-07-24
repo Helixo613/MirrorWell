@@ -16,6 +16,7 @@ import { openFrameSource } from './frames.ts';
 import { type LandmarkFrame } from '../sensing/landmarks.ts';
 import { QualityMonitor, type QualityResult, type QualityState } from '../sensing/quality.ts';
 import { log } from '../log.ts';
+import { baselineCoversExercises } from '../lib/baselineCoverage.ts';
 
 type State = 'DEMO' | 'REPS' | 'REST';
 
@@ -324,6 +325,14 @@ export const SessionController = {
       const profile = await StorageService.getProfile();
       if (!profile || exerciseIds.some((id) => !profile.assignedExercises.includes(id))) {
         throw new MirrorWellError('VALIDATION_FAILED', 'exercise not assigned to profile');
+      }
+      // Refuse to start any exercise that was never gentle-max calibrated (partial baselines
+      // used to reach SessionScreen and only fail mid-frame in MetricEngine).
+      if (!baselineCoversExercises(baseline.comfortableMax, exerciseIds)) {
+        throw new MirrorWellError(
+          'NO_BASELINE',
+          'active baseline is missing comfortableMax for a session exercise',
+        );
       }
       if ((await CalibrationFlow.checkBaselineDrift()) === 'recalibrate') {
         throw new MirrorWellError('RECALIBRATION_REQUIRED', 'recalibration required');
