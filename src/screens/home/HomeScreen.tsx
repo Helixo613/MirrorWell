@@ -105,13 +105,25 @@ export function HomeScreen() {
           </HomeHeader>
         </StaggerFadeIn>
 
-        {/* One continuous auto-fit grid — garden + milestones span the full row (hero
-            content, not a tile), the three status cards below reflow 1/2/3-up as the
+        <StaggerFadeIn animationKey={`${status}-action`} delayMs={STAGGER_MS}>
+          <HomeActionFooter
+            primaryAction={
+              <PrimaryActionButton
+                label={strings.home.startExercises}
+                aria-label={strings.home.startExercisesAriaLabel}
+                onClick={startSession}
+              />
+            }
+          />
+        </StaggerFadeIn>
+
+        {/* One continuous auto-fit grid — garden + milestones span the full row, while
+            the three status cards below reflow 1/2/3-up as the
             window widens, with no discrete mobile/desktop layout swap. */}
         <div className="fluid-grid">
           <StaggerFadeIn
             animationKey={`${status}-garden`}
-            delayMs={STAGGER_MS}
+            delayMs={STAGGER_MS * 2}
             className="[grid-column:1/-1]"
           >
             <AdherenceGarden weeks={garden} />
@@ -167,17 +179,6 @@ export function HomeScreen() {
           ) : null}
         </div>
 
-        <StaggerFadeIn animationKey={`${status}-footer`} delayMs={STAGGER_MS * 3}>
-          <HomeActionFooter
-            primaryAction={
-              <PrimaryActionButton
-                label={strings.home.startExercises}
-                aria-label={strings.home.startExercisesAriaLabel}
-                onClick={startSession}
-              />
-            }
-          />
-        </StaggerFadeIn>
       </div>
     </ScreenShell>
   );
