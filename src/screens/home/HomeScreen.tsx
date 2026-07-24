@@ -9,11 +9,6 @@ import { PrimaryActionButton } from '@/components/home/PrimaryActionButton';
 import { RecalibrationCard } from '@/components/home/RecalibrationCard';
 import { ScreenShell } from '@/components/layout/ScreenShell';
 import { StaggerFadeIn } from '@/components/motion/StaggerFadeIn';
-import {
-  QuietNavItem,
-  QuietNavList,
-} from '@/components/navigation/QuietNavList';
-import { QuietNavLink } from '@/components/navigation/QuietNavLink';
 import { strings } from '@/config/strings';
 import { useAppState } from '@/context/useAppState';
 import { useHomeScreen } from '@/hooks/useHomeScreen';
@@ -74,46 +69,11 @@ export function HomeScreen() {
     );
   }
 
-  const navigation = (
-    <QuietNavList label={strings.home.nav.label} className="border-t-0 pt-0">
-      <QuietNavItem>
-        <QuietNavLink
-          to="/trends"
-          label={strings.home.nav.trends}
-          ariaLabel={strings.home.nav.trendsAriaLabel}
-        />
-      </QuietNavItem>
-      <QuietNavItem>
-        <QuietNavLink
-          to="/export"
-          label={strings.home.nav.export}
-          ariaLabel={strings.home.nav.exportAriaLabel}
-        />
-      </QuietNavItem>
-      <QuietNavItem>
-        <QuietNavLink
-          to="/settings"
-          label={strings.home.nav.settings}
-          ariaLabel={strings.home.nav.settingsAriaLabel}
-        />
-      </QuietNavItem>
-      {settings.caregiverViewEnabled ? (
-        <QuietNavItem>
-          <QuietNavLink
-            to="/caregiver"
-            label={strings.home.nav.caregiver}
-            ariaLabel={strings.home.nav.caregiverAriaLabel}
-          />
-        </QuietNavItem>
-      ) : null}
-    </QuietNavList>
-  );
-
   return (
     <ScreenShell
       textScale={settings.textScale}
       ariaLabelledBy={HOME_HEADING_ID}
-      className="gap-10"
+      className="gap-10 lg:max-w-4xl"
     >
       <div className="flex flex-1 flex-col gap-10">
         <StaggerFadeIn animationKey={status}>
@@ -129,7 +89,7 @@ export function HomeScreen() {
           </HomeHeader>
         </StaggerFadeIn>
 
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
           {isFirstRun ? (
             <StaggerFadeIn animationKey={`${status}-empty`} delayMs={STAGGER_MS}>
               <HomeEmptyState
@@ -176,7 +136,6 @@ export function HomeScreen() {
                 onClick={startSession}
               />
             }
-            navigation={navigation}
           />
         </StaggerFadeIn>
       </div>

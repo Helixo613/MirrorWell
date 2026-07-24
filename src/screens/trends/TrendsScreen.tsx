@@ -95,7 +95,7 @@ export function TrendsScreen() {
     <ScreenShell
       textScale={trends.settings.textScale}
       ariaLabelledBy={TRENDS_HEADING_ID}
-      className="gap-6"
+      className="gap-6 lg:max-w-4xl"
     >
       <p className="sr-only" role="status" aria-live="polite">
         {trends.liveAnnouncement}
@@ -112,23 +112,6 @@ export function TrendsScreen() {
         />
       </StaggerFadeIn>
 
-      {(showExerciseSelector || showGranularity) && (
-        <StaggerFadeIn animationKey="trends-controls" delayMs={STAGGER_MS}>
-          <TrendsControlsToolbar<ExerciseId>
-            exerciseLabel={strings.trends.exerciseSelectorLabel}
-            granularityLabel={strings.trends.granularity.label}
-            showExerciseSelector={showExerciseSelector}
-            showGranularity={showGranularity}
-            exerciseOptions={exerciseOptions}
-            selectedExercise={selectedExercise}
-            onExerciseChange={trends.selectExercise}
-            granularityOptions={granularityOptions}
-            granularity={trends.granularity}
-            onGranularityChange={(value) => void trends.setGranularity(value)}
-          />
-        </StaggerFadeIn>
-      )}
-
       {trends.isRefreshing ? (
         <p className="sr-only" role="status" aria-live="polite">
           {strings.trends.refreshing}
@@ -144,36 +127,55 @@ export function TrendsScreen() {
         </StaggerFadeIn>
       ) : null}
 
-      {trends.status === 'ready' && trends.series ? (
-        <StaggerFadeIn
-          animationKey={`trends-card-${trends.series.exerciseId}-${trends.viewMode}`}
-          delayMs={STAGGER_MS * 2}
-        >
-          <TrendsChartCard
-            caption={trends.caption}
-            steadyLabels={trends.steadyLabels}
-            viewMode={trends.viewMode}
-            isRefreshing={trends.isDisplayPending}
-            onToggleViewMode={trends.toggleViewMode}
+      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[240px_1fr] lg:items-start lg:gap-6">
+        {(showExerciseSelector || showGranularity) && (
+          <StaggerFadeIn animationKey="trends-controls" delayMs={STAGGER_MS}>
+            <TrendsControlsToolbar<ExerciseId>
+              exerciseLabel={strings.trends.exerciseSelectorLabel}
+              granularityLabel={strings.trends.granularity.label}
+              showExerciseSelector={showExerciseSelector}
+              showGranularity={showGranularity}
+              exerciseOptions={exerciseOptions}
+              selectedExercise={selectedExercise}
+              onExerciseChange={trends.selectExercise}
+              granularityOptions={granularityOptions}
+              granularity={trends.granularity}
+              onGranularityChange={(value) => void trends.setGranularity(value)}
+            />
+          </StaggerFadeIn>
+        )}
+
+        {trends.status === 'ready' && trends.series ? (
+          <StaggerFadeIn
+            animationKey={`trends-card-${trends.series.exerciseId}-${trends.viewMode}`}
+            delayMs={STAGGER_MS * 2}
           >
-            {trends.isDisplayPending ? (
-              <TrendsChartSkeleton />
-            ) : trends.viewMode === 'chart' ? (
-              <TrendsChart
-                exerciseName={selectedExerciseName}
-                points={trends.series.points}
-                granularity={trends.series.granularity}
-                highContrast={trends.settings.highContrast}
-              />
-            ) : (
-              <TrendsDataTable
-                points={trends.series.points}
-                granularity={trends.series.granularity}
-              />
-            )}
-          </TrendsChartCard>
-        </StaggerFadeIn>
-      ) : null}
+            <TrendsChartCard
+              caption={trends.caption}
+              steadyLabels={trends.steadyLabels}
+              viewMode={trends.viewMode}
+              isRefreshing={trends.isDisplayPending}
+              onToggleViewMode={trends.toggleViewMode}
+            >
+              {trends.isDisplayPending ? (
+                <TrendsChartSkeleton />
+              ) : trends.viewMode === 'chart' ? (
+                <TrendsChart
+                  exerciseName={selectedExerciseName}
+                  points={trends.series.points}
+                  granularity={trends.series.granularity}
+                  highContrast={trends.settings.highContrast}
+                />
+              ) : (
+                <TrendsDataTable
+                  points={trends.series.points}
+                  granularity={trends.series.granularity}
+                />
+              )}
+            </TrendsChartCard>
+          </StaggerFadeIn>
+        ) : null}
+      </div>
 
       <div className="mt-auto border-t border-border/60 pt-6">
         <QuietNavLink

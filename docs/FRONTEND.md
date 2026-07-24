@@ -17,6 +17,16 @@ flowchart LR
 
 Route guard rules (React Router or equivalent): UNATTESTED → everything redirects to `OnboardingScreen`; DEMO → only `SessionScreen`/`SummaryScreen` reachable (watermarked), plus `OnboardingScreen`, which is demo's **exit** and clears the flag on mount (ARCHITECTURE §11, API §2 `exitDemoMode`); `CaregiverScreen` additionally requires `caregiverViewEnabled === true`.
 
+### 1.1 Layout system
+
+One dynamic, responsive app — no separate mobile build. Desktop-first, calm-clinical (generous whitespace, muted sage/slate palette, one accent). One breakpoint: Tailwind `lg` (1024px).
+
+- **Hub shell (sidebar ≥1024px / bottom tab bar <1024px):** wraps exactly the hub screens shown fanning out from `HomeScreen` in the map above — `HomeScreen`, `TrendsScreen`, `ExportScreen`, `SettingsScreen`, `CaregiverScreen`. Nav items: Home, Trends, Export, Settings, and Caregiver only when `caregiverViewEnabled`. Implemented as a layout route (`AppShell`, a shell-local component per §12's "screen-local presentational components are implementation detail" note — not a glossary identifier) nested inside the existing ATTESTED `GateRoute`, sibling to `CalibrationScreen` which stays outside it.
+- **Never shelled:** `OnboardingScreen` (stepper owns the viewport), `CalibrationScreen` (camera-top layout owns the viewport), `SessionScreen`/`SummaryScreen` (the session flow is distraction-free by construction — it is simply never mounted inside the hub shell, so there is no phase-aware chrome toggle to get wrong).
+- **Grids (2-col ≥1024px, 1-col below):** `HomeScreen`'s secondary cards (empty/last-session/recalibration), `TrendsScreen`'s controls-beside-chart split, and `SummaryScreen`'s per-exercise result cards.
+- **Session stage:** centered, `max-w-5xl` on desktop; full-bleed single column below `lg`.
+- All of the above is Tailwind responsive classes only — no JS media queries.
+
 ## 2. Screens
 
 ### 2.1 `OnboardingScreen`

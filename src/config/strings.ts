@@ -376,7 +376,9 @@ export const strings = Object.freeze({
       actionAriaLabel: 'Go to calibration to refresh your baseline',
     },
     nav: {
-      label: 'More options',
+      primaryLabel: 'Primary navigation',
+      home: 'Home',
+      homeAriaLabel: 'Go to home',
       trends: 'Trends',
       trendsAriaLabel: 'View exercise trends over time',
       export: 'Export',
