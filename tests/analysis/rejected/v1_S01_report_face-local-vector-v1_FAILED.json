@@ -27,7 +27,7 @@
     },
     "rules": [
       "Per-trial evaluation; PASS only if every trial passes every bar",
-      "Missing/invalid cells are the string INVALID — no fallback statistics",
+      "Missing/invalid cells are the string INVALID; no fallback statistics",
       "Yaw validity requires measured mean |yaw| ∈ [7°, 13°] from headPose",
       "Phase valid only if ≥70% frames QUALITY_OK"
     ]
@@ -110,7 +110,7 @@
     {
       "condition": "yaw_15",
       "path": "/home/arnavbansal/MirrorWell/.worktrees/remediation-v1/tests/fixtures/masters/fixture_S01_yaw_15.mp4",
-      "note": "legacy single yaw master; protocol requires yaw_left and yaw_right with measured |yaw| ∈ [7°,13°] and trial suffix — insufficient"
+      "note": "legacy single yaw master; protocol requires yaw_left and yaw_right with measured |yaw| ∈ [7°,13°] and trial suffix, insufficient"
     }
   ],
   "trials": {

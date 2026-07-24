@@ -110,7 +110,7 @@ function vectorBaseline(overrides: Partial<CalibrationBaseline> = {}): Calibrati
   };
 }
 
-describe('NormalizationLayer — NO_BASELINE', () => {
+describe('NormalizationLayer; NO_BASELINE', () => {
   it('normalize() passes LandmarkFrame.blendshapes through to NormalizedFrame ({} when absent)', async () => {
     const { NormalizationLayer } = await import('../../src/metrics/normalize.ts');
     NormalizationLayer.setBaseline(vectorBaseline());
@@ -166,7 +166,7 @@ describe('NormalizationLayer — NO_BASELINE', () => {
   });
 });
 
-describe('NormalizationLayer — kernel minus baseline', () => {
+describe('NormalizationLayer, kernel minus baseline', () => {
   it('displacements equal measureAbsolute(af) − neutralStats component-wise (exact)', async () => {
     const { NormalizationLayer } = await import('../../src/metrics/normalize.ts');
     const W = 640;
@@ -174,7 +174,7 @@ describe('NormalizationLayer — kernel minus baseline', () => {
     const af = asApproved(makeFrame(pixelsToNormalized(restFacePixels(320, 240), W, H)), W, H);
     const abs = measureAbsolute(af);
 
-    // Known baseline with non-zero neutral — displacements must be exact subtraction.
+    // Known baseline with non-zero neutral, displacements must be exact subtraction.
     const baseline = vectorBaseline({
       neutralStats: {
         REGION_BROW: { left: { u: 0.02, v: 0.05 }, right: { u: -0.02, v: 0.05 } },
@@ -238,7 +238,7 @@ describe('NormalizationLayer — kernel minus baseline', () => {
   });
 });
 
-describe('NormalizationLayer — timestampMs passthrough', () => {
+describe('NormalizationLayer, timestampMs passthrough', () => {
   it('normalize() copies timestampMs from the LandmarkFrame unchanged (API.md §7)', async () => {
     const { NormalizationLayer } = await import('../../src/metrics/normalize.ts');
     NormalizationLayer.setBaseline(vectorBaseline());

@@ -62,12 +62,12 @@ export function OnboardingScreen() {
 
   // Reaching this screen IS the demo close-out (API §17: OnboardingScreen is "✅ (exits demo)"
   // in DEMO; FRONTEND §2.5 "ends at OnboardingScreen"), and ARCHITECTURE §11 treats leaving demo
-  // as a safety property — so the flag is cleared here rather than on the Summary button: every
+  // as a safety property, so the flag is cleared here rather than on the Summary button: every
   // route in (demo Done, browser Back, a deep link) must exit, not just the one the copy names.
   //
   // The gate is then re-derived, never hard-coded: an ATTESTED user who tried the demo would
   // otherwise be sent to /calibration with the context gate still 'DEMO', and that route's
-  // GateRoute reads the context — bouncing them back to /session through RootRedirect.
+  // GateRoute reads the context, bouncing them back to /session through RootRedirect.
   useEffect(() => {
     let cancelled = false;
     SafetyGate.exitDemoMode();
@@ -159,7 +159,7 @@ export function OnboardingScreen() {
     try {
       const now = new Date().toISOString();
       // Re-onboarding MUST reuse the existing local profile's identity. saveProfile refuses a
-      // different profileId by design (one local profile, ever — DATABASE rule), so minting a
+      // different profileId by design (one local profile, ever; DATABASE rule), so minting a
       // fresh uuid here permanently dead-ends every documented re-onboarding path: a consent-
       // version bump (.env.example: "bump forces re-onboarding"), an earlier run that never
       // finished attestation, or a dev-seeded profile. Each threw VALIDATION_FAILED

@@ -1,6 +1,6 @@
-# Session handoff — MirrorWell V2 dispatch (2026-07-23)
+# Session handoff: MirrorWell V2 dispatch (2026-07-23)
 
-For a fresh agent (Claude Code / Cursor / other). Prior chat was on Cursor Fable 5, then Grok 4.5; usage forced the switch. **Do not re-explore the whole repo — read the linked plans and execute your track.**
+For a fresh agent (Claude Code / Cursor / other). Prior chat was on Cursor Fable 5, then Grok 4.5; usage forced the switch. **Do not re-explore the whole repo; read the linked plans and execute your track.**
 
 ## What this chat decided
 
@@ -47,6 +47,6 @@ All six tracks run **in parallel**. Within a track, tasks are sequential. Merge 
 
 ## What NOT to redo
 
-- Neutral-rebased effort, effort meter, durationMs rounding, demo quick-setup floors — already on `main`
+- Neutral-rebased effort, effort meter, durationMs rounding, demo quick-setup floors; already on `main`
 - Inventing new identifiers, deps, or network calls
 - Implementing V3 before V2 tracks merge

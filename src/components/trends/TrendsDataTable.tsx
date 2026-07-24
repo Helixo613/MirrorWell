@@ -47,7 +47,7 @@ export function TrendsDataTable({
               <td className="px-4 py-3 tabular-nums">{point.sampleCount}</td>
               <td className="px-4 py-3">
                 {index === 0
-                  ? '—'
+                  ? '-'
                   : point.aboveNoiseFloor
                     ? strings.trends.table.noticeable
                     : strings.trends.table.steady}

@@ -6,7 +6,7 @@ import type { LandmarkFrame } from '../../src/sensing/landmarks.ts';
 // Test isolation: CalibrationFlow (and QualityMonitor's jitter history) keep module-level
 // state that is never reset by a public API, so state bled between tests and could mask
 // ordering-dependent bugs. Each test gets a fresh module graph via vi.resetModules() + dynamic
-// import — no test-only reset() is added to the production contract. Every stateful
+// import; no test-only reset() is added to the production contract. Every stateful
 // collaborator the tests spy on or read must come from the SAME fresh graph, hence the
 // re-imports below.
 let StorageService: typeof import('../../src/data/storage.ts').StorageService;
@@ -86,7 +86,7 @@ function emit(lf: LandmarkFrame | null, timestampMs: number): void {
 /**
  * Waits until a capture window is subscribed. captureFor() now awaits
  * CaptureService.start() before its window is live (src/session/frames.ts), so the number of
- * microtasks between windows is an implementation detail — poll for the subscriber instead of
+ * microtasks between windows is an implementation detail, poll for the subscriber instead of
  * counting ticks. Each window tears its subscriber down synchronously on its closing frame,
  * so `size === 0` reliably means "the next window has not opened yet".
  */
@@ -202,15 +202,18 @@ describe('CalibrationFlow', () => {
   });
 
   it('rejects a comfortable-max median peak below activationFloor (held-still capture)', async () => {
+    const NOISE = thresholds.calibration.comfortableMaxMinRise;
     // Same invariant demoComfortableMax enforces: a noise-level comfortableMax makes
-    // effortIndex = activation / comfortableMax read ANY facial motion — including
-    // cross-activation bleed from an unrelated movement — as a full-effort rep.
+    // effortIndex = activation / comfortableMax read ANY facial motion, including
+    // cross-activation bleed from an unrelated movement, as a full-effort rep.
     // QUALITY_TOO_LOW so CalibrationScreen's coaching/retry path handles it.
     const result = CalibrationFlow.captureComfortableMax('EX_SMILE');
     await captureThree(result.then(() => undefined, () => undefined), [
-      frame({ mouthSmileLeft: 0.02, mouthSmileRight: 0.01 }),
-      frame({ mouthSmileLeft: 0.03, mouthSmileRight: 0.02 }),
-      frame({ mouthSmileLeft: 0.04, mouthSmileRight: 0.02 }),
+      // Scaled to the floor rather than written as literals, so these stay noise-level peaks
+      // (the case under test) whenever activationFloor is retuned.
+      frame({ mouthSmileLeft: NOISE * 0.4, mouthSmileRight: NOISE * 0.2 }),
+      frame({ mouthSmileLeft: NOISE * 0.6, mouthSmileRight: NOISE * 0.4 }),
+      frame({ mouthSmileLeft: NOISE * 0.8, mouthSmileRight: NOISE * 0.4 }),
     ]);
     await expect(result).rejects.toMatchObject({ code: 'QUALITY_TOO_LOW' });
   });
@@ -248,11 +251,15 @@ describe('CalibrationFlow', () => {
       frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }),
       frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }),
     ]);
+    // Peaks sit above the 0.3 resting read but by less than activationFloor, so they clear the
+    // absolute floor and still fail the rebased one. Derived, so a retune cannot invert the case.
+    const REST = 0.3;
+    const step = thresholds.calibration.comfortableMaxMinRise;
     const result = CalibrationFlow.captureComfortableMax('EX_SMILE');
     await captureThree(result.then(() => undefined, () => undefined), [
-      frame({ mouthSmileLeft: 0.33, mouthSmileRight: 0.33 }),
-      frame({ mouthSmileLeft: 0.32, mouthSmileRight: 0.32 }),
-      frame({ mouthSmileLeft: 0.34, mouthSmileRight: 0.34 }),
+      frame({ mouthSmileLeft: REST + step * 0.6, mouthSmileRight: REST + step * 0.6 }),
+      frame({ mouthSmileLeft: REST + step * 0.4, mouthSmileRight: REST + step * 0.4 }),
+      frame({ mouthSmileLeft: REST + step * 0.8, mouthSmileRight: REST + step * 0.8 }),
     ]);
     await expect(result).rejects.toMatchObject({ code: 'QUALITY_TOO_LOW' });
   });
@@ -322,7 +329,7 @@ describe('CalibrationFlow', () => {
   });
 
   // M5 (Gate 0 T7): runNoiseFloorSelfTest pins NormalizationLayer/MetricEngine to a throwaway
-  // makeBaseline(0) baseline to measure the noise floor, then saves the corrected baseline —
+  // makeBaseline(0) baseline to measure the noise floor, then saves the corrected baseline
   // but used to leave both engines pinned to the throwaway. Assert on observable behaviour
   // (NormalizationLayer.normalize throwing NO_BASELINE), not on internals: MetricEngine has no
   // clearBaseline (none is added), so this only proves NormalizationLayer is actually cleared.
@@ -377,7 +384,7 @@ describe('CalibrationFlow', () => {
 
   // I2 regression. The capture window used to open and close off lf.timestampMs behind an
   // `lf &&` guard, so a stream where every frame fails inference (lf === null) never opened
-  // and never closed the window — captureFor hung forever. The window now runs off the raw
+  // and never closed the window, captureFor hung forever. The window now runs off the raw
   // CaptureService timestamp, so the capture always terminates on schedule.
   it(
     'terminates a drift capture in which every frame fails inference',

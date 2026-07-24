@@ -1,10 +1,10 @@
-// src/metrics/geometry.ts — face-local 2D vector geometry kernel (math: ARCHITECTURE §7).
+// src/metrics/geometry.ts, face-local 2D vector geometry kernel (math: ARCHITECTURE §7).
 // Baseline-free measurement: measureAbsolute accepts only ApprovedFrame (type barrier).
 //
-// SCOPE — geometry vs SI (do NOT conflate; MODEL_AND_DATA §7):
+// SCOPE, geometry vs SI (do NOT conflate; MODEL_AND_DATA §7):
 //   This kernel is NOT the production symmetry-index source. Its only consumers are the
-//   calibration path — CalibrationFlow.captureNeutral (neutral-baseline capture) and
-//   checkBaselineDrift (baseline-drift detection) in src/session/calibration.ts — plus the
+//   calibration path, CalibrationFlow.captureNeutral (neutral-baseline capture) and
+//   checkBaselineDrift (baseline-drift detection) in src/session/calibration.ts, plus the
 //   neutral-subtraction step inside NormalizationLayer.normalize (src/metrics/normalize.ts).
 //   symmetryIndex / effortIndex are computed from per-side blendshape pairs in
 //   src/metrics/metrics.ts (candidate blendshape-si-v1); the geometry SI family was rejected
@@ -25,37 +25,37 @@ export type NeutralStats = AbsoluteFeatures;
 // Verified against the standard 468-point topology used by Face Mesh / FaceLandmarker.
 // ---------------------------------------------------------------------------
 
-/** Subject's right eye outer corner — MediaPipe mesh point 33. */
+/** Subject's right eye outer corner, MediaPipe mesh point 33. */
 const EYE_R_OUTER = 33;
-/** Subject's left eye outer corner — MediaPipe mesh point 263. */
+/** Subject's left eye outer corner, MediaPipe mesh point 263. */
 const EYE_L_OUTER = 263;
-/** Subject's right eye inner corner — MediaPipe mesh point 133. */
+/** Subject's right eye inner corner, MediaPipe mesh point 133. */
 const EYE_R_INNER = 133;
-/** Subject's left eye inner corner — MediaPipe mesh point 362. */
+/** Subject's left eye inner corner, MediaPipe mesh point 362. */
 const EYE_L_INNER = 362;
 
-/** Subject's left brow (upper brow ridge) — MediaPipe mesh point 334 (FACEMESH_LEFT_EYEBROW). */
+/** Subject's left brow (upper brow ridge), MediaPipe mesh point 334 (FACEMESH_LEFT_EYEBROW). */
 const BROW_L = 334;
-/** Subject's right brow (upper brow ridge) — MediaPipe mesh point 105 (FACEMESH_RIGHT_EYEBROW). */
+/** Subject's right brow (upper brow ridge), MediaPipe mesh point 105 (FACEMESH_RIGHT_EYEBROW). */
 const BROW_R = 105;
 
-/** Subject's left upper eyelid — MediaPipe mesh point 386 (FACEMESH_LEFT_EYE). */
+/** Subject's left upper eyelid, MediaPipe mesh point 386 (FACEMESH_LEFT_EYE). */
 const LID_UPPER_L = 386;
-/** Subject's left lower eyelid — MediaPipe mesh point 374 (FACEMESH_LEFT_EYE). */
+/** Subject's left lower eyelid, MediaPipe mesh point 374 (FACEMESH_LEFT_EYE). */
 const LID_LOWER_L = 374;
-/** Subject's right upper eyelid — MediaPipe mesh point 159 (FACEMESH_RIGHT_EYE). */
+/** Subject's right upper eyelid, MediaPipe mesh point 159 (FACEMESH_RIGHT_EYE). */
 const LID_UPPER_R = 159;
-/** Subject's right lower eyelid — MediaPipe mesh point 145 (FACEMESH_RIGHT_EYE). */
+/** Subject's right lower eyelid, MediaPipe mesh point 145 (FACEMESH_RIGHT_EYE). */
 const LID_LOWER_R = 145;
 
-/** Subject's left outer mouth corner — MediaPipe mesh point 291. */
+/** Subject's left outer mouth corner, MediaPipe mesh point 291. */
 const MOUTH_L = 291;
-/** Subject's right outer mouth corner — MediaPipe mesh point 61. */
+/** Subject's right outer mouth corner, MediaPipe mesh point 61. */
 const MOUTH_R = 61;
 
-/** Subject's left inner lip corner — MediaPipe mesh point 308. */
+/** Subject's left inner lip corner, MediaPipe mesh point 308. */
 const LIP_L = 308;
-/** Subject's right inner lip corner — MediaPipe mesh point 78. */
+/** Subject's right inner lip corner, MediaPipe mesh point 78. */
 const LIP_R = 78;
 
 const REGION_IDS: readonly RegionId[] = [
@@ -145,7 +145,7 @@ export function measureAbsolute(af: ApprovedFrame): AbsoluteFeatures {
 
   // REGION_MOUTH_CORNER: movers 291 (L) / 61 (R); anchors same-side eye centers
   // (candidate face-local-vector-v2). The nose tip sits off the face plane, so under
-  // yaw its projection shifts by ~depth·sin(yaw) — a common-mode u error that collapsed
+  // yaw its projection shifts by ~depth·sin(yaw); a common-mode u error that collapsed
   // SI to 0 at 10° yaw (V1 B3 rejection of face-local-vector-v1). Eye centers are
   // planar and expression-static, so the depth term vanishes to first order.
   const mouthL = feature(toPx(lm[MOUTH_L]!, W, H), eyeCenterL, uHat, vHat, iod);

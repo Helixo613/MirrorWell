@@ -138,7 +138,7 @@ describe('B1a/B1b/B2/B3 formulas', () => {
     assert.equal(evaluateB1a(null, false).value, INVALID);
   });
 
-  it('B1b uses SI std only — never displacement std fallback', () => {
+  it('B1b uses SI std only; never displacement std fallback', () => {
     const stable = okFrames(20, { symmetryIndex: 0.92 });
     assert.equal(evaluateB1b(stable, true).pass, true);
 

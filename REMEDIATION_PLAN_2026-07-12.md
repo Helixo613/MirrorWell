@@ -21,7 +21,7 @@ Every agent working from this plan must follow these rules in order:
 3. Inspect `git status --short`. Existing uncommitted work belongs to the user; never overwrite or discard it.
 4. Stop at every **Decision Gate** until the user explicitly approves one option.
 5. Amend the owning canonical docs before implementing a changed contract, identifier, schema, threshold, or algorithm.
-6. Include `DOCS-CHANGE: <doc> §<n> — <what and why>` in the corresponding commit/PR body.
+6. Include `DOCS-CHANGE: <doc> §<n>, <what and why>` in the corresponding commit/PR body.
 7. Use test-driven development: add one failing test, verify the intended failure, implement the smallest fix, verify it passes, then refactor if necessary.
 8. Do not tune thresholds against the test set merely to force a pass. Record failed candidates.
 9. Do not continue past a failed kill gate. A failure is evidence, not permission to narrow the test.
@@ -73,7 +73,7 @@ No phase may consume a contract owned by an unfinished predecessor.
 
 These decisions must be approved before implementation. Agents may gather evidence and recommend an option, but may not choose silently.
 
-### DG-1 — Hot-path ownership and structural gating
+### DG-1: Hot-path ownership and structural gating
 
 **Problem:** `QualityMonitor.evaluate` returns only a state, yet docs also say it is the only caller of `NormalizationLayer.normalize`.
 
@@ -83,7 +83,7 @@ These decisions must be approved before implementation. Agents may gather eviden
 
 **Approval must specify:** owner, exact return type, exact accepted input type, and where the `INFERENCE_FAILED → FACE_LOST` conversion happens.
 
-### DG-2 — Calibration bootstrap
+### DG-2: Calibration bootstrap
 
 **Problem:** the first neutral baseline cannot be produced by a normalizer that requires a baseline.
 
@@ -91,7 +91,7 @@ These decisions must be approved before implementation. Agents may gather eviden
 
 **Rejected approach:** install a zero/default baseline. It hides missing state and invalidates the `NO_BASELINE` guarantee.
 
-### DG-3 — Per-exercise geometry representation
+### DG-3: Per-exercise geometry representation
 
 **Problem:** scalar point-to-point distance loses direction and makes inverse rotation ineffective.
 
@@ -103,7 +103,7 @@ These decisions must be approved before implementation. Agents may gather eviden
 
 **Approval must specify for each exercise:** moving landmarks, stable anchor(s), face-local axes, expected positive direction, scale, whether Z is used, pose transform, and output unit.
 
-### DG-4 — Neutral noise metric
+### DG-4: Neutral noise metric
 
 **Problem:** `symmetryIndex` is null at rest, so its rest standard deviation is normally undefined.
 
@@ -111,7 +111,7 @@ These decisions must be approved before implementation. Agents may gather eviden
 
 **Alternative:** retain the field name only if raw pre-floor SI is precisely defined and proven meaningful.
 
-### DG-5 — Storage compatibility
+### DG-5: Storage compatibility
 
 **Problem:** moving noise data to `CalibrationBaseline` or adopting vectors may change the schema.
 
@@ -119,7 +119,7 @@ These decisions must be approved before implementation. Agents may gather eviden
 
 **Approval must state:** pre-release reset or migration, exact field shape, and export compatibility.
 
-### DG-6 — V1 statistics
+### DG-6: V1 statistics
 
 **Problem:** B1–B3 lack exact formulas and independent sampling units.
 
@@ -127,47 +127,47 @@ These decisions must be approved before implementation. Agents may gather eviden
 
 **Recommended B2 structure:** paired within-subject comparison using an explicitly named relative-deviation statistic; never treat frames as independent subjects.
 
-### DG-7 — Pose validation envelope
+### DG-7: Pose validation envelope
 
 **Problem:** validation targets exactly ±15° while the quality gate rejects beyond 15°, leaving no noise margin.
 
 **Recommended decision:** either validate inside a documented operational range below the gate, or move the gate outward only after fixture evidence demonstrates safe accuracy at the validation angles. Record measured yaw/pitch/roll, not a phase label.
 
-### DG-8 — Rendering ownership and rate
+### DG-8: Rendering ownership and rate
 
 **Problem:** docs simultaneously require direct full-FPS rendering and ≤15 Hz event input.
 
 **Recommended decision:** keep geometry/quality computation on the hot path; publish UI state at ≤15 Hz; animate/repaint the canvas with the latest immutable sample via `requestAnimationFrame`. Define latency from capture timestamp to first visible render.
 
-### DG-9 — Demo isolation
+### DG-9: Demo isolation
 
 **Problem:** Demo Mode blocks writes but permits all reads, risking existing patient-data access.
 
 **Recommended decision:** Demo Mode may read only non-sensitive static configuration needed to start; it must not read profile, baseline, session, trend, or export data.
 
-### DG-10 — Clinical and regulatory wording
+### DG-10: Clinical and regulatory wording
 
 **Problem:** the docs categorically declare a non-device/non-treatment status without a jurisdiction-specific determination.
 
 **Recommended decision:** use “research prototype; regulatory status not determined; not cleared or approved” until qualified review. Do not change the clinician-assignment, attestation, stop, or emergency safeguards.
 
-### DG-11 — Supported runtime facts
+### DG-11: Supported runtime facts
 
 **Problem:** Firefox installation and MediaPipe WebGPU statements are stale/inaccurate, and current MediaPipe privacy language mentions utilization metrics.
 
 **Recommended decision:** document exact tested browser versions, call the delegate `GPU` unless backend is directly verified, and block release until runtime network inspection proves no telemetry for the pinned package/configuration.
 
-### DG-12 — Task acceptance model
+### DG-12: Task acceptance model
 
 **Problem:** `IMPLEMENTATION.md` has no acceptance ledger and currently says the repository is empty.
 
 **Recommended decision:** add a table containing task status, evidence, accepted date, and blocking dependency. Mark Task 6 blocked; mark downstream work provisional until V1 passes.
 
-## 5. Phase 0 — Freeze and establish evidence
+## 5. Phase 0: Freeze and establish evidence
 
 **Goal:** prevent further drift and create reproducible baselines.
 
-### Task 0.1 — Record repository state
+### Task 0.1: Record repository state
 
 **Files:**
 - Reference: `DOCS_AUDIT_2026-07-12.md`
@@ -181,7 +181,7 @@ These decisions must be approved before implementation. Agents may gather eviden
 
 **Acceptance:** an agent can determine whether a task may start without inferring acceptance from commit messages.
 
-### Task 0.2 — Preserve failing evidence
+### Task 0.2: Preserve failing evidence
 
 **Files:**
 - Reference: `tests/analysis/v1_S01_report.json`
@@ -197,11 +197,11 @@ These decisions must be approved before implementation. Agents may gather eviden
 
 Stop unless the user approves DG-12 and the current failing evidence is preserved.
 
-## 6. Phase 1 — Repair canonical contracts
+## 6. Phase 1: Repair canonical contracts
 
 **Goal:** make the architecture implementable before changing algorithms.
 
-### Task 1.1 — Define all canonical types
+### Task 1.1: Define all canonical types
 
 **Files:**
 - Modify: `docs/ARCHITECTURE.md §12`
@@ -217,7 +217,7 @@ Stop unless the user approves DG-12 and the current failing evidence is preserve
 
 **Validation:** add a documentation consistency script/test that fails when a public capitalized type used in API/BACKEND is absent from the glossary/owning definition.
 
-### Task 1.2 — Define the hot-path call graph
+### Task 1.2: Define the hot-path call graph
 
 **Files:**
 - Modify: `docs/ARCHITECTURE.md §§3, 5, 8`
@@ -233,7 +233,7 @@ Stop unless the user approves DG-12 and the current failing evidence is preserve
 
 **Acceptance:** the call graph, signatures, and safety enforcement map agree; there is one caller/owner at every boundary.
 
-### Task 1.3 — Remove calibration circularity
+### Task 1.3: Remove calibration circularity
 
 **Files:**
 - Modify: `docs/ARCHITECTURE.md §4`
@@ -249,7 +249,7 @@ Stop unless the user approves DG-12 and the current failing evidence is preserve
 
 **Acceptance:** a first-time calibration sequence is expressible using only documented calls.
 
-### Task 1.4 — Resolve rendering and timing ownership
+### Task 1.4: Resolve rendering and timing ownership
 
 **Files:**
 - Modify: `docs/API.md §§10, 18`
@@ -266,11 +266,11 @@ Stop unless the user approves DG-12 and the current failing evidence is preserve
 
 Run a doc consistency review. Stop if any public signature, type, event, error, or owner differs between canonical docs.
 
-## 7. Phase 2 — Geometry research spike
+## 7. Phase 2: Geometry research spike
 
 **Goal:** select the smallest feature representation that passes evidence gates without premature schema expansion.
 
-### Task 2.1 — Create candidate property tests before candidate code
+### Task 2.1: Create candidate property tests before candidate code
 
 **Files:**
 - Modify: `tests/unit/normalize.test.ts`
@@ -286,7 +286,7 @@ Run a doc consistency review. Stop if any public signature, type, event, error, 
 
 **Acceptance:** tests distinguish real correction from a rotation-invariant scalar-distance no-op.
 
-### Task 2.2 — Specify coordinate conventions
+### Task 2.2: Specify coordinate conventions
 
 **Files:**
 - Candidate notes in this plan or a non-canonical analysis artifact
@@ -300,7 +300,7 @@ Run a doc consistency review. Stop if any public signature, type, event, error, 
 
 **Acceptance:** two independent implementations produce the same result on a numerical example.
 
-### Task 2.3 — Evaluate scalar projections
+### Task 2.3: Evaluate scalar projections
 
 **Files:**
 - Modify only analysis tooling after approval: `tests/analysis/v1-runner.html`, `scripts/run-v1.mjs`
@@ -313,7 +313,7 @@ Run a doc consistency review. Stop if any public signature, type, event, error, 
 
 **Acceptance:** one scalar candidate passes the approved research gates, or the report proves scalar representation insufficient.
 
-### Task 2.4 — Escalate to vectors only if required
+### Task 2.4: Escalate to vectors only if required
 
 **Dependency:** Task 2.3 demonstrates scalar failure.
 
@@ -327,11 +327,11 @@ Run a doc consistency review. Stop if any public signature, type, event, error, 
 
 Stop unless a candidate has evidence for sensitivity, scale, lighting, distance, and both pose directions. A frontal-only improvement is not sufficient.
 
-## 8. Phase 3 — Amend the canonical measurement and validation docs
+## 8. Phase 3: Amend the canonical measurement and validation docs
 
 **Goal:** make the selected algorithm and V1 protocol the sole source of truth.
 
-### Task 3.1 — Replace normalization math
+### Task 3.1: Replace normalization math
 
 **Files:**
 - Modify: `docs/ARCHITECTURE.md §§6–8, 12`
@@ -350,7 +350,7 @@ Stop unless a candidate has evidence for sensitivity, scale, lighting, distance,
 
 **Acceptance:** an agent can implement every formula without choosing an unstated convention.
 
-### Task 3.2 — Define metric temporal semantics
+### Task 3.2: Define metric temporal semantics
 
 **Files:** same owning metric/API/backend/test sections
 
@@ -362,7 +362,7 @@ Stop unless a candidate has evidence for sensitivity, scale, lighting, distance,
 - [ ] Define maximum/stuck-rep handling or explicitly state that session stop discards it.
 - [ ] Confirm the algorithm can meet the 100 ms budget; otherwise change smoothing/rate only through a documented threshold decision.
 
-### Task 3.3 — Define calibration and noise
+### Task 3.3: Define calibration and noise
 
 **Files:**
 - Modify: `docs/ARCHITECTURE.md §4`
@@ -379,7 +379,7 @@ Stop unless a candidate has evidence for sensitivity, scale, lighting, distance,
 - [ ] Pair noise with its baseline.
 - [ ] Define invalidation after algorithm/model version changes.
 
-### Task 3.4 — Publish the V1 statistical analysis plan
+### Task 3.4: Publish the V1 statistical analysis plan
 
 **Files:**
 - Modify: `docs/MODEL_AND_DATA.md §§4, 6–7`
@@ -401,11 +401,11 @@ Stop unless a candidate has evidence for sensitivity, scale, lighting, distance,
 
 Require human review of every `DOCS-CHANGE`. Do not implement production code until the revised ten-doc set is internally consistent.
 
-## 9. Phase 4 — Implement quality and geometry with TDD
+## 9. Phase 4: Implement quality and geometry with TDD
 
 **Goal:** implement only the approved contracts and selected candidate.
 
-### Task 4.1 — Implement canonical types and quality-approved flow
+### Task 4.1: Implement canonical types and quality-approved flow
 
 **Files:** exact paths depend on DG-1; likely existing files under `src/sensing/`, `src/metrics/`, and `src/session/`
 
@@ -415,21 +415,21 @@ Require human review of every `DOCS-CHANGE`. Do not implement production code un
 - [ ] Add runtime tests for all quality states and inference failure.
 - [ ] Verify `NormalizationLayer.normalize` has no caller reachable from a non-OK branch.
 
-### Task 4.2 — Implement the pure geometry kernel
+### Task 4.2: Implement the pure geometry kernel
 
 - [ ] Write tests for aspect, axes, signs, scale, and pose.
 - [ ] Implement the minimum shared geometry needed by calibration and normalization.
 - [ ] Keep raw landmarks transient and never log them.
 - [ ] Reuse the kernel for neutral capture and baseline-subtracted normalization.
 
-### Task 4.3 — Implement per-exercise features
+### Task 4.3: Implement per-exercise features
 
 - [ ] Implement one exercise at a time, starting with `EX_SMILE`.
 - [ ] Run its property and fixture tests before adding the next exercise.
 - [ ] Preserve canonical `RegionId`/`ExerciseId` mapping.
 - [ ] Do not generalize beyond the four documented exercises.
 
-### Task 4.4 — Repair quality gates
+### Task 4.4: Repair quality gates
 
 - [ ] Replace whole-frame luma with the approved face-region statistic.
 - [ ] Make distance independent of capture resolution or enforce/verify one resolution.
@@ -440,11 +440,11 @@ Require human review of every `DOCS-CHANGE`. Do not implement production code un
 
 Run focused unit suites and branch coverage. Stop if any property test fails or the quality boundary can be bypassed.
 
-## 10. Phase 5 — Calibration, metrics, and timing
+## 10. Phase 5: Calibration, metrics, and timing
 
 **Goal:** make the revised geometry usable without reintroducing circularity or timer bugs.
 
-### Task 5.1 — Implement first-baseline calibration
+### Task 5.1: Implement first-baseline calibration
 
 - [ ] Test first-run neutral capture with no baseline.
 - [ ] Test three-capture median aggregation.
@@ -453,7 +453,7 @@ Run focused unit suites and branch coverage. Stop if any property test fails or 
 - [ ] Test baseline/noise pairing and persistence.
 - [ ] Remove every zero-baseline workaround.
 
-### Task 5.2 — Implement direction-aware metrics
+### Task 5.2: Implement direction-aware metrics
 
 - [ ] Test symmetric same-direction movement.
 - [ ] Test equal opposite-direction movement.
@@ -461,7 +461,7 @@ Run focused unit suites and branch coverage. Stop if any property test fails or 
 - [ ] Test below-floor null behavior.
 - [ ] Test effort calibration and over-effort.
 
-### Task 5.3 — Implement gap-safe temporal logic
+### Task 5.3: Implement gap-safe temporal logic
 
 - [ ] Test trailing median ordering and null frames.
 - [ ] Test a quality gap during an active rep.
@@ -469,7 +469,7 @@ Run focused unit suites and branch coverage. Stop if any property test fails or 
 - [ ] Test stop/unmount during active state.
 - [ ] Test cross-exercise reset.
 
-### Task 5.4 — Verify latency
+### Task 5.4: Verify latency
 
 - [ ] Measure with one monotonic timestamp domain.
 - [ ] Include inference, smoothing, dispatch, and first visible paint.
@@ -480,11 +480,11 @@ Run focused unit suites and branch coverage. Stop if any property test fails or 
 
 Stop if the corrected algorithm cannot meet latency without weakening correctness/safety. Return to DG-8 or smoothing design with evidence.
 
-## 11. Phase 6 — Redesign the V1 capture interface
+## 11. Phase 6: Redesign the V1 capture interface
 
 **Goal:** make correct recording obvious and invalid recording recoverable.
 
-### Task 6.1 — Centralize dev strings and UI tunables
+### Task 6.1: Centralize dev strings and UI tunables
 
 **Files:**
 - Modify: `src/config/strings.ts`
@@ -496,7 +496,7 @@ Stop if the corrected algorithm cannot meet latency without weakening correctnes
 - [ ] Add identifiers to the glossary before using them if they are canonical.
 - [ ] Amend the camera-lifecycle rule with a narrowly scoped development-only harness exception; production remains limited to `CalibrationScreen` and `SessionScreen`.
 
-### Task 6.2 — Build explicit capture states
+### Task 6.2: Build explicit capture states
 
 **Files:**
 - Modify: `src/dev/LiveV1Harness.tsx`
@@ -512,7 +512,7 @@ Stop if the corrected algorithm cannot meet latency without weakening correctnes
 - [ ] Permit retrying the current phase without restarting accepted earlier phases.
 - [ ] Make invalid capture distinct from measurement failure.
 
-### Task 6.3 — Use the approved phase order
+### Task 6.3: Use the approved phase order
 
 - [ ] Neutral.
 - [ ] Frontal gentle smile.
@@ -523,7 +523,7 @@ Stop if the corrected algorithm cannot meet latency without weakening correctnes
 
 The last two phases remain dim light and 2 m as explicitly requested.
 
-### Task 6.4 — Accessibility and responsive verification
+### Task 6.4: Accessibility and responsive verification
 
 - [ ] Keyboard-only completion.
 - [ ] Visible focus.
@@ -538,32 +538,32 @@ The last two phases remain dim light and 2 m as explicitly requested.
 
 A fresh operator must complete the protocol without verbal coaching and must correctly identify an intentionally invalid phase.
 
-## 12. Phase 7 — Execute V1 as the real kill gate
+## 12. Phase 7: Execute V1 as the real kill gate
 
 **Goal:** decide whether the measurement product is viable.
 
-### Task 7.1 — Validate fixture provenance
+### Task 7.1: Validate fixture provenance
 
 - [ ] Confirm consent covers exact repository/testing use.
 - [ ] Confirm manifest demographics/conditions without names.
 - [ ] Confirm master and replay paths/formats.
 - [ ] Confirm no fixture or derived visual artifact is created outside approved locations.
 
-### Task 7.2 — Run the approved paired protocol
+### Task 7.2: Run the approved paired protocol
 
 - [ ] Capture the approved subjects/trials.
 - [ ] Reject/rerun only according to prewritten rules.
 - [ ] Generate candidate-versioned CSV/report artifacts containing derived metrics only.
 - [ ] Keep actual pose and quality summaries in the report.
 
-### Task 7.3 — Calculate B1–B3 exactly
+### Task 7.3: Calculate B1–B3 exactly
 
 - [ ] Run the predeclared formulas.
 - [ ] Report per-subject and aggregate results.
 - [ ] Report rejected samples and missing cells.
 - [ ] Do not introduce fallback metrics after seeing results.
 
-### Task 7.4 — Decide viability
+### Task 7.4: Decide viability
 
 **PASS:** all approved B1–B3 criteria met; accept Task 6 and proceed.
 
@@ -577,28 +577,28 @@ A fresh operator must complete the protocol without verbal coaching and must cor
 
 Only an approved B1–B3 PASS accepts Task 6. Invalid/missing cells, post-hoc fallback metrics, or a partially passing candidate keep the task blocked.
 
-## 13. Phase 8 — Data, trends, Demo, and privacy repairs
+## 13. Phase 8: Data, trends, Demo, and privacy repairs
 
 **Goal:** align persistence and downstream interpretation with revised measurement semantics.
 
-### Task 8.1 — Pair noise with baseline
+### Task 8.1: Pair noise with baseline
 
 - [ ] Apply DG-5 migration/reset decision.
 - [ ] Update schema, API, validation, seed, export schema, and tests together.
 - [ ] Ensure historical trends never use noise from another baseline.
 
-### Task 8.2 — Define trend aggregation
+### Task 8.2: Define trend aggregation
 
 - [ ] Define null exclusion, rep/session weighting, minimum samples, time zone, period boundaries, first-point behavior, and partial-session treatment.
 - [ ] Test each rule using hand-computed data.
 
-### Task 8.3 — Replace ambiguous adherence
+### Task 8.3: Replace ambiguous adherence
 
 - [ ] Define completion only over user-started sessions/exercises, or rename the output.
 - [ ] Do not invent a planned-session schedule.
 - [ ] Audit UI copy for guilt/pressure language.
 
-### Task 8.4 — Isolate Demo Mode
+### Task 8.4: Isolate Demo Mode
 
 - [ ] Apply DG-9.
 - [ ] Remove sensitive reads in Demo.
@@ -606,7 +606,7 @@ Only an approved B1–B3 PASS accepts Task 6. Invalid/missing cells, post-hoc fa
 - [ ] Test Demo on a database containing real seeded history and prove no sensitive value appears in UI/events/exports.
 - [ ] Verify zero writes and reload exit.
 
-### Task 8.5 — Enforce single profile and deletion behavior
+### Task 8.5: Enforce single profile and deletion behavior
 
 - [ ] Define transactional replace/reject behavior for a second profile.
 - [ ] Test deletion with open connections and simulated failure.
@@ -616,11 +616,11 @@ Only an approved B1–B3 PASS accepts Task 6. Invalid/missing cells, post-hoc fa
 
 Run schema, migration/reset, trend, Demo isolation, single-profile, transaction, export, and deletion tests. Stop if any historical series can use another baseline's noise or Demo can observe patient data.
 
-## 14. Phase 9 — External evidence and claims
+## 14. Phase 9: External evidence and claims
 
 **Goal:** remove stale or unsupported external assertions.
 
-### Task 9.1 — Runtime and telemetry verification
+### Task 9.1: Runtime and telemetry verification
 
 - [ ] Inspect the pinned MediaPipe web package for telemetry endpoints/calls.
 - [ ] Run no-network tests through initialization, calibration, session, model failure, offline reload, and Demo.
@@ -628,19 +628,19 @@ Run schema, migration/reset, trend, Demo isolation, single-profile, transaction,
 - [ ] Pin supported minimum browser versions.
 - [ ] Update Firefox Windows installation behavior from current Mozilla documentation.
 
-### Task 9.2 — Dataset/license register
+### Task 9.2: Dataset/license register
 
 - [ ] Record exact access and redistribution terms for MEEI, Toronto NeuroFace, FairFace, and Casual Conversations.
 - [ ] Record permitted use, attribution, repository inclusion, and deletion obligations.
 - [ ] Do not acquire restricted data until the register is complete.
 
-### Task 9.3 — Clinical review
+### Task 9.3: Clinical review
 
 - [ ] Have a qualified facial-therapy clinician review exercise selection, phase scope, gentle/over-effort behavior, dosing, emergency/stop language, and outcome claims.
 - [ ] Record accepted changes in the owning docs.
 - [ ] Keep clinician assignment mandatory.
 
-### Task 9.4 — Regulatory/privacy review
+### Task 9.4: Regulatory/privacy review
 
 - [ ] Apply DG-10 wording immediately.
 - [ ] Obtain jurisdiction-specific advice before public distribution.
@@ -651,7 +651,7 @@ Run schema, migration/reset, trend, Demo isolation, single-profile, transaction,
 
 All external claims must have dated evidence. Unresolved telemetry, license, clinical, or regulatory questions remain explicit release blockers; agents may document them but may not mark them passed.
 
-## 15. Phase 10 — Resume downstream work safely
+## 15. Phase 10: Resume downstream work safely
 
 **Prerequisites:** Phase 7 PASS, Phase 8 PASS, and Phase 9 findings documented.
 

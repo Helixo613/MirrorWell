@@ -19,7 +19,7 @@ import { type Page } from '@playwright/test';
 type ExerciseId = 'EX_BROW_RAISE' | 'EX_EYE_CLOSURE' | 'EX_SMILE' | 'EX_PUCKER';
 type EndReason = 'completed' | 'user_stopped' | 'red_flag_stopped' | 'quality_abandoned';
 
-/** One session's worth of seed input. Reps are omitted — no data screen reads rep_metric. */
+/** One session's worth of seed input. Reps are omitted; no data screen reads rep_metric. */
 export interface SeedSession {
   /** Whole days before now the session started (local time buckets it, ARCH §13). */
   daysAgo: number;
@@ -55,7 +55,7 @@ function uuid(prefix: string, n: number): string {
 }
 
 // Two full months apart guarantees >= minPeriodsForChart (2) monthly buckets, so TrendsScreen
-// reaches 'ready' and the chart<->table toggle is exercisable — not the empty state.
+// reaches 'ready' and the chart<->table toggle is exercisable; not the empty state.
 const DEFAULT_SESSIONS: SeedSession[] = [
   { daysAgo: 44, symmetry: { EX_SMILE: 0.58, EX_BROW_RAISE: 0.55 } },
   { daysAgo: 40, symmetry: { EX_SMILE: 0.6, EX_BROW_RAISE: 0.57 } },
@@ -109,7 +109,7 @@ function buildPayload(spec: SeedSpec): SeedPayload {
     qualityScore: 0.9,
     noiseFloorSymmetry: noiseFloor,
     noiseFloorDisplacement: 0.008,
-    isActive: 1, // numeric — see fact 6 note above
+    isActive: 1, // numeric; see fact 6 note above
   };
 
   const settings = {
@@ -118,6 +118,7 @@ function buildPayload(spec: SeedSpec): SeedPayload {
     textScale: 1.0,
     hapticsEnabled: true,
     audioCuesEnabled: true,
+    voiceCoachEnabled: false,
     reducedFacePreview: false,
     trendGranularity: spec.trendGranularity ?? 'monthly',
     showAffectedSideMarker: true,
@@ -166,6 +167,7 @@ export interface DbCounts {
   results: number;
   appSettings: number;
   caregiverViewEnabled: boolean;
+  encouragementNotes: number;
 }
 
 /** Row counts across the writable stores + the settings blob, for before/after mutation audits. */
@@ -190,14 +192,16 @@ export async function readCounts(page: Page): Promise<DbCounts> {
         r.onerror = () => rej(r.error);
       });
     }
-    const [profiles, baselines, sessions, results, appSettings, s] = await Promise.all([
-      count('user_profile'),
-      count('calibration_baseline'),
-      count('session_record'),
-      count('exercise_result'),
-      count('app_settings'),
-      settings(),
-    ]);
+    const [profiles, baselines, sessions, results, appSettings, s, encouragementNotes] =
+      await Promise.all([
+        count('user_profile'),
+        count('calibration_baseline'),
+        count('session_record'),
+        count('exercise_result'),
+        count('app_settings'),
+        settings(),
+        count('encouragement_note'),
+      ]);
     db.close();
     return {
       profiles,
@@ -206,6 +210,7 @@ export async function readCounts(page: Page): Promise<DbCounts> {
       results,
       appSettings,
       caregiverViewEnabled: s.caregiverViewEnabled === true,
+      encouragementNotes,
     };
   });
 }

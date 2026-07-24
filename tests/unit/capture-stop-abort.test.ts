@@ -2,18 +2,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LandmarkFrame } from '../../src/sensing/landmarks.ts';
 
 /**
- * REGRESSION — S1-REQ-3 (`docs/superpowers/coordination/frontend-s1-requests.md`).
+ * REGRESSION, S1-REQ-3 (`docs/superpowers/coordination/frontend-s1-requests.md`).
  *
  * A capture window closes only on an ARRIVING frame. Stopping the camera mid-window (the
  * CalibrationScreen unmount cleanup calls `CaptureService.stop()` unconditionally) means no
  * frame ever arrives: `captureFor` hung, its `openFrameSource` teardown never ran, and its
  * subscriber stayed in CaptureService's module-level `subscribers` Set for the page lifetime.
  * The NEXT camera session then had two subscribers, each calling `LandmarkEngine.detect()` on
- * the same frame and timestamp — the one-detect-per-frame invariant `detectForVideo` requires.
+ * the same frame and timestamp; the one-detect-per-frame invariant `detectForVideo` requires.
  *
  * These tests run against the REAL `src/sensing/capture.ts`, `src/session/frames.ts` and
  * `src/session/calibration.ts` (only the camera *device*, LandmarkEngine and storage are faked).
- * A hand-authored CaptureService double would let the fix pass vacuously — the orphaned
+ * A hand-authored CaptureService double would let the fix pass vacuously; the orphaned
  * subscriber lives in the real module's Set, so that Set is what has to be exercised.
  *
  * What is measured is the INVARIANT (detect calls per frame == 1). MediaPipe's actual response
@@ -42,7 +42,7 @@ function faceless(timestampMs: number): LandmarkFrame {
   return { landmarks: [], headPose: [], facePresent: false, blendshapes: {}, timestampMs };
 }
 
-/** Fires the most recently scheduled rAF tick — the loop re-schedules on every frame. */
+/** Fires the most recently scheduled rAF tick; the loop re-schedules on every frame. */
 function tick(timestampMs: number): void {
   rafCallbacks[rafCallbacks.length - 1]!(timestampMs);
 }

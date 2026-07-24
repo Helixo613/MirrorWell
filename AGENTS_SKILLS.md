@@ -1,4 +1,4 @@
-# AGENTS.md — Skill & Token Policy (portable)
+# AGENTS.md: Skill & Token Policy (portable)
 
 Applies to any coding agent reading this file (Claude Code, Codex CLI, Cursor, others). Native/built-in skills and MCP tools are always allowed when they fit better. If a tool below is unavailable in the current environment, apply its principle manually (fallback column).
 
@@ -10,7 +10,7 @@ Think → locate cheaply → read minimally → patch surgically → validate co
 
 Think before coding. Prefer simplicity; no unnecessary abstractions. Smallest safe change; never touch unrelated files. Preserve existing style, patterns, components. No new dependencies without justification. Verify before saying done.
 
-## Tool routing — one lane per job, never stack overlapping tools
+## Tool routing: one lane per job, never stack overlapping tools
 
 | Job | Tool | Fallback |
 |---|---|---|
@@ -20,9 +20,9 @@ Think before coding. Prefer simplicity; no unnecessary abstractions. Smallest sa
 | Noisy shell output (build/test/lint/git/logs) | prefix commands with `rtk` | summarize only relevant lines |
 | Large tool output, logs, JSON, web pages to analyze | context-mode (`ctx_batch_execute`, `ctx_execute`, `ctx_fetch_and_index` → `ctx_search`) | extract only needed lines |
 | Session memory / prior decisions | context-mode `ctx_search` (timeline) | ask user |
-| Context near limit / ending session | Handoff skill — structured handoff doc, not lossy compaction | write manual handoff notes before compacting |
+| Context near limit / ending session | Handoff skill, structured handoff doc, not lossy compaction | write manual handoff notes before compacting |
 | PDF/DOCX/PPTX/XLSX/CSV/HTML ingestion | `markitdown <file> -o out.md` | extract needed sections only |
-| Frontend UI design reference | refero MCP — real-app patterns before building screens | frontend-design skill |
+| Frontend UI design reference | refero MCP, real-app patterns before building screens | frontend-design skill |
 | Final implementation summary | Caveman format: Changed / Validated / Issues / Next | keep it short anyway |
 | Tiny isolated low-risk polish | Ponytail | scope strictly |
 | Pack repo for external model review | `repomix` | targeted file bundle |
@@ -30,7 +30,7 @@ Think before coding. Prefer simplicity; no unnecessary abstractions. Smallest sa
 
 Navigation order: graph → Serena/SymDex → ripgrep. Never read whole directories, generated files, or lockfiles without cause.
 
-## Workflow skills — load only when triggered
+## Workflow skills: load only when triggered
 
 - Bug unclear, or one fix already failed → systematic-debugging.
 - Complex core logic (parsing, state machines, business rules) → TDD.
@@ -40,7 +40,7 @@ Navigation order: graph → Serena/SymDex → ripgrep. Never read whole director
 
 ## Risk rules
 
-High risk (auth, payments, migrations, security, prod config, architecture): full reasoning, no Ponytail, no compressed reasoning, review skill mandatory. Caveman is for summaries only — never for architecture decisions, tradeoff analysis, or teaching.
+High risk (auth, payments, migrations, security, prod config, architecture): full reasoning, no Ponytail, no compressed reasoning, review skill mandatory. Caveman is for summaries only; never for architecture decisions, tradeoff analysis, or teaching.
 
 ## Validation & git
 
@@ -73,8 +73,8 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 
 | Tool | Use when |
 |------|----------|
-| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
-| `get_review_context` | Need source snippets for review — token-efficient |
+| `detect_changes` | Reviewing code changes, gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review, token-efficient |
 | `get_impact_radius` | Understanding blast radius of a change |
 | `get_affected_flows` | Finding which execution paths are impacted |
 | `query_graph` | Tracing callers, callees, imports, tests, dependencies |

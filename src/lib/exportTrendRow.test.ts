@@ -38,7 +38,7 @@ describe('exportTrendDirection', () => {
 
 describe('exportTrendLatestLabel', () => {
   it('returns an em-dash when there are no points', () => {
-    expect(exportTrendLatestLabel([])).toBe('—');
+    expect(exportTrendLatestLabel([])).toBe('-');
   });
 
   it('labels the most recent point with the shared plain-language symmetry helper', () => {

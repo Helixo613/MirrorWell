@@ -1,4 +1,4 @@
-# Task 3 — CalibrationFlow report
+# Task 3: CalibrationFlow report
 
 Status: DONE
 
@@ -22,12 +22,12 @@ Status: DONE
 
 ## Validation
 
-- `npx vitest run tests/unit/calibration.test.ts` — 11 passed
-- `npx vitest run` — 15 files, 158 tests passed
-- `npx tsc --noEmit` — no errors
+- `npx vitest run tests/unit/calibration.test.ts`, 11 passed
+- `npx vitest run`, 15 files, 158 tests passed
+- `npx tsc --noEmit`; no errors
 
 No git commit was made.
 
 
 ---
-**CORRECTION (2026-07-20, controller):** every `tsc --noEmit` result recorded in this report is VOID. The root `tsconfig.json` is a solution-style config (`"files": []` + project references), so `npx tsc --noEmit` type-checks an empty file set and always reports success. The real gate is `npm run typecheck` (`tsc -b`). Re-verified after commit f046bee: `tsc -b` clean and `npm run build` green across the whole branch, so this task compiles — but the original claim was not evidence for that.
+**CORRECTION (2026-07-20, controller):** every `tsc --noEmit` result recorded in this report is VOID. The root `tsconfig.json` is a solution-style config (`"files": []` + project references), so `npx tsc --noEmit` type-checks an empty file set and always reports success. The real gate is `npm run typecheck` (`tsc -b`). Re-verified after commit f046bee: `tsc -b` clean and `npm run build` green across the whole branch, so this task compiles; but the original claim was not evidence for that.

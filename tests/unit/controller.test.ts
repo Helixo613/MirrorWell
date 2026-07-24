@@ -9,11 +9,11 @@ import { exercises } from '../../src/config/exercises.ts';
 // Test isolation: SessionController, CalibrationFlow, MetricEngine, RepDetector,
 // NormalizationLayer and QualityMonitor all hold module-level state with no public reset, so
 // it bled between tests. Each test gets a fresh module graph via vi.resetModules() + dynamic
-// import in beforeEach — no test-only reset() is added to the production contract. Every
+// import in beforeEach; no test-only reset() is added to the production contract. Every
 // stateful collaborator that is spied on or mutated here must come from the SAME fresh graph
 // (a spy on a stale instance would target a module the unit under test no longer uses), hence
 // the re-imports below. Pure config/value modules (thresholds, exercises, geometry,
-// MirrorWellError) stay statically imported — nothing compares their identity.
+// MirrorWellError) stay statically imported, nothing compares their identity.
 let SessionController: typeof import('../../src/session/controller.ts').SessionController;
 let SafetyGate: typeof import('../../src/session/safety.ts').SafetyGate;
 let StorageService: typeof import('../../src/data/storage.ts').StorageService;
@@ -31,7 +31,7 @@ const capture = vi.hoisted(() => ({
   subscribers: new Set<(video: HTMLVideoElement, timestampMs: number) => void>(),
   stopSubscribers: new Set<() => void>(),
   running: false,
-  /** Fired synchronously by a successful start() — the only way frames reach a subscriber in
+  /** Fired synchronously by a successful start(); the only way frames reach a subscriber in
    * these tests, mirroring production where CaptureService.tick() fans out only while running. */
   onStart: null as (() => void) | null,
   start: vi.fn(),
@@ -50,7 +50,7 @@ vi.mock('../../src/sensing/capture.ts', () => ({
       return () => capture.stopSubscribers.delete(cb);
     },
     // Models the real service's ownership flag: start() sets `running` (on success only),
-    // stop() clears it, isRunning() reports it — so src/session/frames.ts's
+    // stop() clears it, isRunning() reports it; so src/session/frames.ts's
     // start-if-not-running / stop-only-if-I-started logic is genuinely exercised.
     start: async (...args: unknown[]) => {
       await capture.start(...args);
@@ -112,7 +112,7 @@ function emitOk(blendshapes: Record<string, number>, ts: number): void {
   fireSubscribers(ts);
 }
 
-/** A non-OK (FACE_LOST) frame at `ts` — never reaches metrics. */
+/** A non-OK (FACE_LOST) frame at `ts`; never reaches metrics. */
 function emitNonOk(ts: number): void {
   landmarkState.current = { ...landmarkFrame({}, ts), facePresent: false };
   fireSubscribers(ts);
@@ -129,7 +129,7 @@ function makeProfile(assignedExercises: ExerciseId[]): UserProfile {
   };
 }
 
-/** The neutral stats the synthetic `landmarkFrame()` geometry actually measures — a baseline
+/** The neutral stats the synthetic `landmarkFrame()` geometry actually measures; a baseline
  * carrying these makes the REAL drift check report 'ok' (zero displacement). */
 function syntheticNeutralStats(): NeutralStats {
   const result = QualityMonitor.evaluate(VIDEO, landmarkFrame({}, 0));
@@ -151,7 +151,7 @@ function makeBaseline(comfortableMax: Partial<Record<ExerciseId, number>>, neutr
     },
     comfortableMax,
     // Post-rebase baselines always carry neutralActivation (calibration writes it); start()
-    // refuses a baseline without it (RECALIBRATION_REQUIRED) — one test below removes it.
+    // refuses a baseline without it (RECALIBRATION_REQUIRED); one test below removes it.
     neutralActivation: Object.fromEntries(
       Object.keys(comfortableMax).map((id) => [id, 0]),
     ) as Partial<Record<ExerciseId, number>>,
@@ -288,7 +288,7 @@ describe('SessionController preconditions', () => {
 
   it('rejects a pre-rebase baseline (no neutralActivation) with RECALIBRATION_REQUIRED', async () => {
     // A baseline saved before the neutral rebase would silently run the pre-rebase effort
-    // formula and reproduce the inverted-rep defect — the session must route to recalibration.
+    // formula and reproduce the inverted-rep defect; the session must route to recalibration.
     await seedAttested(['EX_SMILE']);
     const { neutralActivation: _dropped, ...preRebase } = makeBaseline({ EX_SMILE: 1 });
     vi.spyOn(StorageService, 'getActiveBaseline').mockResolvedValue(preRebase as CalibrationBaseline);
@@ -345,12 +345,12 @@ describe('SessionController preconditions', () => {
   });
 
   // C1 regression. The real (unstubbed) drift path: CalibrationFlow.checkBaselineDrift()
-  // awaits a frame window, and nothing before it ever started the camera — so on every
+  // awaits a frame window, and nothing before it ever started the camera; so on every
   // attested session start() used to hang forever. Frames here only flow from a successful
   // CaptureService.start() (capture.onStart), exactly like production, so the deadlock is
   // reproducible; the per-test timeout turns a regression into a failure, not a hung suite.
   it(
-    'completes start() on the real drift path — the drift check owns and releases the camera',
+    'completes start() on the real drift path; the drift check owns and releases the camera',
     async () => {
       await seedAttested(['EX_SMILE'], false);
       capture.onStart = () => {
@@ -380,7 +380,7 @@ describe('SessionController preconditions', () => {
     await expect(SessionController.start(['EX_SMILE'])).rejects.toMatchObject({ code: 'CAMERA_DENIED' });
     expect(capture.subscribers.size).toBe(0);
     // A rejected start() acquires nothing (capture.ts leaves stream === null), so the seam must
-    // NOT call stop() on the failed-start path — that could tear down a camera another consumer
+    // NOT call stop() on the failed-start path; that could tear down a camera another consumer
     // owns (frames.ts finding 1). Unsubscribe is the whole cleanup; subscribers.size === 0 above.
     expect(capture.stop).not.toHaveBeenCalled();
   });
@@ -430,7 +430,7 @@ describe('SessionController hot path', () => {
     expect(record.results[1]!.repsCompleted).toBe(exercises.EX_SMILE.repsPerSet);
   });
 
-  // Task A2 — EX_BROW_RAISE previously appeared in no controller test at all. This walks the
+  // Task A2. EX_BROW_RAISE previously appeared in no controller test at all. This walks the
   // same DEMO->REPS->REST->auto-stop arc as the test above but for EX_BROW_RAISE alone, reading
   // repsPerSet/restSeconds/blendshapePair from exercises.EX_BROW_RAISE (never as literals) so the
   // test actually proves config-drivenness rather than passing by coincidence.
@@ -463,10 +463,10 @@ describe('SessionController hot path', () => {
   });
 
   // Regression: production frame timestamps are FRACTIONAL performance-clock values, so a
-  // rep's duration (difference of two of them) is fractional too — but rep_metric.durationMs
+  // rep's duration (difference of two of them) is fractional too, but rep_metric.durationMs
   // is "integer > 0" (DATABASE §rep_metric). Unrounded, saveSession rejected the completed
   // session with VALIDATION_FAILED, sessionEnded never fired, and the idempotent-stop guard
-  // swallowed every later advance()/stop() click: a dead "Rest — 0 seconds left" screen.
+  // swallowed every later advance()/stop() click: a dead "Rest, 0 seconds left" screen.
   it('persists a completed session under fractional timestamps, rounding durationMs at assembly', async () => {
     await seedAttested(['EX_SMILE']);
     await SessionController.start(['EX_SMILE']);
@@ -498,7 +498,7 @@ describe('SessionController hot path', () => {
       expect(Number.isInteger(rep.durationMs)).toBe(true);
       expect(rep.durationMs).toBeGreaterThan(0);
     }
-    // The defect was a rejected saveSession — prove the record actually reached IndexedDB.
+    // The defect was a rejected saveSession, prove the record actually reached IndexedDB.
     expect(await db.rep_metric.count()).toBe(exercises.EX_SMILE.repsPerSet);
   });
 
@@ -616,22 +616,31 @@ describe('SessionController hot path', () => {
       // frames instead of driveOkRepFrames' low-SYMMETRIC tail. Closing the last rep and
       // leaving REPS(fromId) for REST happen inside the SAME handleRepsFrame call
       // (src/session/controller.ts ~line 196-201), and no frame is ever computed again while
-      // in REST/DEMO (handleFrame returns early for both) — so whatever sits in MetricEngine's
+      // in REST/DEMO (handleFrame returns early for both), so whatever sits in MetricEngine's
       // smoothing window right when this closing frame is processed is exactly what's still
-      // there the instant toId's first REPS frame computes. act=max(0.06,0.01)=0.06 is low
-      // enough that 3 of them reliably close the rep (same "3 lows outvote the window"
-      // trailing-median mechanics driveOkRepFrames relies on — verified numerically against
-      // MetricEngine's 5-entry window) while symmetryIndex=0.01/0.06≈0.167 is clearly
-      // asymmetric. Because 3 of the resulting 5 window entries are asymmetric (not 1-of-5),
-      // the leak survives the trailing median at the switch instead of being outvoted by it.
+      // there the instant toId's first REPS frame computes.
+      //
+      // The closing activation has to satisfy two opposing constraints at once, so it is derived
+      // rather than written as a literal (a literal silently inverted this case once already when
+      // endThreshold was retuned and 3 "low" frames stopped closing the rep):
+      //   * strictly BELOW reps.endThreshold, so 3 of them close the rep (comfortableMax is 1
+      //     here, so effortIndex == activation), and
+      //   * at or ABOVE blendshapes.activationFloor, so symmetryIndex is non-null and the
+      //     asymmetric value is actually able to leak, which is the whole point of the test.
+      // Midway between the two bounds satisfies both with the most margin on each side.
+      // The right side is held well under the left so SI stays clearly asymmetric. Because 3 of
+      // the resulting 5 window entries are asymmetric (not 1-of-5), the leak survives the
+      // trailing median at the switch instead of being outvoted by it.
       emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
       ts += 200;
       emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
       ts += 200;
       emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
+      const closingAct =
+        (thresholds.reps.endThreshold + thresholds.blendshapes.activationFloor) / 2;
       for (let i = 0; i < 3; i++) {
         ts += 200;
-        emitOk({ [fromPair.left]: 0.06, [fromPair.right]: 0.01 }, ts);
+        emitOk({ [fromPair.left]: closingAct, [fromPair.right]: closingAct * 0.2 }, ts);
       }
       const lastComputedTs = ts;
 
@@ -645,7 +654,7 @@ describe('SessionController hot path', () => {
       SessionController.advance(); // DEMO -> REPS(toId)
       const samples: Array<{ symmetryIndex: number | null }> = [];
       on('metricUpdate', (p) => samples.push(p.sample));
-      // Small gap (<= metrics.gapResetMs) from the last `fromId` compute — if reset() were
+      // Small gap (<= metrics.gapResetMs) from the last `fromId` compute; if reset() were
       // skipped, the leaked asymmetric window entries would still be live here.
       emitOk({ [toPair.left]: 0.3, [toPair.right]: 0.3 }, lastComputedTs + 50);
       expect(samples[0]!.symmetryIndex).toBe(1);
@@ -730,7 +739,7 @@ describe('SessionController session assembly', () => {
     const rep = result.reps[0]!;
     expect(rep.easeOffTriggered === 0 || rep.easeOffTriggered === 1).toBe(true);
 
-    // stop() resolves a SessionRecordFull (docs/API.md §10) — results/reps carry their
+    // stop() resolves a SessionRecordFull (docs/API.md §10), results/reps carry their
     // parent keys, matching what getSessions() would return for this same session.
     expect(result.sessionId).toBe(record.sessionId);
     expect(rep.resultId).toBe(result.resultId);
@@ -804,7 +813,7 @@ describe('SessionController session assembly', () => {
   });
 
   // T5/M1 regression: stop() before any start() must not run session assembly against
-  // empty state, must not persist, and — critically — must not poison stopPromise for a
+  // empty state, must not persist, and; critically; must not poison stopPromise for a
   // session that legitimately starts and stops afterward.
   it('stop() before any start() is a no-op that touches neither storage nor the event surface', async () => {
     const saveSpy = vi.spyOn(StorageService, 'saveSession');
@@ -842,13 +851,13 @@ describe('SessionController session assembly', () => {
   });
 });
 
-// Task A4 — frontend seam (SessionApi) conformance. SessionController is the surface the
+// Task A4: frontend seam (SessionApi) conformance. SessionController is the surface the
 // frontend plan names SessionApi; these lock its shape against docs/API.md §10 so a future
 // change cannot silently add, drop, or rename an event or method.
 describe('SessionController event surface (docs/API.md §10)', () => {
   // The 7-event closed set. `Events` is a TS type erased at runtime, so this is derived from
   // what a real session actually EMITS: we drive one session that provably fires every event
-  // and assert the exact set of observed names equals these 7. Falsifiable — a renamed/dropped
+  // and assert the exact set of observed names equals these 7. Falsifiable; a renamed/dropped
   // event breaks the set-equality. Known gap (documented in the A4 report): an 8th event that
   // never fires during this session cannot be detected without runtime reflection the emitter
   // does not expose.
@@ -867,7 +876,7 @@ describe('SessionController event surface (docs/API.md §10)', () => {
     await SessionController.start(['EX_SMILE']);       // stateChanged: DEMO
     SessionController.advance();                        // stateChanged: REPS
 
-    // easeOff FIRST, from the fresh (empty) REPS smoothing window — 0.8/0.8 sustained >=300ms
+    // easeOff FIRST, from the fresh (empty) REPS smoothing window; 0.8/0.8 sustained >=300ms
     // (mirrors the easeOff transition test). Driving a rep first would leave low frames in the
     // trailing-median window and stop 4 highs from re-crossing the ease-off threshold.
     emitOk({ mouthSmileLeft: 0.8, mouthSmileRight: 0.8 }, 0);   // metricUpdate + qualityUpdate(OK)
@@ -907,7 +916,7 @@ describe('SessionController event surface (docs/API.md §10)', () => {
   });
 });
 
-// Task A4 — Demo Mode quick-setup contract (docs/ARCHITECTURE.md §11). Demo start() skips the
+// Task A4. Demo Mode quick-setup contract (docs/ARCHITECTURE.md §11). Demo start() skips the
 // persisted-baseline load (controller.ts), so the ephemeral quick-calibration overlay (a later
 // frontend plan) MUST seed BOTH NormalizationLayer and MetricEngine before the first REPS frame,
 // with a valid comfortableMax for the demo exercise. These lock that contract.
@@ -943,7 +952,7 @@ describe('SessionController demo quick-setup contract (docs/API.md §10, ARCHITE
   // Negative: the hazard the A4 plan pointed at ("a demo that appears to run while detecting
   // nothing") does NOT manifest as a phantom FACE_LOST. Gate 0 made frames.ts call onFrame
   // outside its narrow detect-only catch, so a missing comfortableMax throws NO_BASELINE
-  // (metrics.ts compute) straight out of the frame callback — a loud, diagnosable failure. This
+  // (metrics.ts compute) straight out of the frame callback; a loud, diagnosable failure. This
   // is the demo-mode analogue of the existing "propagates a downstream pipeline error" test.
   it('missing comfortableMax for the demo exercise throws NO_BASELINE out of the first REPS frame (never a phantom FACE_LOST)', async () => {
     enterDemo();
@@ -962,7 +971,7 @@ describe('SessionController demo quick-setup contract (docs/API.md §10, ARCHITE
       caught = e;
     }
     // vi.resetModules() gives the fresh controller graph its own MirrorWellError class identity,
-    // so `instanceof` the statically-imported class fails across realms — assert structurally
+    // so `instanceof` the statically-imported class fails across realms, assert structurally
     // (matches the existing suite's toMatchObject({ code }) pattern).
     expect((caught as MirrorWellError).name).toBe('MirrorWellError');
     expect((caught as MirrorWellError).code).toBe('NO_BASELINE');
@@ -985,13 +994,13 @@ describe('SessionController demo quick-setup contract (docs/API.md §10, ARCHITE
       caught = e;
     }
     // vi.resetModules() gives the fresh controller graph its own MirrorWellError class identity,
-    // so `instanceof` the statically-imported class fails across realms — assert structurally
+    // so `instanceof` the statically-imported class fails across realms, assert structurally
     // (matches the existing suite's toMatchObject({ code }) pattern).
     expect((caught as MirrorWellError).name).toBe('MirrorWellError');
     expect((caught as MirrorWellError).code).toBe('NO_BASELINE');
   });
 
-  // Seeding only ONE engine is not sufficient — same NO_BASELINE code, but the message pins
+  // Seeding only ONE engine is not sufficient, same NO_BASELINE code, but the message pins
   // WHICH omission broke WHAT: normalize runs first, compute second.
   it('MetricEngine seeded but NormalizationLayer not → normalize throws NO_BASELINE first', async () => {
     enterDemo();
@@ -1008,7 +1017,7 @@ describe('SessionController demo quick-setup contract (docs/API.md §10, ARCHITE
       caught = e;
     }
     // vi.resetModules() gives the fresh controller graph its own MirrorWellError class identity,
-    // so `instanceof` the statically-imported class fails across realms — assert structurally
+    // so `instanceof` the statically-imported class fails across realms, assert structurally
     // (matches the existing suite's toMatchObject({ code }) pattern).
     expect((caught as MirrorWellError).name).toBe('MirrorWellError');
     expect((caught as MirrorWellError).code).toBe('NO_BASELINE');
@@ -1030,7 +1039,7 @@ describe('SessionController demo quick-setup contract (docs/API.md §10, ARCHITE
       caught = e;
     }
     // vi.resetModules() gives the fresh controller graph its own MirrorWellError class identity,
-    // so `instanceof` the statically-imported class fails across realms — assert structurally
+    // so `instanceof` the statically-imported class fails across realms, assert structurally
     // (matches the existing suite's toMatchObject({ code }) pattern).
     expect((caught as MirrorWellError).name).toBe('MirrorWellError');
     expect((caught as MirrorWellError).code).toBe('NO_BASELINE');

@@ -15,17 +15,17 @@
     "example": "fixture_S01_yaw_left_1.mp4",
     "notes": [
       "V1 kill-gate (MODEL_AND_DATA §7) requires 2 independent trials × 6 phases per subject.",
-      "Yaw phases must be labeled yaw_left / yaw_right; validity uses measured mean |yaw| ∈ [7°,13°] from headPose — operator label alone is not evidence.",
+      "Yaw phases must be labeled yaw_left / yaw_right; validity uses measured mean |yaw| ∈ [7°,13°] from headPose, operator label alone is not evidence.",
       "Legacy masters without a trial suffix, or with EX_SMILE / yaw_15 condition names, are insufficient for the current protocol and must not be treated as PASS evidence."
     ]
   },
   "$exampleEntryShape": {
-    "subjectId": "string, e.g. S01 — never a real name",
+    "subjectId": "string, e.g. S01. never a real name",
     "condition": "neutral | smile | yaw_left | yaw_right | low_light | distance_2m",
     "trial": "1 | 2",
     "mastersPath": "tests/fixtures/masters/fixture_<subjectId>_<condition>_<trial>.{webm,mp4}",
     "replayPath": "tests/fixtures/replay/fixture_<subjectId>_<condition>_<trial>.mjpeg",
-    "protocolSufficient": "boolean — false for legacy single-shot / misnamed masters",
+    "protocolSufficient": "boolean, false for legacy single-shot / misnamed masters",
     "demographics": {
       "fitzpatrickBand": "I-II | III-IV | V-VI | unspecified",
       "gender": "string, self-reported",
@@ -42,7 +42,7 @@
       "mastersPath": "tests/fixtures/masters/fixture_S01_neutral.mp4",
       "replayPath": "tests/fixtures/replay/fixture_S01_neutral.mjpeg",
       "protocolSufficient": false,
-      "note": "Legacy master — missing trial suffix; kept for replay/history only. Insufficient for V1 2-trial protocol.",
+      "note": "Legacy master, missing trial suffix; kept for replay/history only. Insufficient for V1 2-trial protocol.",
       "demographics": {
         "fitzpatrickBand": "unspecified",
         "gender": "unspecified",
@@ -58,7 +58,7 @@
       "mastersPath": "tests/fixtures/masters/fixture_S01_EX_SMILE.mp4",
       "replayPath": "tests/fixtures/replay/fixture_S01_EX_SMILE.mjpeg",
       "protocolSufficient": false,
-      "note": "Legacy smile master — protocol condition is 'smile' with trial suffix. Insufficient for current V1 protocol.",
+      "note": "Legacy smile master, protocol condition is 'smile' with trial suffix. Insufficient for current V1 protocol.",
       "demographics": {
         "fitzpatrickBand": "unspecified",
         "gender": "unspecified",
@@ -74,7 +74,7 @@
       "mastersPath": "tests/fixtures/masters/fixture_S01_low_light.mp4",
       "replayPath": "tests/fixtures/replay/fixture_S01_low_light.mjpeg",
       "protocolSufficient": false,
-      "note": "Legacy master — missing trial suffix; insufficient for V1 2-trial protocol.",
+      "note": "Legacy master, missing trial suffix; insufficient for V1 2-trial protocol.",
       "demographics": {
         "fitzpatrickBand": "unspecified",
         "gender": "unspecified",
@@ -90,7 +90,7 @@
       "mastersPath": "tests/fixtures/masters/fixture_S01_distance_2m.mp4",
       "replayPath": "tests/fixtures/replay/fixture_S01_distance_2m.mjpeg",
       "protocolSufficient": false,
-      "note": "Legacy master — missing trial suffix; insufficient for V1 2-trial protocol.",
+      "note": "Legacy master, missing trial suffix; insufficient for V1 2-trial protocol.",
       "demographics": {
         "fitzpatrickBand": "unspecified",
         "gender": "unspecified",
@@ -106,7 +106,7 @@
       "mastersPath": "tests/fixtures/masters/fixture_S01_yaw_15.mp4",
       "replayPath": "tests/fixtures/replay/fixture_S01_yaw_15.mjpeg",
       "protocolSufficient": false,
-      "note": "Legacy single yaw master — insufficient. Protocol requires separate yaw_left and yaw_right masters with trial suffix; validity uses measured mean |yaw| ∈ [7°,13°], not the operator label.",
+      "note": "Legacy single yaw master, insufficient. Protocol requires separate yaw_left and yaw_right masters with trial suffix; validity uses measured mean |yaw| ∈ [7°,13°], not the operator label.",
       "demographics": {
         "fitzpatrickBand": "unspecified",
         "gender": "unspecified",

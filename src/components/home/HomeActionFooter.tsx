@@ -3,7 +3,7 @@ import { StickyScreenFooter } from '@/components/layout/StickyScreenFooter';
 
 export interface HomeActionFooterProps {
   primaryAction: ReactNode;
-  navigation: ReactNode;
+  navigation?: ReactNode;
   className?: string;
 }
 

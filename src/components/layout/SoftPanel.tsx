@@ -10,7 +10,7 @@ export interface SoftPanelProps {
   ariaBusy?: boolean;
 }
 
-/** Calm secondary surface — shared by summary, trends, and export cards. */
+/** Calm secondary surface, shared by summary, trends, and export cards. */
 export function SoftPanel({
   children,
   className,

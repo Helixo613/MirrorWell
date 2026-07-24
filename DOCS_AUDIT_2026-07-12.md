@@ -33,7 +33,7 @@ Recommended status:
 9. Baseline partitioning prevents trends from silently mixing incompatible calibrations.
 10. The explicit local section-reference scan found no missing `DOC.md §n` targets.
 
-## P0 — specification blockers
+## P0: specification blockers
 
 ### P0-1. The structural quality gate cannot be implemented with the declared contracts
 
@@ -139,7 +139,7 @@ Regulatory status follows intended purpose and function, not a disclaimer. FDA g
 
 **Required decision:** replace categorical legal conclusions with “regulatory status not determined” until reviewed for each intended market. Keep the conservative safety behavior regardless.
 
-## P1 — major design and contract problems
+## P1: major design and contract problems
 
 ### P1-1. `SessionController.stop` has two return types
 
@@ -260,7 +260,7 @@ No external clinical images/videos should enter the repository until exact licen
 
 Add an authoritative acceptance ledger and mark Task 6 blocked until a revised protocol passes.
 
-## P2 — clarity, maintainability, and evidence gaps
+## P2: clarity, maintainability, and evidence gaps
 
 1. `README.md` still marks package versions “needs verification” although `ARCHITECTURE.md §2` records exact resolved versions.
 2. Several hard product tunables remain “needs verification”: effort zone, ease-off boundary rationale, drift threshold, stale days, dosing, and Android haptics.
@@ -308,21 +308,21 @@ Add an authoritative acceptance ledger and mark Task 6 blocked until a revised p
 
 ## External primary/authoritative sources checked
 
-- [Google Face Landmarker guide](https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker) — result content and canonical-to-detected transformation-matrix purpose.
-- [Google JS `NormalizedLandmark`](https://developers.google.com/edge/api/mediapipe/js/tasks-vision.normalizedlandmark) — X/Y normalization semantics.
-- [MediaPipe Face Mesh V2 model card](https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Face%20Mesh%20V2.pdf) — landmark error and subgroup evaluation.
-- [MediaPipe repository privacy notice](https://github.com/google-ai-edge/mediapipe) — current on-device and metrics notice.
-- [MediaPipe WebGPU support issue](https://github.com/google-ai-edge/mediapipe/issues/5826) — maintainer statement that Web Vision Tasks use WebGL.
-- [W3C IndexedDB 3.0](https://www.w3.org/TR/IndexedDB-3/) — valid key types.
-- [Mozilla: Web apps in Firefox for Windows](https://support.mozilla.org/en-US/kb/web-apps-firefox-windows) — Firefox 143+ Windows support.
-- [FDA Digital Health Policy Navigator, step 7](https://www.fda.gov/medical-devices/digital-health-center-excellence/step-7-does-device-software-functions-dsf-and-mobile-medical-applications-mma-guidance-apply) — disease-specific coaching and enforcement discretion.
-- [EU Medical Device Regulation 2017/745](https://eur-lex.europa.eu/eli/reg/2017/745/oj) — intended purpose, medical-device definition, and software classification.
-- [Cochrane: physical treatments for idiopathic facial paralysis](https://www.cochrane.org/evidence/CD006283_physical-treatments-idiopathic-facial-paralysis) — limited/heterogeneous exercise evidence.
-- [International facial synkinesis recommendations](https://pmc.ncbi.nlm.nih.gov/articles/PMC9682287/) — specialist-guided facial training context.
-- [MEEI/Sir Charles Bell photographic standards](https://pmc.ncbi.nlm.nih.gov/articles/PMC5697767/) and [Society site](https://www.sircharlesbell.com/home-) — standardized material and current site description.
-- [Toronto NeuroFace access page](https://slp.utoronto.ca/faculty/yana-yunusova/speech-production-lab/datasets/) — access process, clinical metadata, and reported clinical-group landmark bias.
-- [FairFace repository](https://github.com/joojs/fairface) — CC BY 4.0 license.
+- [Google Face Landmarker guide](https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker), result content and canonical-to-detected transformation-matrix purpose.
+- [Google JS `NormalizedLandmark`](https://developers.google.com/edge/api/mediapipe/js/tasks-vision.normalizedlandmark), X/Y normalization semantics.
+- [MediaPipe Face Mesh V2 model card](https://storage.googleapis.com/mediapipe-assets/Model%20Card%20MediaPipe%20Face%20Mesh%20V2.pdf), landmark error and subgroup evaluation.
+- [MediaPipe repository privacy notice](https://github.com/google-ai-edge/mediapipe), current on-device and metrics notice.
+- [MediaPipe WebGPU support issue](https://github.com/google-ai-edge/mediapipe/issues/5826), maintainer statement that Web Vision Tasks use WebGL.
+- [W3C IndexedDB 3.0](https://www.w3.org/TR/IndexedDB-3/), valid key types.
+- [Mozilla: Web apps in Firefox for Windows](https://support.mozilla.org/en-US/kb/web-apps-firefox-windows), Firefox 143+ Windows support.
+- [FDA Digital Health Policy Navigator, step 7](https://www.fda.gov/medical-devices/digital-health-center-excellence/step-7-does-device-software-functions-dsf-and-mobile-medical-applications-mma-guidance-apply); disease-specific coaching and enforcement discretion.
+- [EU Medical Device Regulation 2017/745](https://eur-lex.europa.eu/eli/reg/2017/745/oj), intended purpose, medical-device definition, and software classification.
+- [Cochrane: physical treatments for idiopathic facial paralysis](https://www.cochrane.org/evidence/CD006283_physical-treatments-idiopathic-facial-paralysis), limited/heterogeneous exercise evidence.
+- [International facial synkinesis recommendations](https://pmc.ncbi.nlm.nih.gov/articles/PMC9682287/), specialist-guided facial training context.
+- [MEEI/Sir Charles Bell photographic standards](https://pmc.ncbi.nlm.nih.gov/articles/PMC5697767/) and [Society site](https://www.sircharlesbell.com/home-), standardized material and current site description.
+- [Toronto NeuroFace access page](https://slp.utoronto.ca/faculty/yana-yunusova/speech-production-lab/datasets/), access process, clinical metadata, and reported clinical-group landmark bias.
+- [FairFace repository](https://github.com/joojs/fairface), CC BY 4.0 license.
 
 ## Bottom line
 
-The best parts of MirrorWell are its scope, privacy model, fail-safe intent, and refusal to diagnose. The weakest part is the one everything depends on: the geometry and its validation. The concept should not be abandoned yet—the face-local candidate materially improved signal and invariance—but the present documents overstate what the current algorithm proves. Fix the specification and V1 first; the rest of the architecture can remain largely intact.
+The best parts of MirrorWell are its scope, privacy model, fail-safe intent, and refusal to diagnose. The weakest part is the one everything depends on: the geometry and its validation. The concept should not be abandoned yet-the face-local candidate materially improved signal and invariance-but the present documents overstate what the current algorithm proves. Fix the specification and V1 first; the rest of the architecture can remain largely intact.

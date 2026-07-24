@@ -1,4 +1,4 @@
-// scripts/copy-wasm.ts — bundles the @mediapipe/tasks-vision WASM runtime (docs/IMPLEMENTATION.md
+// scripts/copy-wasm.ts, bundles the @mediapipe/tasks-vision WASM runtime (docs/IMPLEMENTATION.md
 // Task 4). MANDATORY: the package's own examples load this from a CDN via FilesetResolver;
 // that breaks the no-network gate and the offline PWA. Copying it here lets
 // FilesetResolver.forVisionTasks('/wasm') resolve same-origin instead.

@@ -7,10 +7,12 @@ describe('thresholds', () => {
   it('exports the full key list from API.md §15', () => {
     expect(Object.keys(thresholds).sort()).toEqual(
       [
-        'blendshapes', 'calibration', 'landmarker', 'liveDemo', 'metrics',
+        'blendshapes', 'calibration', 'feedback', 'landmarker', 'liveDemo', 'metrics',
         'profile', 'qualityGates', 'reps', 'session', 'v1Protocol',
         // UI presentation tunables (frontend salvage, Gate 0)
         'home', 'summary', 'trends', 'export', 'settings',
+        // V3 Task 4: caregiver-authored text limit
+        'caregiver',
       ].sort(),
     );
   });
@@ -28,9 +30,12 @@ describe('thresholds', () => {
     expect(thresholds.qualityGates.interOcularMinFrac).toBe(0.09);
   });
 
-  it('blendshapes exposes activationFloor 0.05 (blendshape-si-v1)', () => {
-    expect(Object.keys(thresholds.blendshapes)).toEqual(['activationFloor']);
-    expect(thresholds.blendshapes.activationFloor).toBe(0.05);
+  it('blendshapes exposes the SI activation floor and the strain noise floor', () => {
+    expect(Object.keys(thresholds.blendshapes).sort()).toEqual(
+      ['activationFloor', 'strainAccessoryFloor'].sort(),
+    );
+    expect(thresholds.blendshapes.activationFloor).toBe(0.03);
+    expect(thresholds.blendshapes.strainAccessoryFloor).toBe(0.08);
   });
 
   it('metrics exposes all six metric tunables (incl. gapResetMs)', () => {
@@ -47,20 +52,37 @@ describe('thresholds', () => {
     expect(thresholds.metrics.gapResetMs).toBe(250);
   });
 
-  it('reps exposes all four rep-detection tunables', () => {
+  it('reps exposes the rep-detection and rep-classification tunables', () => {
     expect(Object.keys(thresholds.reps).sort()).toEqual(
-      ['endThreshold', 'minDurationMs', 'minQualityFramePct', 'startThreshold'].sort(),
+      [
+        'endThreshold', 'minDurationMs', 'minQualityFramePct', 'startThreshold',
+        'fullRepEffortMin', 'strainMax',
+      ].sort(),
     );
   });
 
-  it('calibration exposes all five calibration tunables', () => {
+  it('calibration exposes the capture tunables and the comfortable-max rise floor', () => {
     expect(Object.keys(thresholds.calibration).sort()).toEqual(
-      ['captureSeconds', 'driftMaxPct', 'minQualityScore', 'neutralCaptures', 'staleDays'].sort(),
+      [
+        'captureSeconds', 'driftMaxPct', 'minQualityScore', 'neutralCaptures', 'staleDays',
+        'comfortableMaxMinRise',
+      ].sort(),
+    );
+    // Must stay well ABOVE the SI activation floor: it guards the effort denominator, whereas
+    // activationFloor only guards whether a symmetry ratio is defined. Collapsing them is what
+    // let a resting face be accepted as a comfortable max.
+    expect(thresholds.calibration.comfortableMaxMinRise).toBeGreaterThan(
+      thresholds.blendshapes.activationFloor,
     );
   });
 
   it('session exposes the quality-problem stop-offer and metric-throttle tunables', () => {
     expect(Object.keys(thresholds.session).sort()).toEqual(['metricEventMinIntervalMs', 'qualityProblemOfferStopMs', 'restExtendSeconds'].sort());
+  });
+
+  it('feedback exposes the VoiceCoach minimum gap', () => {
+    expect(Object.keys(thresholds.feedback)).toEqual(['voiceMinGapMs']);
+    expect(thresholds.feedback.voiceMinGapMs).toBe(2500);
   });
 
   it('profile exposes local-only text limits', () => {
@@ -70,6 +92,11 @@ describe('thresholds', () => {
     ]);
     expect(thresholds.profile.nicknameMaxLength).toBe(30);
     expect(thresholds.profile.motivationMaxLength).toBe(120);
+  });
+
+  it('caregiver exposes the encouragement-note length limit', () => {
+    expect(Object.keys(thresholds.caregiver)).toEqual(['noteMaxLength']);
+    expect(thresholds.caregiver.noteMaxLength).toBe(200);
   });
 
   it('v1Protocol exposes MODEL_AND_DATA §7 capture tunables', () => {
@@ -101,6 +128,14 @@ describe('thresholds', () => {
       'sessionLookbackDays',
       'afternoonStartHour',
       'eveningStartHour',
+      'gardenWeeks',
+      'gardenBloomSessions',
+      'daysPerWeek',
+      'sessions10',
+      'sessions25',
+      'practiceWeeks4Days',
+      'gentleReps100',
+      'rhythmMinDays',
     ]);
     expect(Object.keys(thresholds.summary).sort()).toEqual(
       ['symmetryFairlyEvenMin', 'symmetryMostlyEvenMin', 'symmetrySomeDifferenceMin'].sort(),

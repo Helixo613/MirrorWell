@@ -10,6 +10,7 @@ import { exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
 import { useSummaryScreen } from '@/hooks/useSummaryScreen';
 import { gentlenessStat, symmetryPlainLabel } from '@/lib/summaryMetrics';
+import { milestonesFrom } from '@/screens/home/milestones';
 
 const STAGGER_MS = 60;
 
@@ -36,6 +37,7 @@ export function SummaryScreen() {
   }
 
   const { isDemo, textScale, highContrast, handleDone, headingId } = summary;
+  const milestones = milestonesFrom(summary.history).filter((milestone) => milestone.achieved);
   const hasResults = record.results.length > 0;
   const { gentle, total } = gentlenessStat(record.results);
   const celebration =
@@ -47,7 +49,7 @@ export function SummaryScreen() {
     <ScreenShell
       textScale={textScale}
       ariaLabelledBy={headingId}
-      className="gap-0 pb-0"
+      className="gap-0 pb-0 lg:max-w-4xl"
     >
       <p className="sr-only" role="status" aria-live="polite">
         {announcement}
@@ -91,10 +93,20 @@ export function SummaryScreen() {
           </section>
         ) : null}
 
+        {milestones.length > 0 ? (
+          <section aria-label={strings.summary.milestones.label} className="flex flex-wrap gap-2">
+            {milestones.map((milestone) => (
+              <span key={milestone.id} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                {strings.home.milestones[milestone.id]}
+              </span>
+            ))}
+          </section>
+        ) : null}
+
         {hasResults ? (
           <section
             aria-label={strings.summary.exerciseListLabel}
-            className="flex flex-col gap-4"
+            className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4"
           >
             {record.results.map((result, index) => (
               <StaggerFadeIn

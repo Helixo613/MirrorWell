@@ -10,7 +10,7 @@
     <script type="module">
       /**
        * Headless V1 sampler (docs/MODEL_AND_DATA.md §7 / Task B7).
-       * Loads bundled MediaPipe from /wasm + /models (same-origin only — no CDN).
+       * Loads bundled MediaPipe from /wasm + /models (same-origin only; no CDN).
        * Exposed as window.__v1 for Playwright control via scripts/run-v1.mjs --sample.
        *
        * Protocol fixture naming (preferred):
@@ -19,7 +19,7 @@
        *   trials: 1 | 2
        *
        * Each QUALITY_OK row records measured yawDeg from headPose (operator label is not
-       * evidence). Metric formulas live in scripts/v1-protocol.mjs — this page only samples.
+       * evidence). Metric formulas live in scripts/v1-protocol.mjs; this page only samples.
        *
        * Measurement core mirrors production verbatim: quality gates + euler extraction
        * from src/sensing/quality.ts, face-local vector kernel from src/metrics/geometry.ts.
@@ -28,13 +28,13 @@
       import { FaceLandmarker, FilesetResolver } from '/node_modules/@mediapipe/tasks-vision/vision_bundle.mjs';
 
       // ---------------------------------------------------------------------------
-      // Measurement core — VERBATIM ports of the production pipeline (candidate-2):
+      // Measurement core, VERBATIM ports of the production pipeline (candidate-2):
       //   pose/quality: src/sensing/quality.ts   kernel: src/metrics/geometry.ts
       // Rows emit absolute face-local features only; displacement/SI derivation happens
       // in scripts/run-v1.mjs so neutral baselines are per-trial (MODEL_AND_DATA §7).
       // ---------------------------------------------------------------------------
 
-      // Canonical mesh indices (anatomical = subject's side) — src/metrics/geometry.ts.
+      // Canonical mesh indices (anatomical = subject's side), src/metrics/geometry.ts.
       const EYE_R_OUTER = 33, EYE_L_OUTER = 263, EYE_R_INNER = 133, EYE_L_INNER = 362;
       const BROW_L = 334, BROW_R = 105;
       const LID_UPPER_L = 386, LID_LOWER_L = 374, LID_UPPER_R = 159, LID_LOWER_R = 145;
@@ -59,7 +59,7 @@
         statusEl.textContent = s;
       }
 
-      // --- pose (ZYX Tait-Bryan, row-major 4x4) — mirrors quality.ts extractEulerAnglesDeg ---
+      // --- pose (ZYX Tait-Bryan, row-major 4x4); mirrors quality.ts extractEulerAnglesDeg ---
       function poseAnglesDeg(m) {
         if (!m || m.length < 16) return { yaw: 0, pitch: 0, roll: 0 };
         const r = (row, col) => m[row * 4 + col] ?? 0;
@@ -70,7 +70,7 @@
         return { yaw: yaw * toDeg, pitch: pitch * toDeg, roll: roll * toDeg };
       }
 
-      // --- face-region luma — mirrors quality.ts faceRegionLuma64 ---
+      // --- face-region luma, mirrors quality.ts faceRegionLuma64 ---
       function faceRegionLuma64(landmarks) {
         const canvas = document.createElement('canvas');
         canvas.width = LUMA_DOWNSAMPLE;
@@ -118,7 +118,7 @@
         return Math.sqrt(dx * dx + dy * dy);
       }
 
-      // --- jitter (RMS second difference / IOD) — mirrors quality.ts rollingJitterSecondDiff.
+      // --- jitter (RMS second difference / IOD), mirrors quality.ts rollingJitterSecondDiff.
       // Sampling interval is 100 ms (vs ~33 ms live); second difference still cancels
       // constant-velocity motion, so the same threshold applies. Reset per video + on non-OK.
       let prevLandmarks = null, prevPrevLandmarks = null, jitterHistory = [];
@@ -177,7 +177,7 @@
         return 'QUALITY_OK';
       }
 
-      // --- face-local vector kernel — mirrors geometry.ts measureAbsolute ---
+      // --- face-local vector kernel, mirrors geometry.ts measureAbsolute ---
       function measureAbsolutePx(landmarks, W, H) {
         const toPx = (p) => ({ x: p.x * W, y: p.y * H });
         const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
@@ -197,7 +197,7 @@
         const eyeCenterL = mid(eyeL, toPx(landmarks[EYE_L_INNER]));
         const eyeCenterR = mid(eyeR, toPx(landmarks[EYE_R_INNER]));
         // v2 anchors: mouth/lip use same-side eye centers (geometry.ts candidate
-        // face-local-vector-v2) — nose tip removed (off-plane yaw artifact).
+        // face-local-vector-v2), nose tip removed (off-plane yaw artifact).
         return {
           REGION_BROW: {
             left: feature(toPx(landmarks[BROW_L]), eyeCenterL),

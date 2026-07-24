@@ -1,4 +1,4 @@
-# backend-services-v1 — implementation evidence
+# backend-services-v1: implementation evidence
 
 Task-by-task reports and the progress ledger for
 `docs/superpowers/plans/2026-07-20-backend-services-v1.md`, executed
@@ -6,7 +6,7 @@ subagent-driven (fresh implementer per task, independent reviewer per task,
 fix rounds until approved).
 
 Copied here from the session scratch directory so the evidence survives a
-clone — `.superpowers/` self-ignores.
+clone, `.superpowers/` self-ignores.
 
 | Task | Module | Review outcome |
 |---|---|---|
@@ -18,7 +18,7 @@ clone — `.superpowers/` self-ignores.
 | 5 | `TrendsService` | approved after 1 fix round (boundary + `DB_UNAVAILABLE` coverage) |
 | 6 | `ExportService` | see report |
 
-**Correction on record:** every `tsc --noEmit` result in these reports is void —
+**Correction on record:** every `tsc --noEmit` result in these reports is void
 that command type-checks nothing in this repo (root `tsconfig.json` is a
 solution file with `"files": []`). The real gate is `npm run typecheck`
 (`tsc -b`), which caught two genuine contract defects the reports had marked

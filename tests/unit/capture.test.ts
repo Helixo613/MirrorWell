@@ -19,7 +19,7 @@ beforeEach(() => {
   rafCallbacks = [];
   fakeTracks = [{ stop: vi.fn() }, { stop: vi.fn() }];
   fakeStream = { getTracks: () => fakeTracks };
-  // No requestVideoFrameCallback on this fake element — forces the rAF fallback path,
+  // No requestVideoFrameCallback on this fake element, forces the rAF fallback path,
   // which is deterministic to drive synchronously in tests.
   fakeVideo = makeFakeVideoEl();
 
@@ -42,7 +42,7 @@ beforeEach(() => {
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
 });
 
-describe('CaptureService — getUserMedia error mapping', () => {
+describe('CaptureService, getUserMedia error mapping', () => {
   it('maps NotAllowedError to CAMERA_DENIED', async () => {
     (globalThis as any).navigator.mediaDevices.getUserMedia = vi
       .fn()
@@ -68,10 +68,10 @@ describe('CaptureService — getUserMedia error mapping', () => {
   });
 });
 
-describe('CaptureService — requestVideoFrameCallback timestamp source', () => {
+describe('CaptureService, requestVideoFrameCallback timestamp source', () => {
   it('delivers the performance-clock `now`, never metadata.mediaTime (which resets per stream)', async () => {
     // mediaTime restarts near 0 on every camera restart while the FaceLandmarker singleton
-    // survives — one backwards timestamp poisons the MediaPipe graph (BACKEND §1.1).
+    // survives; one backwards timestamp poisons the MediaPipe graph (BACKEND §1.1).
     type RvfcCb = (now: number, metadata: { mediaTime: number }) => void;
     const rvfcCallbacks: RvfcCb[] = [];
     (fakeVideo as unknown as { requestVideoFrameCallback: (cb: RvfcCb) => number }).requestVideoFrameCallback = (
@@ -94,7 +94,7 @@ describe('CaptureService — requestVideoFrameCallback timestamp source', () => 
   });
 });
 
-describe('CaptureService — frame subscription', () => {
+describe('CaptureService, frame subscription', () => {
   it('unsubscribe stops callbacks', async () => {
     const { CaptureService } = await import('../../src/sensing/capture.ts');
     await CaptureService.start();
@@ -155,7 +155,7 @@ describe('CaptureService.stop', () => {
     rafCallbacks[rafCallbacks.length - 1]!(1000);
     expect(cb).toHaveBeenCalledTimes(1);
 
-    // Pause: useSessionScreen stops the camera and later restarts it WITHOUT re-subscribing —
+    // Pause: useSessionScreen stops the camera and later restarts it WITHOUT re-subscribing
     // the SessionController's frame source and the preview both ride on that same subscription.
     // This is why the S1-REQ-3 fix could not be "stop() clears `subscribers`".
     CaptureService.stop();

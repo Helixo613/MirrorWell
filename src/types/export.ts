@@ -42,7 +42,7 @@ export interface ExportTrendSeries {
   points: TrendPoint[];
 }
 
-/** Canonical export document — must match tests/schemas/export.schema.json. */
+/** Canonical export document, must match tests/schemas/export.schema.json. */
 export interface ExportSummaryDocument {
   schemaVersion: 1;
   generatedAt: string;

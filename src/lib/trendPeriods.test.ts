@@ -33,7 +33,7 @@ describe('formatPeriodLabel', () => {
   it('labels a monthly period with the full month and year', () => {
     const label = formatPeriodLabel('2026-06-01', 'monthly');
     expect(label).toContain('2026');
-    // Month name, not a bare number — locale-tolerant check that it is not just the year.
+    // Month name, not a bare number; locale-tolerant check that it is not just the year.
     expect(label.length).toBeGreaterThan('2026'.length);
   });
 

@@ -20,10 +20,16 @@ export function settingLabelFor(key: EditableAppSettingKey): string {
       return strings.settings.cues.haptics.label;
     case 'audioCuesEnabled':
       return strings.settings.cues.audio.label;
+    case 'voiceCoachEnabled':
+      return strings.settings.cues.voiceCoach.label;
     case 'trendGranularity':
       return strings.settings.trends.granularityLabel;
     case 'caregiverViewEnabled':
       return strings.settings.sharing.caregiver.label;
+    case 'remindersEnabled':
+      return strings.settings.reminders.toggleLabel;
+    case 'reminderTime':
+      return strings.settings.reminders.timeLabel;
     default: {
       const _exhaustive: never = key;
       return _exhaustive;

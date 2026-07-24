@@ -1,4 +1,4 @@
-// tests/analysis/blendshape-probe.mjs — RESEARCH PROBE (not gate evidence).
+// tests/analysis/blendshape-probe.mjs, RESEARCH PROBE (not gate evidence).
 // Question: does blendshape-based SI (min/max of mouthSmileLeft/Right) hold the V1
 // B1/B2/B3 bars on the same 12 fixtures that rejected three geometry candidates?
 // Output: tests/analysis/blendshape_probe_S01.json + console table. No contract changes.
@@ -151,7 +151,7 @@ async function main() {
     });
   }
   console.table(rowsOut);
-  console.log('* B1a analog is in blendshape score units (0..1), not IOD — compare shape, not the geometry bar.');
+  console.log('* B1a analog is in blendshape score units (0..1), not IOD; compare shape, not the geometry bar.');
   const out = path.join(ROOT, 'tests', 'analysis', `blendshape_probe_${SUBJECT}.json`);
   fs.writeFileSync(out, JSON.stringify(report, null, 2));
   console.log('written:', out);

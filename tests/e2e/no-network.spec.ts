@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test';
  * prove the FilesetResolver CDN default is fully bypassed.
  *
  * Deliberately stricter than "after page load": we listen from the moment the page/context
- * is created, not just post-load, because the non-negotiable is "no network calls, ever" —
+ * is created, not just post-load, because the non-negotiable is "no network calls, ever"
  * catching a same-origin-violation during initial load is not a false positive, it's the point.
  */
 test('production build makes zero non-same-origin requests', async ({ page, baseURL }) => {
@@ -20,7 +20,7 @@ test('production build makes zero non-same-origin requests', async ({ page, base
 
   page.on('request', (request) => {
     const url = request.url();
-    // Ignore Playwright/Chromium internal schemes (about:, data:, blob:) — not network calls.
+    // Ignore Playwright/Chromium internal schemes (about:, data:, blob:); not network calls.
     if (!/^https?:\/\//.test(url)) return;
     if (new URL(url).origin !== pageOrigin) {
       offOriginRequests.push(`${request.method()} ${url}`);

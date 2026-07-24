@@ -10,7 +10,7 @@ import {
 } from '@/lib/summaryMetrics';
 
 // Pure helpers behind SummaryScreen (FRONTEND §2.5). Bucket boundaries are read from
-// thresholds.summary — the tunable is the source of truth, so retuning a threshold moves
+// thresholds.summary; the tunable is the source of truth, so retuning a threshold moves
 // these cases with it (CLAUDE.md: every tunable lives in src/config/thresholds.ts). The
 // expected COPY is asserted verbatim: SAFETY §8 wording is a release blocker.
 

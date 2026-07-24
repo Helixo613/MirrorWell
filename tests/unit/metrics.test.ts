@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { thresholds } from '../../src/config/thresholds.ts';
 import type { NormalizedFrame } from '../../src/metrics/normalize.ts';
 import type { Vec2 } from '../../src/metrics/geometry.ts';
 import type { CalibrationBaseline, ExerciseId, RegionId } from '../../src/data/schema.ts';
 
 /**
  * docs/TESTS.md §2: MetricEngine + RepDetector require 100% branch coverage (hard
- * requirement) — every branch below is deliberate, not incidental.
+ * requirement); every branch below is deliberate, not incidental.
  *
  * Blendshape SI (candidate blendshape-si-v1, BACKEND §1.5 / MODEL_AND_DATA §7):
  * L/R = blendshapes[pair.left/right]; act = max(L,R);
@@ -58,12 +59,12 @@ function baseline(comfortableMax: Partial<Record<ExerciseId, number>>): Calibrat
 // unless the registry is reset first, so without this every test shared one engine and the suite
 // was order-dependent: "throws NO_BASELINE before setBaseline() is ever called" passed only while
 // it happened to run before any test that called setBaseline(). Mirrors the isolation pattern in
-// tests/unit/controller.test.ts — no test-only reset is added to the production contract.
+// tests/unit/controller.test.ts; no test-only reset is added to the production contract.
 beforeEach(() => {
   vi.resetModules();
 });
 
-describe('MetricEngine — NO_BASELINE', () => {
+describe('MetricEngine; NO_BASELINE', () => {
   it('compute() throws NO_BASELINE before setBaseline() is ever called', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     expect(() => MetricEngine.compute(bsFrame(0.5, 0.5), 'EX_SMILE')).toThrow(
@@ -88,11 +89,11 @@ describe('MetricEngine — NO_BASELINE', () => {
   });
 });
 
-describe('MetricEngine — neutral-rebased effortIndex (ARCHITECTURE §7)', () => {
+describe('MetricEngine, neutral-rebased effortIndex (ARCHITECTURE §7)', () => {
   // MediaPipe reports nonzero RESTING activation for some pairs (browOuterUp, eyeBlink). Without
   // the rebase, resting effort sat above repStart/repEnd thresholds: a rep opened at rest and
   // only closed on the OPPOSITE movement (furrow / eyes wide), while the intended movement pinned
-  // effort over the ease-off ceiling — the inverted behaviour reported for those two exercises.
+  // effort over the ease-off ceiling; the inverted behaviour reported for those two exercises.
   it('effort is 0 at the resting read and 1 at comfortableMax', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline({ ...baseline({ EX_SMILE: 0.6 }), neutralActivation: { EX_SMILE: 0.2 } });
@@ -122,7 +123,7 @@ describe('MetricEngine — neutral-rebased effortIndex (ARCHITECTURE §7)', () =
   });
 });
 
-describe('MetricEngine — blendshape symmetryIndex', () => {
+describe('MetricEngine, blendshape symmetryIndex', () => {
   it('symmetric pair → SI 1', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
@@ -150,11 +151,12 @@ describe('MetricEngine — blendshape symmetryIndex', () => {
     expect(result.effortIndex).toBeCloseTo(0.4, 6);
   });
 
-  it('act exactly at activationFloor (0.05) is NOT null (boundary is strict <)', async () => {
+  it('act exactly at activationFloor is NOT null (boundary is strict <)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    const result = MetricEngine.compute(bsFrame(0.05, 0.05), 'EX_SMILE');
+    const floor = thresholds.blendshapes.activationFloor;
+    const result = MetricEngine.compute(bsFrame(floor, floor), 'EX_SMILE');
     expect(result.symmetryIndex).toBe(1);
   });
 
@@ -162,9 +164,12 @@ describe('MetricEngine — blendshape symmetryIndex', () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    const result = MetricEngine.compute(bsFrame(0.02, 0.03), 'EX_SMILE');
+    // Kept strictly under activationFloor by construction rather than by a literal, so this
+    // stays the "below the floor" case whenever the floor is retuned.
+    const under = thresholds.blendshapes.activationFloor / 2;
+    const result = MetricEngine.compute(bsFrame(under * 0.5, under), 'EX_SMILE');
     expect(result.symmetryIndex).toBeNull();
-    expect(result.effortIndex).toBeCloseTo(0.03, 6);
+    expect(result.effortIndex).toBeCloseTo(under, 6);
   });
 
   it('missing pair scores in the record default to 0 (act 0 → null SI, effort 0)', async () => {
@@ -176,7 +181,7 @@ describe('MetricEngine — blendshape symmetryIndex', () => {
     expect(result.effortIndex).toBe(0);
   });
 
-  it('EX_PUCKER (no blendshapePair — open decision) throws VALIDATION_FAILED, never a silent fallback', async () => {
+  it('EX_PUCKER (no blendshapePair; open decision) throws VALIDATION_FAILED, never a silent fallback', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_PUCKER: 1.0 }));
     MetricEngine.reset();
@@ -186,7 +191,7 @@ describe('MetricEngine — blendshape symmetryIndex', () => {
   });
 });
 
-describe('MetricEngine — trailing 5-frame median (t−4..t only)', () => {
+describe('MetricEngine, trailing 5-frame median (t−4..t only)', () => {
   it('a single-frame spike is killed by the trailing median (both SI and effort)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
@@ -260,7 +265,7 @@ describe('MetricEngine — trailing 5-frame median (t−4..t only)', () => {
   });
 });
 
-describe('MetricEngine — gap > gapResetMs (250) resets smoothing + ease-off', () => {
+describe('MetricEngine, gap > gapResetMs (250) resets smoothing + ease-off', () => {
   it('gap > 250 ms clears the trailing window so the next sample stands alone', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
@@ -304,7 +309,7 @@ describe('MetricEngine — gap > gapResetMs (250) resets smoothing + ease-off', 
   });
 });
 
-describe('MetricEngine — ease-off (sustained > 0.60 for >= 300ms)', () => {
+describe('MetricEngine, ease-off (sustained > 0.60 for >= 300ms)', () => {
   it('isEaseOffActive() is false before any compute() call', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
@@ -338,7 +343,7 @@ describe('MetricEngine — ease-off (sustained > 0.60 for >= 300ms)', () => {
     expect(MetricEngine.isEaseOffActive()).toBe(true);
   });
 
-  it('exactly at threshold (0.60) does not fire — boundary is strict >', async () => {
+  it('exactly at threshold (0.60) does not fire, boundary is strict >', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
@@ -349,7 +354,7 @@ describe('MetricEngine — ease-off (sustained > 0.60 for >= 300ms)', () => {
   });
 });
 
-describe('MetricEngine — getLastRaw() (DebugHud, Task 8)', () => {
+describe('MetricEngine, getLastRaw() (DebugHud, Task 8)', () => {
   it('is null before the first compute() call', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
@@ -372,7 +377,7 @@ describe('MetricEngine — getLastRaw() (DebugHud, Task 8)', () => {
   });
 });
 
-describe('MetricEngine — reset()', () => {
+describe('MetricEngine, reset()', () => {
   it('reset() clears smoothing window, gap clock, and ease-off state but retains the active baseline', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));

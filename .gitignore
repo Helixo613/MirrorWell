@@ -11,7 +11,7 @@ test-results/
 *.tsbuildinfo
 
 # Regenerated from node_modules by scripts/copy-wasm.ts at postinstall (docs/IMPLEMENTATION.md
-# Task 4) — committing it would duplicate ~32MB already reproducible via package-lock.json.
+# Task 4): committing it would duplicate ~32MB already reproducible via package-lock.json.
 public/wasm/
 
 # Superpowers / agent worktrees (isolated branches)

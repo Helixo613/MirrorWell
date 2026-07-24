@@ -1,5 +1,5 @@
 // Pure decision layer for CalibrationScreen. Everything here is a total function of its
-// arguments so it can be unit-tested (vitest runs in `environment: 'node'` — a React component
+// arguments so it can be unit-tested (vitest runs in `environment: 'node'`; a React component
 // cannot be rendered in this repo, so this module is the screen's only unit-test surface).
 import { assignableExercises, exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
@@ -26,7 +26,7 @@ export type BlockingErrorCode = Extract<
 >;
 
 /**
- * How the screen reacts to a thrown error. Branches on `code` only — `error.message` is
+ * How the screen reacts to a thrown error. Branches on `code` only, `error.message` is
  * developer-facing and must never reach the DOM (API §1/§16).
  */
 export type CalibrationErrorAction =
@@ -57,7 +57,7 @@ export function classifyError(error: unknown): CalibrationErrorAction {
 /**
  * Assigned exercises that `CalibrationFlow.captureComfortableMax` can actually measure.
  * `EX_PUCKER` has no `blendshapePair`, so it is not in `assignableExercises` and would throw
- * `VALIDATION_FAILED` — filtering here is what keeps it out of the sequence.
+ * `VALIDATION_FAILED`, filtering here is what keeps it out of the sequence.
  */
 export function calibrationExercises(
   assigned: readonly ExerciseId[] | undefined,
@@ -73,7 +73,7 @@ export function calibrationExercises(
 
 /**
  * Ordering is fixed by the backend, not by taste: `captureNeutral()` resets the accumulated
- * comfortable-max map and `runNoiseFloorSelfTest()` needs both (else `NO_BASELINE`) — so
+ * comfortable-max map and `runNoiseFloorSelfTest()` needs both (else `NO_BASELINE`), so
  * neutral runs first, then every exercise, then the self-test. There is deliberately no
  * transition back to `neutral`: redo is scoped to the phase the user is standing in.
  */
@@ -104,7 +104,7 @@ export const CAPTURE_WINDOW_MS = thresholds.calibration.captureSeconds * 1000;
 
 /**
  * Progress dots for the N captures (FRONTEND §2.2). CalibrationFlow emits no per-window
- * event — one tap covers all N windows — so completion is derived from elapsed wall clock
+ * event; one tap covers all N windows, so completion is derived from elapsed wall clock
  * against the real window length. Honest, because the windows really are that long, but it
  * is an estimate, not an event stream: the backend closes each window on an arriving frame
  * timestamp, so a stalled camera makes this run ahead. Hence the clamp.
@@ -179,7 +179,7 @@ export function primaryLabel(
 
 /**
  * Advisory copy under the primary action. Deliberately advisory: the Capture button is never
- * disabled on quality (FRONTEND §4 — capture is user-tapped, and gating it on a quality state
+ * disabled on quality (FRONTEND §4: capture is user-tapped, and gating it on a quality state
  * the user may not be able to clear would be exactly the dead end §2.2 forbids).
  */
 export function helperText(

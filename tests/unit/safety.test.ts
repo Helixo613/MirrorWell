@@ -3,10 +3,10 @@ import type { UserProfile } from '../../src/data/schema';
 
 // SafetyGate holds module-level `demoMode` with no public exit (enterDemoMode is one-way by
 // design; recordAttestation is the documented demo-exit path). A test that enters demo therefore
-// leaked into every test after it — isAttested() short-circuits to false in demo and
+// leaked into every test after it, isAttested() short-circuits to false in demo and
 // StorageService reads are demo-blocked, so the attestation tests failed whenever they happened
 // to run after the demo test. Each test now gets a fresh module graph via vi.resetModules() +
-// dynamic import, mirroring tests/unit/controller.test.ts — no test-only reset is added to the
+// dynamic import, mirroring tests/unit/controller.test.ts; no test-only reset is added to the
 // production contract.
 let db: typeof import('../../src/data/schema').db;
 let StorageService: typeof import('../../src/data/storage').StorageService;
@@ -80,7 +80,7 @@ describe('SafetyGate', () => {
   it('exits demo mode without touching storage (the OnboardingScreen close-out)', async () => {
     SafetyGate.enterDemoMode();
     expect(SafetyGate.isDemoMode()).toBe(true);
-    // Demo refuses every write, so recordAttestation — the only other exit — cannot run here.
+    // Demo refuses every write, so recordAttestation; the only other exit; cannot run here.
     await expect(StorageService.saveProfile(makeProfile())).rejects.toMatchObject({
       code: 'VALIDATION_FAILED',
     });

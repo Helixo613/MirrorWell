@@ -1,4 +1,4 @@
-// src/dev/CaptureHarness.tsx — manual test harness for CaptureService + LandmarkEngine
+// src/dev/CaptureHarness.tsx, manual test harness for CaptureService + LandmarkEngine
 // (docs/IMPLEMENTATION.md Task 3 Test line + Task 4 Test line: "Harness shows 478 stable dots
 // at >= 24 fps end-to-end on the dev laptop"). Dev-only: src/dev/ is excluded from production
 // bundles; only mounted from App.tsx behind an import.meta.env.DEV check.
@@ -61,7 +61,7 @@ export function CaptureHarness() {
           setDotCount(frame.landmarks.length);
           drawLandmarks(canvasElRef.current, video, frame.landmarks);
         } catch {
-          // INFERENCE_FAILED: absorbed here same as QualityMonitor does downstream — skip
+          // INFERENCE_FAILED: absorbed here same as QualityMonitor does downstream, skip
           // this tick's overlay, keep the loop alive (docs/API.md §16).
         }
       }

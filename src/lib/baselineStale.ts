@@ -1,6 +1,6 @@
 import { thresholds } from '@/config/thresholds';
 
-/** UTC date-only difference in whole days (FRONTEND §2.3 — no time-of-day). */
+/** UTC date-only difference in whole days (FRONTEND §2.3: no time-of-day). */
 export function daysBetweenDateOnly(fromIso: string, toIso: string): number {
   const fromDay = fromIso.slice(0, 10);
   const toDay = toIso.slice(0, 10);

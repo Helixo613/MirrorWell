@@ -1,4 +1,4 @@
-// src/dev/DebugOverlay.tsx — passive live-state overlay for the REAL product app (dev-only).
+// src/dev/DebugOverlay.tsx, passive live-state overlay for the REAL product app (dev-only).
 //
 // Unlike DebugHud (which owns its own CaptureService + LandmarkEngine loop and therefore must
 // run standalone), this overlay opens NO camera and runs NO inference. It subscribes to
@@ -9,19 +9,24 @@
 // Dev-only twice over: src/dev/ is dropped from production bundles, and tapDevLog() is a no-op
 // outside import.meta.env.DEV.
 import { useEffect, useState } from 'react';
+import { thresholds } from '../config/thresholds.ts';
 import { StorageService } from '../data/storage.ts';
 import { tapDevLog } from '../log.ts';
 import { seedDev } from './seed.ts';
 
-/** Which quality gate each state maps to — the gates are evaluated in a fixed order
+/** Which quality gate each state maps to; the gates are evaluated in a fixed order
  *  (src/sensing/quality.ts), so the state name uniquely identifies the failing gate. */
+// Gate values are interpolated from thresholds rather than written as literals: these hints
+// exist to tell a developer which boundary just rejected a frame, and a hardcoded copy of that
+// boundary starts lying the moment the gate is retuned.
+const { lumaMin, interOcularMinFrac, poseMaxDeg, jitterMaxPct } = thresholds.qualityGates;
 const GATE_HINT: Record<string, string> = {
   QUALITY_OK: 'all gates pass',
   FACE_LOST: 'no face detected (or inference failed)',
-  LOW_LIGHT: 'face-region luma < lumaMin (60)',
-  TOO_FAR: 'eyes < interOcularMinFrac (0.09) of frame width — move closer',
-  POSE_OUT_OF_RANGE: 'head angle > poseMaxDeg (15°)',
-  LOW_CONFIDENCE: 'jitter > jitterMaxPct (0.005) — landmark instability',
+  LOW_LIGHT: `face-region luma < lumaMin (${lumaMin})`,
+  TOO_FAR: `eyes < interOcularMinFrac (${interOcularMinFrac}) of frame width, move closer`,
+  POSE_OUT_OF_RANGE: `head angle > poseMaxDeg (${poseMaxDeg}°)`,
+  LOW_CONFIDENCE: `jitter > jitterMaxPct (${jitterMaxPct}), landmark instability`,
 };
 
 type Line = { id: number; scope: string; msg: string; data: string };
@@ -88,7 +93,7 @@ export function DebugOverlay() {
           <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 11, color: '#999' }}>quality</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: ok ? '#7fd67f' : '#ffb27f' }}>
-              {quality ?? '— (no frames yet)'}
+              {quality ?? '(no frames yet)'}
             </div>
             {quality && GATE_HINT[quality] && (
               <div style={{ fontSize: 11, color: '#aaa' }}>{GATE_HINT[quality]}</div>
@@ -134,7 +139,7 @@ export function DebugOverlay() {
                 // first), so reopening localhost resumes where you left off. This wipes every
                 // table and reloads for a truly fresh start. Corner: while DEMO mode is active,
                 // StorageService structurally refuses the clear (by design; this overlay may not
-                // import SafetyGate — the import-graph invariant in app-debug-hud.test.ts) — the
+                // import SafetyGate; the import-graph invariant in app-debug-hud.test.ts); the
                 // reload still exits demo (in-memory flag), so a second click then wipes the DB.
                 void StorageService.deleteAllData()
                   // Full navigation (not just reload) so RootRedirect / GateRoute re-run on a
@@ -161,7 +166,7 @@ export function DebugOverlay() {
           <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 11, color: '#999' }}>log</div>
             {lines.length === 0 ? (
-              <div style={{ color: '#777' }}>—</div>
+              <div style={{ color: '#777' }}>-</div>
             ) : (
               lines.map((l) => (
                 <div key={l.id} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>

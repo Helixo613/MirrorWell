@@ -6,7 +6,7 @@ import { NormalizationLayer } from '../../src/metrics/normalize.ts';
 
 describe('type barrier', () => {
   it('normalize rejects LandmarkFrame at compile time', () => {
-    // Type-level only — never execute the invalid call at runtime.
+    // Type-level only; never execute the invalid call at runtime.
     if (false as boolean) {
       // @ts-expect-error LandmarkFrame is not ApprovedFrame
       NormalizationLayer.normalize({} as LandmarkFrame);

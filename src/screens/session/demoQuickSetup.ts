@@ -1,4 +1,4 @@
-// src/screens/session/demoQuickSetup.ts — the inline "quick setup" for Demo Mode (ARCHITECTURE
+// src/screens/session/demoQuickSetup.ts; the inline "quick setup" for Demo Mode (ARCHITECTURE
 // §11, FRONTEND §2.4). Demo's SessionController.start() sets placeholder profile/baseline ids and
 // does NOT setBaseline (controller.ts isDemoMode branch); so before the first REPS frame this
 // must build an in-memory baseline and call BOTH NormalizationLayer.setBaseline AND
@@ -6,7 +6,7 @@
 //
 // Capture mirrors CalibrationFlow's private captureFor (src/session/calibration.ts): it reuses
 // the idempotent `openFrameSource` seam, which runs LandmarkEngine.detect per frame and owns the
-// camera for the window's duration, then releases it — so the camera has exactly one owner at a
+// camera for the window's duration, then releases it; so the camera has exactly one owner at a
 // time and is free again before SessionController.start() re-opens it.
 import { exercises } from '@/config/exercises';
 import { thresholds } from '@/config/thresholds';
@@ -19,7 +19,7 @@ import { QualityMonitor, type ApprovedFrame } from '@/sensing/quality';
 import { openFrameSource, type FrameHandler } from '@/session/frames';
 import { demoComfortableMax } from '@/screens/session/sessionHelpers';
 
-// The demo exercise: any assignable exercise (has a validated blendshapePair) — never EX_PUCKER.
+// The demo exercise: any assignable exercise (has a validated blendshapePair); never EX_PUCKER.
 export const DEMO_EXERCISE_ID: ExerciseId = 'EX_SMILE';
 
 /** The two capture phases, surfaced so the overlay can tell the user WHEN to smile. Without a
@@ -82,7 +82,7 @@ function gentleActivation(frame: ApprovedFrame, pair: { left: string; right: str
 
 /**
  * Captures ~3 s neutral + a gentle rep, builds an in-memory `CalibrationBaseline`, and sets it on
- * both engines. Throws `NO_BASELINE` (honestly, at build time) if the capture measured nothing —
+ * both engines. Throws `NO_BASELINE` (honestly, at build time) if the capture measured nothing
  * e.g. a faceless device yields zero approved frames, so `comfortableMax` cannot be positive and
  * `aggregateNeutral([])` would produce NaN stats. That loud failure is the designed behaviour
  * (ARCHITECTURE §11): a demo that appears to run while detecting nothing would be worse.
@@ -105,7 +105,7 @@ export async function runDemoQuickSetup(
   if (neutral.approved.length === 0) {
     throw new MirrorWellError('NO_BASELINE', 'demo quick-setup captured no neutral frames');
   }
-  // Median resting activation for the demo pair, from the neutral window — effortIndex rebases
+  // Median resting activation for the demo pair, from the neutral window; effortIndex rebases
   // on it (ARCHITECTURE §7), same as the real calibration's neutralActivation capture.
   const neutralValues = neutral.approved
     .map((frame) => gentleActivation(frame, pair))

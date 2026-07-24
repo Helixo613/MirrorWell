@@ -27,10 +27,10 @@ export const SafetyGate = {
     demoMode = true;
   },
 
-  // DOCS-CHANGE: API §2 — the documented demo close-out is SummaryScreen -> OnboardingScreen
+  // DOCS-CHANGE: API §2: the documented demo close-out is SummaryScreen -> OnboardingScreen
   // (§17: OnboardingScreen is "✅ (exits demo)" in DEMO), and ARCHITECTURE §11 makes leaving
   // demo a safety property. Before this the only exits were recordAttestation (which requires a
-  // profile and WRITES — impossible in demo, where every write is refused) and a page reload,
+  // profile and WRITES, impossible in demo, where every write is refused) and a page reload,
   // so demo was a one-way door and OnboardingScreen had no way to clear a module-private flag.
   exitDemoMode(): void {
     demoMode = false;

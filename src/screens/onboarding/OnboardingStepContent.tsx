@@ -115,8 +115,8 @@ export function OnboardingStepContent({
       );
     }
     case 4: {
-      // Post-consent "About you" — optional nickname + why (FRONTEND §2.1). Both fields must
-      // stay above the sticky Continue footer — numbered labels + scroll padding so the second
+      // Post-consent "About you", optional nickname + why (FRONTEND §2.1). Both fields must
+      // stay above the sticky Continue footer, numbered labels + scroll padding so the second
       // question is obvious (users reported only seeing the name field).
       const copy = strings.onboarding.steps.aboutYou;
       return (

@@ -1,6 +1,6 @@
-// scripts/verify-model.ts — hash-verifies the model AND every bundled WASM runtime file
+// scripts/verify-model.ts, hash-verifies the model AND every bundled WASM runtime file
 // against models.lock.json (docs/IMPLEMENTATION.md Task 4). Wired to `postinstall`, after
-// copy-wasm.ts. Fails loudly (non-zero exit) on any missing, corrupted, or unexpected file —
+// copy-wasm.ts. Fails loudly (non-zero exit) on any missing, corrupted, or unexpected file
 // this is the integrity backstop for assets that are never re-fetched at runtime.
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -27,7 +27,7 @@ function collectFiles(): Record<string, string> {
 
 export function verifyModel(): void {
   if (!existsSync(LOCK_PATH)) {
-    throw new Error('models.lock.json missing — run `node scripts/verify-model.ts --write` to generate it first');
+    throw new Error('models.lock.json missing; run `node scripts/verify-model.ts --write` to generate it first');
   }
   const expected = JSON.parse(readFileSync(LOCK_PATH, 'utf8')) as Record<string, string>;
   const actual = collectFiles();

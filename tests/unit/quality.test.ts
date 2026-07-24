@@ -139,7 +139,7 @@ beforeEach(() => {
   });
 });
 
-describe('QualityMonitor.evaluate — gate order (first failure wins)', () => {
+describe('QualityMonitor.evaluate, gate order (first failure wins)', () => {
   it('FACE_LOST when lf is null', async () => {
     const { QualityMonitor } = await import('../../src/sensing/quality.ts');
     const result = QualityMonitor.evaluate(fakeVideo as unknown as HTMLVideoElement, null);
@@ -222,9 +222,9 @@ describe('QualityMonitor.evaluate — gate order (first failure wins)', () => {
   });
 });
 
-describe('QualityMonitor.evaluate — face-region luma (landmark bbox +10% on 64×64)', () => {
+describe('QualityMonitor.evaluate, face-region luma (landmark bbox +10% on 64×64)', () => {
   it('dark face + bright background → LOW_LIGHT', async () => {
-    // Face center dark (30), edges bright (220) — full-frame mean would pass; face-region fails.
+    // Face center dark (30), edges bright (220); full-frame mean would pass; face-region fails.
     setLumaFaceVsBackground(30, 220);
     const { QualityMonitor } = await import('../../src/sensing/quality.ts');
     const result = QualityMonitor.evaluate(fakeVideo as unknown as HTMLVideoElement, makeFrame());
@@ -232,7 +232,7 @@ describe('QualityMonitor.evaluate — face-region luma (landmark bbox +10% on 64
   });
 
   it('lit face + dark background → QUALITY_OK', async () => {
-    // Face center bright (200), edges dark (10) — full-frame mean might fail; face-region passes.
+    // Face center bright (200), edges dark (10); full-frame mean might fail; face-region passes.
     setLumaFaceVsBackground(200, 10);
     const { QualityMonitor } = await import('../../src/sensing/quality.ts');
     const result = QualityMonitor.evaluate(fakeVideo as unknown as HTMLVideoElement, makeFrame());
@@ -240,7 +240,7 @@ describe('QualityMonitor.evaluate — face-region luma (landmark bbox +10% on 64
   });
 });
 
-describe('QualityMonitor.evaluate — fractional distance (interOcularMinFrac)', () => {
+describe('QualityMonitor.evaluate, fractional distance (interOcularMinFrac)', () => {
   it('same face fraction passes at 640×480 and 1280×720', async () => {
     const { QualityMonitor } = await import('../../src/sensing/quality.ts');
     // 0.12 > 0.09 → pass at any resolution
@@ -274,7 +274,7 @@ describe('QualityMonitor.evaluate — fractional distance (interOcularMinFrac)',
   });
 });
 
-describe('QualityMonitor.evaluate — LOW_CONFIDENCE (RMS second-difference jitter)', () => {
+describe('QualityMonitor.evaluate, LOW_CONFIDENCE (RMS second-difference jitter)', () => {
   it('QUALITY_OK on the first two frames (need 3 samples for second difference)', async () => {
     const { QualityMonitor } = await import('../../src/sensing/quality.ts');
     const r0 = QualityMonitor.evaluate(fakeVideo as unknown as HTMLVideoElement, makeFrame());
@@ -286,8 +286,8 @@ describe('QualityMonitor.evaluate — LOW_CONFIDENCE (RMS second-difference jitt
   it('constant-velocity intentional motion passes (second difference ≈ 0)', async () => {
     const { QualityMonitor } = await import('../../src/sensing/quality.ts');
     const base = makeLandmarks(0.3);
-    const v = 0.02; // large per-frame shift — would fail first-difference gate; OK for 2nd-diff
-    // p0, p0+v, p0+2v, p0+3v — constant velocity → accel = 0
+    const v = 0.02; // large per-frame shift, would fail first-difference gate; OK for 2nd-diff
+    // p0, p0+v, p0+2v, p0+3v; constant velocity → accel = 0
     for (let t = 0; t < 4; t++) {
       const landmarks = translateLandmarks(base, v * t, v * t);
       const result = QualityMonitor.evaluate(
@@ -301,7 +301,7 @@ describe('QualityMonitor.evaluate — LOW_CONFIDENCE (RMS second-difference jitt
   it('oscillating jitter fails (high second difference → LOW_CONFIDENCE)', async () => {
     const { QualityMonitor } = await import('../../src/sensing/quality.ts');
     const base = makeLandmarks(0.3);
-    const amp = 0.05; // exaggerated oscillation so RMS 2nd-diff ≫ jitterMaxPct 0.005
+    const amp = 0.05; // exaggerated oscillation so RMS 2nd-diff stays well above jitterMaxPct
     // Alternate +amp / 0 so second difference is large once 3 frames exist.
     // t=0: 0, t=1: +amp, t=2: 0 → accel = 0 - 2*(+amp) + 0 = -2amp
     const offsets = [0, amp, 0, amp, 0];
@@ -329,7 +329,7 @@ describe('QualityMonitor.evaluate — LOW_CONFIDENCE (RMS second-difference jitt
     QualityMonitor.evaluate(fakeVideo as unknown as HTMLVideoElement, makeFrame());
     QualityMonitor.evaluate(fakeVideo as unknown as HTMLVideoElement, makeFrame());
     QualityMonitor.evaluate(fakeVideo as unknown as HTMLVideoElement, null); // FACE_LOST resets
-    // Post-reset first frame has no prior history — not penalized as jitter.
+    // Post-reset first frame has no prior history; not penalized as jitter.
     const result = QualityMonitor.evaluate(fakeVideo as unknown as HTMLVideoElement, makeFrame());
     expectQualityOk(result);
   });

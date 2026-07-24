@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { AppShell } from '@/components/layout/AppShell';
 import { ScreenShell } from '@/components/layout/ScreenShell';
 import { strings } from '@/config/strings';
 import { AppStateProvider } from '@/context/AppStateContext';
@@ -22,6 +23,17 @@ const TrendsScreen = lazy(() =>
   })),
 );
 
+// Hub shell layout route: wraps only the hub screens (Home/Trends/Export/Settings/
+// Caregiver) in the sidebar/tab-bar shell. Calibration stays a sibling route under the
+// same ATTESTED guard but outside the shell, its camera-top layout owns the viewport.
+function HubShellLayout() {
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+}
+
 function TrendsRouteFallback() {
   return (
     <ScreenShell textScale={DEFAULT_SETTINGS.textScale}>
@@ -41,7 +53,7 @@ function TrendsRouteFallback() {
 // here at Gate 0; the screen bodies are filled in by the S1/S2/S3 streams.
 //
 // Guard rules (FRONTEND §3, ARCH §12): every blocked route redirects to "/" and lets
-// RootRedirect send the user to the correct home for their gate — UNATTESTED →
+// RootRedirect send the user to the correct home for their gate, UNATTESTED →
 // /onboarding, ATTESTED → /home or /calibration, DEMO → /session. Redirecting through
 // root (rather than a fixed screen) is what keeps DEMO out of everything but
 // Session/Summary without a redirect loop. Caregiver additionally requires the
@@ -68,25 +80,27 @@ function ProductApp() {
           />
           <Route element={<GateRoute allowed={['ATTESTED']} redirectTo="/" />}>
             <Route path="/calibration" element={<CalibrationScreen />} />
-            <Route path="/home" element={<HomeScreen />} />
-            <Route
-              path="/trends"
-              element={
-                <Suspense fallback={<TrendsRouteFallback />}>
-                  <TrendsScreen />
-                </Suspense>
-              }
-            />
-            <Route path="/export" element={<ExportScreen />} />
-            <Route path="/settings" element={<SettingsScreen />} />
-            <Route
-              path="/caregiver"
-              element={
-                <CaregiverRoute>
-                  <CaregiverScreen />
-                </CaregiverRoute>
-              }
-            />
+            <Route element={<HubShellLayout />}>
+              <Route path="/home" element={<HomeScreen />} />
+              <Route
+                path="/trends"
+                element={
+                  <Suspense fallback={<TrendsRouteFallback />}>
+                    <TrendsScreen />
+                  </Suspense>
+                }
+              />
+              <Route path="/export" element={<ExportScreen />} />
+              <Route path="/settings" element={<SettingsScreen />} />
+              <Route
+                path="/caregiver"
+                element={
+                  <CaregiverRoute>
+                    <CaregiverScreen />
+                  </CaregiverRoute>
+                }
+              />
+            </Route>
           </Route>
           <Route
             element={<GateRoute allowed={['ATTESTED', 'DEMO']} redirectTo="/" />}
@@ -145,7 +159,7 @@ export function App() {
 
   return (
     <div>
-      MirrorWell — dev harness
+      MirrorWell, dev harness
       {liveDemo ? (
         <DevOnly
           loader={() => import('./dev/LiveDemoView').then((m) => ({ default: m.LiveDemoView }))}

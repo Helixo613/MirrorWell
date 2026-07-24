@@ -89,7 +89,7 @@ function makeSession(opts: {
 }
 
 // Minimal recursive draft-07 validator (brief: "plain recursive checker in the test, no new
-// deps"). Scoped to what the brief names: type / required / additionalProperties / items —
+// deps"). Scoped to what the brief names: type / required / additionalProperties / items
 // enough to catch the additionalProperties:false drift this task cares about.
 function validateAgainstSchema(schema: any, data: unknown, path = '$'): string[] {
   const errors: string[] = [];
@@ -179,7 +179,7 @@ beforeEach(async () => {
   vi.restoreAllMocks();
 });
 
-describe('ExportService.generateSummary — schema validation', () => {
+describe('ExportService.generateSummary, schema validation', () => {
   it('never exports the local-only motivation anywhere in the JSON', async () => {
     await seedAttestedExportFixture();
     const profile = await StorageService.getProfile();
@@ -218,6 +218,20 @@ describe('ExportService.generateSummary — schema validation', () => {
     expect(text).not.toContain('motivation');
   });
 
+  it('never exports the caregiver encouragement note, in JSON or HTML (SAFETY §5/§6)', async () => {
+    await seedAttestedExportFixture();
+    await StorageService.saveEncouragementNote({
+      noteId: '77777777-7777-4777-8777-777777777777',
+      text: 'UniqueEncouragementNoteExportGuard',
+      createdAt: '2026-07-10T09:00:00.000Z',
+    });
+
+    const { json, html } = await ExportService.generateSummary(RANGE);
+
+    expect(await json.text()).not.toContain('UniqueEncouragementNoteExportGuard');
+    expect(await html.text()).not.toContain('UniqueEncouragementNoteExportGuard');
+  });
+
   it('produces a JSON payload that validates against tests/schemas/export.schema.json', async () => {
     await seedAttestedExportFixture();
 
@@ -233,7 +247,7 @@ describe('ExportService.generateSummary — schema validation', () => {
     const { json } = await ExportService.generateSummary(RANGE);
     const parsed = JSON.parse(await json.text());
 
-    // Inject an extra field nested inside sessions[].results[] (not just top-level) — proves
+    // Inject an extra field nested inside sessions[].results[] (not just top-level), proves
     // the additionalProperties:false check recurses into array items, not just the root.
     const tampered = {
       ...parsed,
@@ -248,7 +262,7 @@ describe('ExportService.generateSummary — schema validation', () => {
   });
 });
 
-describe('ExportService.generateSummary — nonDiagnosticNotice', () => {
+describe('ExportService.generateSummary, nonDiagnosticNotice', () => {
   it('includes the notice text, equal to strings.exportSummary.nonDiagnosticNotice', async () => {
     await seedAttestedExportFixture();
 
@@ -268,7 +282,7 @@ describe('ExportService.generateSummary — nonDiagnosticNotice', () => {
   });
 });
 
-describe('ExportService.generateSummary — HTML labels sourced from strings.ts', () => {
+describe('ExportService.generateSummary, HTML labels sourced from strings.ts', () => {
   it('HTML blob contains every exportSummary label string, not a hardcoded literal', async () => {
     await seedAttestedExportFixture();
 
@@ -287,7 +301,7 @@ describe('ExportService.generateSummary — HTML labels sourced from strings.ts'
     const { html } = await ExportService.generateSummary(RANGE);
     const htmlText = await html.text();
 
-    // Display names, not raw enum ids — a regression back to `t.exerciseId` fails here.
+    // Display names, not raw enum ids; a regression back to `t.exerciseId` fails here.
     expect(htmlText).toContain('Gentle smile');
     expect(htmlText).not.toContain('EX_SMILE');
     // Every trend row carries a direction word (sub-noise-floor / <2 points read "Steady").
@@ -304,7 +318,7 @@ describe('ExportService.generateSummary — HTML labels sourced from strings.ts'
   });
 });
 
-describe('ExportService.generateSummary — noiseFloorSymmetry sourcing', () => {
+describe('ExportService.generateSummary, noiseFloorSymmetry sourcing', () => {
   it("uses the active baseline's noiseFloorSymmetry, not the inactive baseline's value", async () => {
     await seedAttestedExportFixture(); // OLD 0.09 (inactive), NEW 0.05 (active)
 
@@ -316,7 +330,7 @@ describe('ExportService.generateSummary — noiseFloorSymmetry sourcing', () => 
   });
 });
 
-describe('ExportService.generateSummary — gating and validation errors', () => {
+describe('ExportService.generateSummary, gating and validation errors', () => {
   it('rejects an unattested profile with NOT_ATTESTED', async () => {
     // No profile saved at all -> SafetyGate.isAttested() is false.
     await expect(ExportService.generateSummary(RANGE)).rejects.toMatchObject({ code: 'NOT_ATTESTED' });
@@ -356,10 +370,10 @@ describe('ExportService.generateSummary — gating and validation errors', () =>
   });
 });
 
-describe('ExportService.generateSummary — M3: UTC export range vs. local trend bucket (toStorageRange boundary)', () => {
+describe('ExportService.generateSummary, M3: UTC export range vs. local trend bucket (toStorageRange boundary)', () => {
   // toStorageRange (export.ts) widens a calendar-date export range to a UTC timestamp range;
   // TrendsService buckets sessions inside that range in the reader's LOCAL time (ARCHITECTURE
-  // §13, src/data/trends.ts bucketStart — not touched by this task). Pin the boundary with a
+  // §13, src/data/trends.ts bucketStart; not touched by this task). Pin the boundary with a
   // fixed, non-DST timezone (Asia/Karachi, UTC+05:00, no DST transitions) so the assertion is
   // timezone-deterministic regardless of the machine running the test. Node re-reads
   // process.env.TZ on every new Date() call, so reassigning it mid-test is sufficient.
@@ -392,18 +406,18 @@ describe('ExportService.generateSummary — M3: UTC export range vs. local trend
       // time: index 0 = week of 2026-06-01, index 1 = week of 2026-06-08, index 2 = week of
       // 2026-06-15 (2026-06-14T23:59:59.999Z UTC is already 2026-06-15T04:59:59 local). In
       // Asia/Karachi (UTC+05:00, no DST), 2026-06-07T23:50:00.000Z is already 2026-06-08T04:50
-      // local — a Monday — so the session counts toward the MIDDLE bucket, despite its UTC
+      // local; a Monday, so the session counts toward the MIDDLE bucket, despite its UTC
       // calendar date (Sunday 2026-06-07) falling inside the first week's UTC span.
       expect(parsed.adherence.sessionsPerWeek).toEqual([0, 1, 0]);
       // Still counted for completionRate: it IS inside the UTC-widened storage range, whatever
-      // local week it lands in — the two facts (range membership, bucket placement) are
+      // local week it lands in; the two facts (range membership, bucket placement) are
       // independently correct, just computed in different clocks.
       expect(parsed.adherence.completionRate).toBe(1);
     },
   );
 });
 
-describe('ExportService.generateSummary — DB_UNAVAILABLE propagation', () => {
+describe('ExportService.generateSummary, DB_UNAVAILABLE propagation', () => {
   it('propagates DB_UNAVAILABLE from StorageService.getSessions', async () => {
     await seedAttestedExportFixture();
     vi.spyOn(StorageService, 'getSessions').mockRejectedValueOnce(

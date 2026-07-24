@@ -1,7 +1,7 @@
-// src/sensing/landmarks.ts — frames in, LandmarkFrame out. The only ML call site in the
+// src/sensing/landmarks.ts, frames in, LandmarkFrame out. The only ML call site in the
 // codebase (docs/BACKEND.md §1.2). Contracts: docs/API.md §5.
 //
-// MediaPipe types NEVER escape this module — downstream sees only LandmarkFrame, and only
+// MediaPipe types NEVER escape this module, downstream sees only LandmarkFrame, and only
 // raw landmark geometry + per-side blendshape scores (decision reversal, MODEL_AND_DATA §2/§7 2026-07-19).
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import { MirrorWellError } from '../data/errors.ts';
@@ -21,7 +21,7 @@ let landmarker: FaceLandmarker | null = null;
 // Last timestamp actually passed to detectForVideo. MediaPipe requires strictly increasing
 // timestamps for the LIFETIME of the landmarker instance; a violation poisons the graph
 // unrecoverably (google-ai-edge/mediapipe#5743). CaptureService already supplies a monotonic
-// performance-clock timestamp, so this guard is belt-and-braces against any caller regression —
+// performance-clock timestamp, so this guard is belt-and-braces against any caller regression
 // a non-increasing input is nudged forward by 1 ms rather than fed through (docs/BACKEND.md §1.2).
 let lastDetectTimestampMs: number | null = null;
 
@@ -58,7 +58,7 @@ async function createLandmarker(fileset: Awaited<ReturnType<typeof FilesetResolv
 
 async function init(): Promise<void> {
   try {
-    // Bundled runtime only — never a CDN (AGENTS.md non-negotiable, verified fact #2).
+    // Bundled runtime only; never a CDN (AGENTS.md non-negotiable, verified fact #2).
     const fileset = await FilesetResolver.forVisionTasks('/wasm');
     landmarker = await createLandmarker(fileset);
     lastDetectTimestampMs = null; // fresh graph, no timestamp history
@@ -74,7 +74,7 @@ function detect(video: HTMLVideoElement, timestampMs: number): LandmarkFrame {
   }
 
   // Strictly-increasing clamp: the graph must never see a timestamp <= the previous one. The
-  // returned LandmarkFrame keeps the CALLER's timestamp — the clamped value exists only for
+  // returned LandmarkFrame keeps the CALLER's timestamp; the clamped value exists only for
   // MediaPipe's ingest clock and drifts from real time by at most 1 ms per clamped frame.
   const detectTimestampMs =
     lastDetectTimestampMs !== null && timestampMs <= lastDetectTimestampMs
@@ -89,12 +89,12 @@ function detect(video: HTMLVideoElement, timestampMs: number): LandmarkFrame {
   try {
     result = landmarker.detectForVideo(video, detectTimestampMs);
   } catch (err) {
-    // Never crashes a session — QualityMonitor absorbs this as FACE_LOST (docs/API.md §16).
+    // Never crashes a session, QualityMonitor absorbs this as FACE_LOST (docs/API.md §16).
     throw new MirrorWellError('INFERENCE_FAILED', err instanceof Error ? err.message : String(err));
   }
 
   // FaceLandmarkerResult has NO per-frame confidence field (AGENTS.md verified fact #1).
-  // facePresent is defined as faceLandmarks being non-empty — nothing else.
+  // facePresent is defined as faceLandmarks being non-empty, nothing else.
   const faceLandmarks = result.faceLandmarks[0] ?? [];
   const transformationMatrix = result.facialTransformationMatrixes[0]?.data ?? [];
   const blendshapes: Record<string, number> = {};

@@ -133,7 +133,7 @@ describe('phase copy', () => {
   const exercise = {
     exerciseId: 'EX_SMILE' as ExerciseId,
     displayName: 'Gentle smile',
-    instruction: 'Let a small, slow smile come — about half of what feels possible. Gentle is the goal.',
+    instruction: 'Let a small, slow smile come; about half of what feels possible. Gentle is the goal.',
   };
 
   it('keeps the comfortable-max copy gentle (API §11 rule, SAFETY §8)', () => {
@@ -175,7 +175,7 @@ describe('action affordances', () => {
     );
   });
 
-  it('offers quality guidance as advice only — capture is never gated on it', () => {
+  it('offers quality guidance as advice only, capture is never gated on it', () => {
     expect(helperText(false, false)).toBe(strings.calibration.helpers.qualityNotReady);
     expect(helperText(false, true)).toBeNull();
     expect(helperText(true, false)).toBe(strings.calibration.helpers.capturing);

@@ -1,10 +1,10 @@
-// src/dev/DebugHud.tsx — live pipeline introspection + CSV capture (docs/IMPLEMENTATION.md
+// src/dev/DebugHud.tsx, live pipeline introspection + CSV capture (docs/IMPLEMENTATION.md
 // Task 8). Dev-only: src/dev/ is excluded from production bundles (import.meta.env.DEV
 // dead-branch elimination, same mechanism as CaptureHarness); additionally gated at runtime by
 // VITE_ENABLE_DEBUG_HUD (docs/ARCHITECTURE.md §9).
 //
 // There is no SessionController yet (Task 11) to own the hot-path wiring, so this harness plays
-// that role temporarily — same precedent as CaptureHarness wiring CaptureService+LandmarkEngine
+// that role temporarily, same precedent as CaptureHarness wiring CaptureService+LandmarkEngine
 // directly in Tasks 3/4. The QualityMonitor-gates-NormalizationLayer rule (API.md §6, this
 // codebase's non-negotiable) is honored the same way it will be in SessionController:
 // NormalizationLayer.normalize() is called only inside the `qualityState === 'QUALITY_OK'`
@@ -213,17 +213,17 @@ export function DebugHud({ cameraControls = true }: { cameraControls?: boolean }
       <button onClick={handleRecord} disabled={!running || recording}>
         {recording ? 'Recording…' : 'Record 30s CSV'}
       </button>
-      {!baseline && <p role="status">No active baseline — click Seed.</p>}
+      {!baseline && <p role="status">No active baseline, click Seed.</p>}
       {error && (
         <p role="alert">
           {error.code}: {error.message}
         </p>
       )}
       <p>
-        fps: {fps} | quality: {qualityState ?? '—'} | repState: {repState}
+        fps: {fps} | quality: {qualityState ?? '-'} | repState: {repState}
       </p>
       <p>
-        symmetryIndex (smoothed): {sample?.symmetryIndex ?? '—'} | effortIndex (smoothed): {sample?.effortIndex ?? '—'}
+        symmetryIndex (smoothed): {sample?.symmetryIndex ?? '-'} | effortIndex (smoothed): {sample?.effortIndex ?? '-'}
       </p>
       {cameraControls && (
         <div ref={containerRef} style={{ position: 'relative', width: 640, height: 480 }} />

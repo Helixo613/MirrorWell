@@ -1,4 +1,4 @@
-// src/dev/LiveV1Harness.tsx — live V1 protocol capture UX (docs/MODEL_AND_DATA.md §7).
+// src/dev/LiveV1Harness.tsx, live V1 protocol capture UX (docs/MODEL_AND_DATA.md §7).
 // Dev-only. Neutral uses measureAbsolute + aggregateNeutral (no zero/ephemeral baseline).
 // Later phases use NormalizationLayer.normalize after a real in-memory baseline is set.
 import {
@@ -57,7 +57,7 @@ interface StoredPhaseResult {
   validity: PhaseValidity;
 }
 
-/** Local copy of quality.ts euler math — not a new service (dev harness only). */
+/** Local copy of quality.ts euler math; not a new service (dev harness only). */
 function extractEulerAnglesDeg(headPose: number[]): { yaw: number; pitch: number; roll: number } {
   const r = (row: number, col: number) => headPose[row * 4 + col] ?? 0;
   const pitch = Math.atan2(r(2, 1), r(2, 2));
@@ -391,7 +391,7 @@ export function LiveV1Harness() {
             if (recordingRef.current && activePhase === 'neutral') {
               neutralAbsRef.current.push(abs);
             }
-            // Live diagnostics on absolute mouth feature magnitude (not SI — baseline-free).
+            // Live diagnostics on absolute mouth feature magnitude (not SI, baseline-free).
             const m = mouthMags(abs.REGION_MOUTH_CORNER);
             magL = m.left;
             magR = m.right;
@@ -408,7 +408,7 @@ export function LiveV1Harness() {
             si = sample.symmetryIndex;
           }
         } catch {
-          // NO_BASELINE / transient — skip metrics for this frame
+          // NO_BASELINE / transient, skip metrics for this frame
         }
       }
 
@@ -514,7 +514,7 @@ export function LiveV1Harness() {
     if (abs.length === 0) {
       throw new MirrorWellError(
         'QUALITY_TOO_LOW',
-        'No QUALITY_OK frames in neutral — improve light/framing and retry.',
+        'No QUALITY_OK frames in neutral, improve light/framing and retry.',
       );
     }
     const baseline = buildInMemoryBaseline(
@@ -831,7 +831,7 @@ export function LiveV1Harness() {
       <p style={{ fontSize: 14 }}>
         {copy.fpsLabel}: {fps} | {copy.qualityLabel}:{' '}
         <strong>
-          {qualityState ?? '—'}
+          {qualityState ?? '-'}
           {qualityState ? ` (${qualityFix(qualityState)})` : ''}
         </strong>{' '}
         | {copy.trialLabel}: {state.trial}/{thresholds.v1Protocol.trials}
@@ -844,8 +844,8 @@ export function LiveV1Harness() {
       )}
 
       <p style={{ fontSize: 14 }}>
-        {copy.livePoseLabel}: {copy.yawLabel} {liveYaw?.toFixed(1) ?? '—'}° · {copy.pitchLabel}{' '}
-        {livePitch?.toFixed(1) ?? '—'}° · {copy.rollLabel} {liveRoll?.toFixed(1) ?? '—'}°
+        {copy.livePoseLabel}: {copy.yawLabel} {liveYaw?.toFixed(1) ?? '-'}° · {copy.pitchLabel}{' '}
+        {livePitch?.toFixed(1) ?? '-'}° · {copy.rollLabel} {liveRoll?.toFixed(1) ?? '-'}°
         {phase && isYawPhase(phase) && (
           <>
             {' '}
@@ -859,7 +859,7 @@ export function LiveV1Harness() {
         {copy.movementLabel}:{' '}
         <strong>
           {liveMovement === null
-            ? '—'
+            ? '-'
             : liveMovement
               ? copy.movementDetected
               : copy.movementNotDetected}
@@ -881,8 +881,8 @@ export function LiveV1Harness() {
       >
         <summary style={{ cursor: 'pointer' }}>{copy.diagnosticsToggle}</summary>
         <p style={{ margin: '6px 0' }}>
-          {copy.siLabel}: {liveSi ?? '—'} | {copy.displacementLabel}:{' '}
-          {liveDisp != null ? liveDisp.toFixed(6) : '—'} | {copy.floorLabel}:{' '}
+          {copy.siLabel}: {liveSi ?? '-'} | {copy.displacementLabel}:{' '}
+          {liveDisp != null ? liveDisp.toFixed(6) : '-'} | {copy.floorLabel}:{' '}
           {thresholds.metrics.movementFloorPct}
         </p>
       </details>
@@ -947,7 +947,7 @@ export function LiveV1Harness() {
             {reviewValidity.ok ? copy.captureValid : copy.captureInvalid}
           </strong>
           <p style={{ margin: '6px 0' }}>
-            {phaseTitle(phase)} — {reviewValidity.okCount}/{reviewValidity.totalCount} QUALITY_OK (
+            {phaseTitle(phase)}, {reviewValidity.okCount}/{reviewValidity.totalCount} QUALITY_OK (
             {(reviewValidity.okPct * 100).toFixed(0)}%)
             {reviewValidity.meanAbsYawDeg != null &&
               ` · mean |yaw| ${reviewValidity.meanAbsYawDeg.toFixed(1)}°`}
@@ -1005,7 +1005,7 @@ export function LiveV1Harness() {
               {r.validity.meanAbsYawDeg != null
                 ? ` · |yaw| ${r.validity.meanAbsYawDeg.toFixed(1)}°`
                 : ''}
-              {r.validity.ok ? '' : ` — ${copy.captureInvalid}`}
+              {r.validity.ok ? '' : ` ${copy.captureInvalid}`}
             </li>
           ))}
         </ul>
@@ -1029,8 +1029,8 @@ export function LiveV1Harness() {
               return (
                 <li key={p}>
                   {phaseTitle(p)}: {copy.trial1Short}{' '}
-                  {t1 ? `${t1.okCount}/${t1.totalCount}` : '—'} · {copy.trial2Short}{' '}
-                  {t2 ? `${t2.okCount}/${t2.totalCount}` : '—'}
+                  {t1 ? `${t1.okCount}/${t1.totalCount}` : '-'} · {copy.trial2Short}{' '}
+                  {t2 ? `${t2.okCount}/${t2.totalCount}` : '-'}
                 </li>
               );
             })}

@@ -22,7 +22,7 @@ export interface CalibrationStep {
 
 // Both totals are the SAME tunable: CalibrationFlow.captureNeutral and
 // .captureComfortableMax each run `thresholds.calibration.neutralCaptures` capture windows
-// (src/session/calibration.ts — captureWindows). Restating 3 here would be a second source
+// (src/session/calibration.ts, captureWindows). Restating 3 here would be a second source
 // of truth for a threshold (CLAUDE.md: every tunable lives in thresholds.ts).
 export const NEUTRAL_CAPTURE_TOTAL = thresholds.calibration.neutralCaptures;
 export const COMFORTABLE_REP_TOTAL = thresholds.calibration.neutralCaptures;

@@ -1,9 +1,9 @@
-// src/dev/LiveDemoView.tsx — dev-only live symmetry demo (the finish-line "live demo").
+// src/dev/LiveDemoView.tsx, dev-only live symmetry demo (the finish-line "live demo").
 // Records NOTHING: no MediaRecorder, no blob/download, no StorageService, no IndexedDB, no
 // frame/landmark logging. Only derived numbers live in memory, and they die with the view.
 // Distinct from the fixture-master recorder (LiveV1Harness.tsx) and from product Demo Mode.
 // Mounted only behind `import.meta.env.DEV && VITE_ENABLE_LIVE_DEMO === 'true'` via App's
-// DevOnly dynamic import (A-REQ-3) — never statically imported from a production module.
+// DevOnly dynamic import (A-REQ-3); never statically imported from a production module.
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { CaptureService } from '../sensing/capture.ts';
 import { LandmarkEngine } from '../sensing/landmarks.ts';
@@ -29,7 +29,7 @@ import {
 
 const copy = strings.liveDemo;
 
-// EX_SMILE is the demo arc's exercise (assignable — it has a validated blendshapePair).
+// EX_SMILE is the demo arc's exercise (assignable; it has a validated blendshapePair).
 // Referencing an exercise id literally is allowed under src/dev/ (no-exercise-branch test).
 const DEMO_EXERCISE = 'EX_SMILE' as const;
 const PAIR = exercises[DEMO_EXERCISE]!.blendshapePair!;
@@ -111,7 +111,7 @@ export function LiveDemoView() {
         return;
       }
 
-      // Phase 1 — collect. Only a QUALITY_OK frame can contribute a sample, and an inference
+      // Phase 1: collect. Only a QUALITY_OK frame can contribute a sample, and an inference
       // failure costs this frame's sample, nothing more.
       if (ok) {
         if (current === 'neutral') {
@@ -131,7 +131,7 @@ export function LiveDemoView() {
               if (raw?.symmetryIndex != null) holdSiRef.current.push(raw.symmetryIndex);
             }
           } catch {
-            // NO_BASELINE / transient — no reading for this frame, never a substituted guess.
+            // NO_BASELINE / transient; no reading for this frame, never a substituted guess.
             clearReadings();
           }
         }
@@ -139,7 +139,7 @@ export function LiveDemoView() {
 
       if (current === 'live') return;
 
-      // Phase 2 — deadline. Evaluated on EVERY frame: outside the quality branch and outside
+      // Phase 2: deadline. Evaluated on EVERY frame: outside the quality branch and outside
       // the inference try, so a window that collected data and then went bad still finalizes
       // instead of hanging in "Capturing…".
       windowStartRef.current ??= timestampMs;
@@ -169,7 +169,10 @@ export function LiveDemoView() {
         setStep('holdPrompt');
         return;
       }
-      const peak = Math.max(...holdActsRef.current, thresholds.blendshapes.activationFloor);
+      // Floor the span at the calibration rise, not at activationFloor: this peak becomes
+      // comfortableMax, so flooring it at the (deliberately low) SI floor would build a
+      // collapsed span in which resting noise reads as full effort.
+      const peak = Math.max(...holdActsRef.current, thresholds.calibration.comfortableMaxMinRise);
       const baseline = buildEphemeralBaseline(neutralAbsRef.current, peak, floor);
       NormalizationLayer.setBaseline(baseline);
       MetricEngine.setBaseline(baseline);
@@ -187,7 +190,7 @@ export function LiveDemoView() {
       mountedRef.current = false;
       teardownRef.current?.();
       teardownRef.current = null;
-      // ponytail: unconditional stop — the safety rule outranks openFrameSource's
+      // ponytail: unconditional stop; the safety rule outranks openFrameSource's
       // stop-only-if-I-started ownership when this view goes away.
       CaptureService.stop();
       NormalizationLayer.clearBaseline();
@@ -200,7 +203,7 @@ export function LiveDemoView() {
     try {
       if (!LandmarkEngine.isReady()) await LandmarkEngine.init();
       // Unmount can land inside either await. The stream may be open only while this view is
-      // mounted, so bail after both — never pin a teardown (or state) on a dead component.
+      // mounted, so bail after both; never pin a teardown (or state) on a dead component.
       if (!mountedRef.current) {
         CaptureService.stop();
         return;
@@ -228,12 +231,12 @@ export function LiveDemoView() {
     setCameraOn(false);
     setQuality(null);
     clearReadings();
-    // Invariant: after stopCamera, the component is in the same state as a fresh mount — every
+    // Invariant: after stopCamera, the component is in the same state as a fresh mount; every
     // ref and piece of state a subsequent Start->Capture-neutral sequence could read must be
     // cleared here, not just the ones the current step happens to be using. Left stale, the next
     // window's first frame computes its elapsed time against a timestamp carried over from the
     // previous camera session (windowStartRef), against sample buffers from the previous attempt,
-    // or against a baseline nothing rebuilt yet — none of that is safe to leave lying around.
+    // or against a baseline nothing rebuilt yet, none of that is safe to leave lying around.
     setStep('idle');
     windowStartRef.current = null;
     neutralAbsRef.current = [];
