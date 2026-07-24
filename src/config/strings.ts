@@ -412,6 +412,13 @@ export const strings = Object.freeze({
       beginAriaLabel: 'Begin the exercise session',
       stop: 'Stop',
       stopAriaLabel: 'Stop and leave this session',
+      // Caregiver encouragement note (SAFETY §5 narrow carve-out): display-only, dismiss deletes
+      // it from storage. Never auto-dismisses — the patient chooses when it's gone.
+      note: {
+        heading: 'A note for you',
+        dismiss: 'Dismiss',
+        dismissAriaLabel: 'Dismiss and remove this note',
+      },
     },
     demo: {
       ready: "I'm ready",
@@ -672,6 +679,17 @@ export const strings = Object.freeze({
     },
     exportLink: 'Open the full summary',
     exportLinkAriaLabel: 'Open the full summary to share with your care team',
+    // SAFETY §5 narrow carve-out: the sole mutating control on this screen.
+    note: {
+      heading: 'Leave an encouragement note',
+      hint: "Up to 200 characters. They'll see it before their next session.",
+      label: 'Your note',
+      save: 'Save note',
+      saveAriaLabel: 'Save encouragement note',
+      saving: 'Saving…',
+      saved: 'Note saved',
+      saveFailed: 'Could not save that note. Please try again.',
+    },
     nav: {
       back: 'Back to home',
       backAriaLabel: 'Return to home',
@@ -750,7 +768,7 @@ export const strings = Object.freeze({
       caregiver: {
         label: 'Caregiver view',
         description:
-          'Lets a trusted person see practice summaries on this device — read only, nothing is shared online',
+          'Lets a trusted person see practice summaries on this device and leave you one short encouragement note — read only otherwise, nothing is shared online',
       },
     },
     calibration: {

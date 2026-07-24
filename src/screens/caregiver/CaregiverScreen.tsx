@@ -6,8 +6,12 @@ import { StaggerFadeIn } from '@/components/motion/StaggerFadeIn';
 import { QuietNavLink } from '@/components/navigation/QuietNavLink';
 import { TrendsChart } from '@/components/trends/TrendsChart';
 import { TrendsDataTable } from '@/components/trends/TrendsDataTable';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
+import { thresholds } from '@/config/thresholds';
 import { useAppState } from '@/context/useAppState';
 import {
   CAREGIVER_HEADING_ID,
@@ -17,9 +21,11 @@ import {
 const STAGGER_MS = 60;
 
 /**
- * CaregiverScreen (FRONTEND §2.7): a READ-ONLY trusted-person view. The route is already gated by
- * CaregiverRoute (redirects to /home when caregiverViewEnabled is false). This screen has ZERO
- * mutating controls — the only interactive elements are navigation links (to /export and /home).
+ * CaregiverScreen (FRONTEND §2.7): a READ-ONLY trusted-person view, with exactly one narrow
+ * exception (SAFETY §5): the encouragement-note compose box. The route is already gated by
+ * CaregiverRoute (redirects to /home when caregiverViewEnabled is false). No other interactive
+ * element on this screen may mutate anything — the rest are navigation links (to /export and
+ * /home).
  */
 export function CaregiverScreen() {
   const { profile, settings } = useAppState();
@@ -81,6 +87,43 @@ export function CaregiverScreen() {
         <p className="rounded-lg bg-secondary/40 px-4 py-3 text-sm font-medium text-foreground">
           {copy.banner}
         </p>
+      </StaggerFadeIn>
+
+      <StaggerFadeIn animationKey="caregiver-note" delayMs={STAGGER_MS * 2}>
+        <SoftPanel aria-labelledby="caregiver-note-heading" className="flex flex-col gap-3 p-4">
+          <h2 id="caregiver-note-heading" className="text-lg font-semibold text-foreground">
+            {copy.note.heading}
+          </h2>
+          <div className="space-y-2">
+            <Label htmlFor="caregiver-note-input">{copy.note.label}</Label>
+            <Input
+              id="caregiver-note-input"
+              value={caregiver.noteText}
+              maxLength={thresholds.caregiver.noteMaxLength}
+              disabled={caregiver.noteSaving}
+              onChange={(event) => caregiver.setNoteText(event.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">{copy.note.hint}</p>
+          </div>
+          {caregiver.noteSaveFeedback ? (
+            <p className="text-sm font-medium text-foreground" role="status" aria-live="polite">
+              {caregiver.noteSaveFeedback}
+            </p>
+          ) : null}
+          {caregiver.noteErrorMessage ? (
+            <p className="text-sm text-destructive" role="alert">
+              {caregiver.noteErrorMessage}
+            </p>
+          ) : null}
+          <Button
+            type="button"
+            disabled={caregiver.noteSaving || caregiver.noteText.trim().length === 0}
+            aria-label={copy.note.saveAriaLabel}
+            onClick={() => void caregiver.saveNote()}
+          >
+            {caregiver.noteSaving ? copy.note.saving : copy.note.save}
+          </Button>
+        </SoftPanel>
       </StaggerFadeIn>
 
       {caregiver.status === 'empty' ? (
