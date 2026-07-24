@@ -30,15 +30,15 @@ test.describe('caregiver screen', () => {
   test('renders the read-only summary when enabled', async ({ page }) => {
     await seedCaregiverEnabled(page);
     await expect(
-      page.getByText('Read-only view, enabled by the device owner'),
+      page.getByText('Read-only view — your practice stays on this device'),
     ).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Practice adherence' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Symmetry trends' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Most recent session' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Measurement quality' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your steady practice' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your practice over time' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your latest session' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Clear practice moments' })).toBeVisible();
     // A link to Export exists (navigation is not mutation).
     await expect(
-      page.getByRole('link', { name: 'Go to export to share a summary with your care team' }),
+      page.getByRole('link', { name: 'Open the full summary to share with your care team' }),
     ).toBeVisible();
 
     // The mini-trend charts are SVGs (no data for a screen reader), so each series must also be
