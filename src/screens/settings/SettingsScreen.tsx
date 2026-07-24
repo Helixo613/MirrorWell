@@ -111,7 +111,7 @@ export function SettingsScreen() {
           title={strings.settings.sections.profile}
           headingId="settings-profile-heading"
         >
-          <SoftPanel className="flex flex-col gap-4 p-4">
+          <div className="flex flex-col gap-4 p-4">
             <div className="space-y-2">
               <Label htmlFor="settings-nickname">{strings.settings.profile.nicknameLabel}</Label>
               <Input
@@ -145,7 +145,7 @@ export function SettingsScreen() {
             >
               {strings.settings.profile.save}
             </Button>
-          </SoftPanel>
+          </div>
         </SettingsSection>
 
         <SettingsSection

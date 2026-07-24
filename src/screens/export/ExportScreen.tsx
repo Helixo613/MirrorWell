@@ -55,7 +55,10 @@ export function ExportScreen() {
       <div className="flex max-w-shell flex-col gap-6">
         {/* Mandatory non-diagnostic notice (SAFETY §8) — always visible. */}
         <StaggerFadeIn animationKey="export-notice" delayMs={STAGGER_MS}>
-          <SoftPanel aria-labelledby="export-notice-heading">
+          <SoftPanel
+            aria-labelledby="export-notice-heading"
+            className="border border-primary/15 bg-primary/5"
+          >
             <h2
               id="export-notice-heading"
               className="text-base font-semibold text-foreground"

@@ -30,7 +30,7 @@ export function TrendsChartCard({
       labelledBy={!isRefreshing && caption ? 'trends-chart-caption' : undefined}
       ariaLabel={isRefreshing ? strings.trends.refreshing : undefined}
       ariaBusy={isRefreshing}
-      className={cn('space-y-4', className)}
+      className={cn('space-y-4 border border-border/50', className)}
     >
       <div
         className={cn(

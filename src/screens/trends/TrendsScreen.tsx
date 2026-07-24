@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { BlockingNotice } from '@/components/feedback/BlockingNotice';
 import { HomeHeader } from '@/components/home/HomeHeader';
 import { ScreenShell } from '@/components/layout/ScreenShell';
+import { SoftPanel } from '@/components/layout/SoftPanel';
 import { StaggerFadeIn } from '@/components/motion/StaggerFadeIn';
 import { QuietNavLink } from '@/components/navigation/QuietNavLink';
 import { TrendsChart } from '@/components/trends/TrendsChart';
@@ -138,18 +139,20 @@ export function TrendsScreen() {
       <div className="flex flex-col gap-6">
         {(showExerciseSelector || showGranularity) && (
           <StaggerFadeIn animationKey="trends-controls" delayMs={STAGGER_MS} className="max-w-shell">
-            <TrendsControlsToolbar<ExerciseId>
-              exerciseLabel={strings.trends.exerciseSelectorLabel}
-              granularityLabel={strings.trends.granularity.label}
-              showExerciseSelector={showExerciseSelector}
-              showGranularity={showGranularity}
-              exerciseOptions={exerciseOptions}
-              selectedExercise={selectedExercise}
-              onExerciseChange={trends.selectExercise}
-              granularityOptions={granularityOptions}
-              granularity={trends.granularity}
-              onGranularityChange={(value) => void trends.setGranularity(value)}
-            />
+            <SoftPanel className="border border-border/50 p-4 sm:p-5">
+              <TrendsControlsToolbar<ExerciseId>
+                exerciseLabel={strings.trends.exerciseSelectorLabel}
+                granularityLabel={strings.trends.granularity.label}
+                showExerciseSelector={showExerciseSelector}
+                showGranularity={showGranularity}
+                exerciseOptions={exerciseOptions}
+                selectedExercise={selectedExercise}
+                onExerciseChange={trends.selectExercise}
+                granularityOptions={granularityOptions}
+                granularity={trends.granularity}
+                onGranularityChange={(value) => void trends.setGranularity(value)}
+              />
+            </SoftPanel>
           </StaggerFadeIn>
         )}
 

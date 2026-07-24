@@ -28,7 +28,7 @@ export function SummaryExerciseCard({
     <SoftPanel
       as="article"
       labelledBy={headingId}
-      className={cn('space-y-4', className)}
+      className={cn('space-y-4 border border-border/50', className)}
     >
       <header className="space-y-1.5">
         <h2 id={headingId} className="text-lg font-semibold leading-snug">

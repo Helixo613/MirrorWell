@@ -85,7 +85,7 @@ export function CaregiverScreen() {
       </StaggerFadeIn>
 
       <StaggerFadeIn animationKey="caregiver-banner" delayMs={STAGGER_MS}>
-        <p className="rounded-lg bg-secondary/40 px-4 py-3 text-sm font-medium text-foreground">
+        <p className="rounded-lg border border-border/50 bg-secondary/40 px-4 py-3 text-sm font-medium text-foreground">
           {copy.banner}
         </p>
       </StaggerFadeIn>
@@ -95,7 +95,7 @@ export function CaregiverScreen() {
           panels stay their own full section, gridded separately below. */}
       <div className="fluid-grid">
         <StaggerFadeIn animationKey="caregiver-note" delayMs={STAGGER_MS * 2}>
-          <SoftPanel aria-labelledby="caregiver-note-heading" className="flex h-full flex-col gap-3 p-4">
+          <SoftPanel aria-labelledby="caregiver-note-heading" className="flex h-full flex-col gap-3 border border-primary/15 bg-primary/5 p-4">
             <h2 id="caregiver-note-heading" className="text-lg font-semibold text-foreground">
               {copy.note.heading}
             </h2>
