@@ -32,6 +32,21 @@ describe('SettingsService', () => {
     expect(await SettingsService.get()).toEqual(DEFAULT_SETTINGS);
   });
 
+  it('defaults voice coaching off for a legacy stored settings row', async () => {
+    const { voiceCoachEnabled: _, ...legacySettings } = {
+      ...DEFAULT_SETTINGS,
+      highContrast: true,
+    };
+    await db
+      .table<Omit<AppSettings, 'voiceCoachEnabled'>, string>('app_settings')
+      .put(legacySettings);
+
+    expect(await SettingsService.get()).toEqual({
+      ...DEFAULT_SETTINGS,
+      highContrast: true,
+    });
+  });
+
   it('merges a partial update and persists it', async () => {
     const updated = await SettingsService.update({
       caregiverViewEnabled: true,

@@ -26,7 +26,7 @@ CI order: build → unit → **no-network gate** → E2E → a11y. All must be g
 | `CalibrationFlow` | Median (not max) of comfortable-max verified with skewed inputs; dark capture → `QUALITY_TOO_LOW`; drift fixture (median regional `|m_current − m_neutral|` > `driftMaxPct`) → `'recalibrate'`; `noiseFloorSymmetry` + `noiseFloorDisplacement` persisted on `calibration_baseline` (not `app_settings`) |
 | `TrendsService` | Two-baseline seed → series never mixes `baselineId`s; sub-noise-floor change → `aboveNoiseFloor: false`; `quality_abandoned`/`red_flag_stopped` absent from aggregates; adherence math vs. hand-computed seed values |
 | `ExportService` | JSON validates against `tests/schemas/export.schema.json`; extra-field injection test fails validation; `nonDiagnosticNotice` present and matches `strings.ts`; HTML prints one A4 page; contents equal `inspect-db` ground truth |
-| `SettingsService` | `textScale 2.5` → `VALIDATION_FAILED`; `caregiverViewEnabled` round-trip; unset `app_settings` → `voiceCoachEnabled: false`; update to `true` persists |
+| `SettingsService` | `textScale 2.5` → `VALIDATION_FAILED`; `caregiverViewEnabled` round-trip; unset `app_settings` and legacy stored row without the field → `voiceCoachEnabled: false` while existing values persist; update to `true` persists |
 | `VoiceCoach` | Disabled → no utterance; two calls 1 s apart → one utterance; accepted cue cancels before speaking; missing `speechSynthesis` → no throw/no utterance |
 | Screens | Per-screen axe scan → zero critical violations; guard tests per FRONTEND §1 (unattested deep links redirect; caregiver toggle-off redirect) |
 

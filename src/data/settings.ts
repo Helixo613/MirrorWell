@@ -37,7 +37,7 @@ function assertSettings(settings: AppSettings): void {
 }
 
 async function get(): Promise<AppSettings> {
-  return (await StorageService.getSettings()) ?? { ...DEFAULT_SETTINGS };
+  return { ...DEFAULT_SETTINGS, ...(await StorageService.getSettings()) };
 }
 
 export const SettingsService = {
