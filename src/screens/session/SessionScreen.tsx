@@ -81,10 +81,10 @@ export function SessionScreen() {
       variant="wide"
       textScale={s.textScale}
       ariaLabelledBy={HEADING_ID}
-      className="mx-auto max-w-standalone"
+      className="mx-auto h-dvh max-w-standalone overflow-hidden py-xs sm:py-sm"
     >
-      <div className="flex flex-1 flex-col gap-4">
-        <div className="flex items-center justify-between gap-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <div className="flex shrink-0 items-center justify-between gap-3">
           <h1 id={HEADING_ID} className="text-lg font-medium text-foreground">
             {s.exerciseName || strings.session.screenTitle}
           </h1>
@@ -97,8 +97,12 @@ export function SessionScreen() {
           ) : null}
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl">
-          <CameraPreview ref={s.previewRef} dimmed={s.reducedFacePreview} />
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
+          <CameraPreview
+            ref={s.previewRef}
+            dimmed={s.reducedFacePreview}
+            className="h-full max-h-none aspect-auto rounded-none border-0"
+          />
           {/* Keep canvas mounted (renderer needs a stable surface) but hide gauges during arrival —
               the green effort meter peeking through the scrim looked broken/crooked. */}
           <div
@@ -158,7 +162,7 @@ export function SessionScreen() {
         </div>
 
         {s.phase === 'active' ? (
-          <div className="flex flex-1 flex-col gap-4">
+          <div className="shrink-0">
             {s.subState === 'DEMO' ? (
               <div className="space-y-4 text-center">
                 <p className="text-base leading-relaxed text-muted-foreground">{s.instruction}</p>
@@ -175,21 +179,29 @@ export function SessionScreen() {
             ) : null}
 
             {s.subState === 'REPS' ? (
-              <div className="space-y-3">
+              <div className="rounded-2xl border border-border/60 bg-card/95 p-3 shadow-sm">
                 {s.status ? (
                   <SessionStatusStrip message={s.status.message} variant={s.status.variant} />
                 ) : null}
-                <SessionRepCounter summary={s.repSummary} label={strings.session.repCounterLabel} />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full text-muted-foreground"
-                  aria-label={strings.session.teach.showAriaLabel}
-                  onClick={s.showTeach}
-                >
-                  {strings.session.teach.show}
-                </Button>
-                <p className="text-center text-sm text-muted-foreground">{strings.session.coach.legend}</p>
+                <div className="mt-2 flex items-center justify-between gap-4">
+                  <SessionRepCounter
+                    summary={s.repSummary}
+                    label={strings.session.repCounterLabel}
+                    className="text-left text-2xl"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="shrink-0 text-muted-foreground"
+                    aria-label={strings.session.teach.showAriaLabel}
+                    onClick={s.showTeach}
+                  >
+                    {strings.session.teach.show}
+                  </Button>
+                </div>
+                <p className="mt-1 text-sm leading-snug text-muted-foreground">
+                  {strings.session.coach.legend}
+                </p>
               </div>
             ) : null}
 

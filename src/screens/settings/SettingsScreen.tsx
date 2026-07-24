@@ -108,14 +108,12 @@ export function SettingsScreen() {
         </p>
       ) : null}
 
-      {/* The three settings groups are same-kind tiles — auto-fit spreads them 1/2/3-up as
-          the wide shell widens. Recalibrate/Danger-zone below stay full-width standalone
-          bands (not tiles): a destructive action shouldn't compete for a grid cell. */}
-      <div className="fluid-grid">
-        <SettingsSection
-          title={strings.settings.sections.profile}
-          headingId="settings-profile-heading"
-        >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,30rem),1fr))] items-start gap-lg">
+        <div className="flex min-w-0 flex-col gap-md">
+          <SettingsSection
+            title={strings.settings.sections.profile}
+            headingId="settings-profile-heading"
+          >
           <div className="flex flex-col gap-4 p-4">
             <div className="space-y-2">
               <Label htmlFor="settings-nickname">{strings.settings.profile.nicknameLabel}</Label>
@@ -151,12 +149,56 @@ export function SettingsScreen() {
               {strings.settings.profile.save}
             </Button>
           </div>
-        </SettingsSection>
+          </SettingsSection>
 
-        <SettingsSection
-          title={strings.settings.sections.displayAndCues}
-          headingId="settings-display-cues-heading"
-        >
+          <nav aria-label={strings.settings.calibration.navLabel}>
+            <h2 className="mb-2 px-1 text-sm font-medium text-muted-foreground">
+              {strings.settings.sections.calibration}
+            </h2>
+            <SoftPanel className="border border-primary/20 bg-primary/5 p-0">
+              <SettingsLinkRow
+                to="/calibration"
+                label={strings.settings.calibration.recalibrate}
+                description={strings.settings.calibration.description}
+                ariaLabel={strings.settings.calibration.recalibrateAriaLabel}
+                className="rounded-lg hover:bg-primary/10"
+              />
+            </SoftPanel>
+          </nav>
+
+          <SettingsSection
+            title={strings.settings.sections.trendsAndSharing}
+            headingId="settings-trends-sharing-heading"
+          >
+            <div className="px-5 py-4 sm:px-6">
+              <SegmentedControl
+                label={strings.settings.trends.granularityLabel}
+                options={granularityOptions}
+                value={settingsScreen.settings.trendGranularity}
+                disabled={disabled}
+                onChange={(value) =>
+                  void settingsScreen.updateSetting('trendGranularity', value)
+                }
+              />
+            </div>
+            <ToggleSettingRow
+              id="settings-caregiver-view"
+              label={strings.settings.sharing.caregiver.label}
+              description={strings.settings.sharing.caregiver.description}
+              checked={settingsScreen.settings.caregiverViewEnabled}
+              disabled={disabled}
+              onCheckedChange={(checked) =>
+                void settingsScreen.updateSetting('caregiverViewEnabled', checked)
+              }
+            />
+          </SettingsSection>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-md">
+          <SettingsSection
+            title={strings.settings.sections.display}
+            headingId="settings-display-heading"
+          >
           <ToggleSettingRow
             id="settings-high-contrast"
             label={strings.settings.display.highContrast.label}
@@ -192,7 +234,13 @@ export function SettingsScreen() {
               void settingsScreen.updateSetting('showAffectedSideMarker', checked)
             }
           />
-          {settingsScreen.hapticsAvailable ? (
+          </SettingsSection>
+
+          <SettingsSection
+            title={strings.settings.sections.cues}
+            headingId="settings-cues-heading"
+          >
+            {settingsScreen.hapticsAvailable ? (
             <ToggleSettingRow
               id="settings-haptics"
               label={strings.settings.cues.haptics.label}
@@ -248,51 +296,15 @@ export function SettingsScreen() {
                 : strings.settings.cues.voiceName.description}
             </p>
           </div>
-        </SettingsSection>
+          </SettingsSection>
 
-        <SettingsSection
-          title={strings.settings.sections.trendsAndSharing}
-          headingId="settings-trends-sharing-heading"
-        >
-          <div className="px-5 py-4 sm:px-6">
-            <SegmentedControl
-              label={strings.settings.trends.granularityLabel}
-              options={granularityOptions}
-              value={settingsScreen.settings.trendGranularity}
-              disabled={disabled}
-              onChange={(value) =>
-                void settingsScreen.updateSetting('trendGranularity', value)
-              }
-            />
-          </div>
-          <ToggleSettingRow
-            id="settings-caregiver-view"
-            label={strings.settings.sharing.caregiver.label}
-            description={strings.settings.sharing.caregiver.description}
-            checked={settingsScreen.settings.caregiverViewEnabled}
-            disabled={disabled}
-            onCheckedChange={(checked) =>
-              void settingsScreen.updateSetting('caregiverViewEnabled', checked)
-            }
-          />
-        </SettingsSection>
+        </div>
       </div>
 
-      <div className="flex max-w-shell flex-col gap-6">
-        <nav aria-label={strings.settings.calibration.navLabel}>
-          <SoftPanel className="p-0">
-            <SettingsLinkRow
-              to="/calibration"
-              label={strings.settings.calibration.recalibrate}
-              description={strings.settings.calibration.description}
-              ariaLabel={strings.settings.calibration.recalibrateAriaLabel}
-            />
-          </SoftPanel>
-        </nav>
-
+      <div className="flex max-w-shell flex-col gap-6 pt-md">
         <section
           aria-labelledby="settings-danger-heading"
-          className="space-y-2"
+          className="space-y-2 border-t border-border/70 pt-md"
         >
           <h2
             id="settings-danger-heading"
