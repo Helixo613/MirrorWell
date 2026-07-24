@@ -25,7 +25,7 @@ export function OnboardingHeader({
 }: OnboardingHeaderProps) {
   return (
     <header
-      className={cn('mb-6 flex min-h-touch items-center justify-between gap-4', className)}
+      className={cn('mb-md flex min-h-touch items-center justify-between gap-4', className)}
     >
       <div className="flex min-w-0 flex-1 items-center">
         {showBack && onBack ? (

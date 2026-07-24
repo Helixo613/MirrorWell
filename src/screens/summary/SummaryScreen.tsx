@@ -49,7 +49,7 @@ export function SummaryScreen() {
     <ScreenShell
       textScale={textScale}
       ariaLabelledBy={headingId}
-      className="gap-0 pb-0 lg:max-w-4xl"
+      className="gap-0 pb-0 md:max-w-shell-wide"
     >
       <p className="sr-only" role="status" aria-live="polite">
         {announcement}
@@ -106,7 +106,7 @@ export function SummaryScreen() {
         {hasResults ? (
           <section
             aria-label={strings.summary.exerciseListLabel}
-            className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4"
+            className="flex flex-col gap-4 md:grid md:grid-cols-2 md:items-start md:gap-4"
           >
             {record.results.map((result, index) => (
               <StaggerFadeIn

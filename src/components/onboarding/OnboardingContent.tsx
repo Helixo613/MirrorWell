@@ -71,7 +71,7 @@ export function SafetyCallout({
       role="region"
       aria-label={strings.onboarding.safetyRegionLabel}
       className={cn(
-        'space-y-6 rounded-lg border-l-4 border-safety-border bg-safety p-5 text-safety-foreground sm:p-6',
+        'space-y-6 rounded-lg border-l-4 border-safety-border bg-safety p-sm text-safety-foreground sm:p-md',
         className,
       )}
     >

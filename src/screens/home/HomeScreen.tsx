@@ -88,7 +88,7 @@ export function HomeScreen() {
     <ScreenShell
       textScale={settings.textScale}
       ariaLabelledBy={HOME_HEADING_ID}
-      className="gap-10 lg:max-w-4xl"
+      className="gap-10 md:max-w-shell-wide"
     >
       <div className="flex flex-1 flex-col gap-10">
         <StaggerFadeIn animationKey={status}>
@@ -118,7 +118,7 @@ export function HomeScreen() {
           </section>
         ) : null}
 
-        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+        <div className="flex flex-col gap-8 md:grid md:grid-cols-2 md:items-start md:gap-6">
           {isFirstRun ? (
             <StaggerFadeIn animationKey={`${status}-empty`} delayMs={STAGGER_MS}>
               <HomeEmptyState

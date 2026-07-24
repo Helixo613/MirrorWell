@@ -47,6 +47,33 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      // Fluid type scale (Task 1 craft): overrides just these Tailwind default
+      // fontSize keys with clamp()-backed CSS vars from src/index.css, so every
+      // existing text-sm/base/lg/xl/2xl/3xl usage in the app scales continuously
+      // with viewport width instead of jumping only at `lg`. Unlisted sizes
+      // (xs, 4xl+) keep Tailwind's static defaults.
+      fontSize: {
+        sm: ['var(--step-sm)', { lineHeight: '1.4' }],
+        base: ['var(--step-base)', { lineHeight: '1.5' }],
+        lg: ['var(--step-lg)', { lineHeight: '1.5' }],
+        xl: ['var(--step-xl)', { lineHeight: '1.4' }],
+        '2xl': ['var(--step-2xl)', { lineHeight: '1.3' }],
+        '3xl': ['var(--step-3xl)', { lineHeight: '1.2' }],
+      },
+      // Fluid spacing tokens for shell/panel chrome (see src/index.css) — a
+      // named scale distinct from Tailwind's numeric spacing scale, applied
+      // deliberately (padding/gaps on shells and panels), not globally.
+      spacing: {
+        xs: 'var(--space-xs)',
+        sm: 'var(--space-sm)',
+        md: 'var(--space-md)',
+        lg: 'var(--space-lg)',
+        xl: 'var(--space-xl)',
+      },
+      maxWidth: {
+        shell: 'var(--shell-width)',
+        'shell-wide': 'var(--shell-width-wide)',
+      },
       keyframes: {
         'fade-in': {
           from: { opacity: '0' },

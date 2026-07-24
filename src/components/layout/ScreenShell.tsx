@@ -22,7 +22,7 @@ export function ScreenShell({
     <main
       aria-labelledby={ariaLabelledBy}
       className={cn(
-        'mx-auto flex min-h-dvh w-full max-w-lg flex-col px-4 py-6 sm:px-6 sm:py-10',
+        'mx-auto flex min-h-dvh w-full max-w-shell flex-col px-xs py-sm sm:px-sm sm:py-md',
         className,
       )}
       style={

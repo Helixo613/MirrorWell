@@ -95,7 +95,7 @@ export function TrendsScreen() {
     <ScreenShell
       textScale={trends.settings.textScale}
       ariaLabelledBy={TRENDS_HEADING_ID}
-      className="gap-6 lg:max-w-4xl"
+      className="gap-6 md:max-w-shell-wide"
     >
       <p className="sr-only" role="status" aria-live="polite">
         {trends.liveAnnouncement}
@@ -127,7 +127,7 @@ export function TrendsScreen() {
         </StaggerFadeIn>
       ) : null}
 
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[240px_1fr] lg:items-start lg:gap-6">
+      <div className="flex flex-col gap-6 md:grid md:grid-cols-[240px_1fr] md:items-start md:gap-6">
         {(showExerciseSelector || showGranularity) && (
           <StaggerFadeIn animationKey="trends-controls" delayMs={STAGGER_MS}>
             <TrendsControlsToolbar<ExerciseId>

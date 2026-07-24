@@ -69,7 +69,7 @@ export function CaregiverScreen() {
     <ScreenShell
       textScale={settings.textScale}
       ariaLabelledBy={CAREGIVER_HEADING_ID}
-      className="gap-6"
+      className="gap-6 md:max-w-shell-wide"
     >
       <p className="sr-only" role="status" aria-live="polite">
         {caregiver.liveAnnouncement}
