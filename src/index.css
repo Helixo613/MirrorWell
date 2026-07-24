@@ -49,12 +49,10 @@
 
     /* Shell content widths — fluid instead of a hard max-w-lg cap, so hub
        screens stop looking like a phone column floating on a desktop screen.
-       `shell` = readable measure for phone / compact forms.
-       `shell-onboarding` = calm desktop card width (wider than phone column,
-       still restrained — not a flashy full-bleed dashboard).
-       `shell-wide` = hub dashboards (home/trends/summary/caregiver). */
+       `shell` keeps a readable measure for text-heavy screens (onboarding,
+       settings); `shell-wide` is the opt-in cap for dashboard-style hub
+       screens (home/trends/summary/caregiver/export) with cards/charts. */
     --shell-width: clamp(20rem, 92vw, 38rem);
-    --shell-width-onboarding: clamp(22rem, 72vw, 46rem);
     --shell-width-wide: clamp(20rem, 94vw, 64rem);
   }
 

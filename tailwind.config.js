@@ -72,7 +72,6 @@ export default {
       },
       maxWidth: {
         shell: 'var(--shell-width)',
-        'shell-onboarding': 'var(--shell-width-onboarding)',
         'shell-wide': 'var(--shell-width-wide)',
       },
       keyframes: {
