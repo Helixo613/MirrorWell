@@ -16,7 +16,7 @@ export function OnboardingFooter({
   className,
 }: OnboardingFooterProps) {
   return (
-    <StickyScreenFooter className={cn('border-border pt-4', className)}>
+    <StickyScreenFooter className={cn('border-border pt-sm', className)}>
       {helperText ? (
         <p
           id={helperId}

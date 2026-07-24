@@ -86,9 +86,10 @@ export function HomeScreen() {
 
   return (
     <ScreenShell
+      variant="wide"
       textScale={settings.textScale}
       ariaLabelledBy={HOME_HEADING_ID}
-      className="gap-10 lg:max-w-4xl"
+      className="gap-10"
     >
       <div className="flex flex-1 flex-col gap-10">
         <StaggerFadeIn animationKey={status}>
@@ -104,21 +105,31 @@ export function HomeScreen() {
           </HomeHeader>
         </StaggerFadeIn>
 
-        <StaggerFadeIn animationKey={`${status}-garden`} delayMs={STAGGER_MS}>
-          <AdherenceGarden weeks={garden} />
-        </StaggerFadeIn>
+        {/* One continuous auto-fit grid — garden + milestones span the full row (hero
+            content, not a tile), the three status cards below reflow 1/2/3-up as the
+            window widens, with no discrete mobile/desktop layout swap. */}
+        <div className="fluid-grid">
+          <StaggerFadeIn
+            animationKey={`${status}-garden`}
+            delayMs={STAGGER_MS}
+            className="[grid-column:1/-1]"
+          >
+            <AdherenceGarden weeks={garden} />
+          </StaggerFadeIn>
 
-        {milestones.length > 0 ? (
-          <section aria-label={strings.home.milestones.label} className="flex flex-wrap gap-2">
-            {milestones.map((milestone) => (
-              <span key={milestone.id} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                {strings.home.milestones[milestone.id]}
-              </span>
-            ))}
-          </section>
-        ) : null}
+          {milestones.length > 0 ? (
+            <section
+              aria-label={strings.home.milestones.label}
+              className="flex flex-wrap gap-2 [grid-column:1/-1]"
+            >
+              {milestones.map((milestone) => (
+                <span key={milestone.id} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                  {strings.home.milestones[milestone.id]}
+                </span>
+              ))}
+            </section>
+          ) : null}
 
-        <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
           {isFirstRun ? (
             <StaggerFadeIn animationKey={`${status}-empty`} delayMs={STAGGER_MS}>
               <HomeEmptyState

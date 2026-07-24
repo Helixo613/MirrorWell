@@ -25,7 +25,7 @@ export function SoftPanel({
       aria-label={ariaLabel}
       aria-busy={ariaBusy}
       className={cn(
-        'rounded-lg bg-secondary/30 p-5 sm:p-6',
+        'rounded-lg bg-secondary/30 p-sm sm:p-md',
         className,
       )}
     >

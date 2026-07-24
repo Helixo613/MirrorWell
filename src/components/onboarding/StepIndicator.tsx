@@ -22,7 +22,7 @@ export function StepIndicator({
 
   return (
     <nav
-      className={cn('mb-8', className)}
+      className={cn('mb-lg', className)}
       aria-label={strings.onboarding.progressLabel}
     >
       <div

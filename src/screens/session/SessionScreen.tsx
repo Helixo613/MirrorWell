@@ -77,9 +77,10 @@ export function SessionScreen() {
   // renderer) stays mounted across sub-state transitions. Phase-specific content is layered on top.
   return (
     <ScreenShell
+      variant="wide"
       textScale={s.textScale}
       ariaLabelledBy={HEADING_ID}
-      className="lg:max-w-5xl"
+      className="mx-auto max-w-standalone"
     >
       <div className="flex flex-1 flex-col gap-4">
         <div className="flex items-center justify-between gap-3">

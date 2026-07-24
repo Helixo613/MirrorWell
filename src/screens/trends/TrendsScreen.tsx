@@ -93,9 +93,10 @@ export function TrendsScreen() {
 
   return (
     <ScreenShell
+      variant="wide"
       textScale={trends.settings.textScale}
       ariaLabelledBy={TRENDS_HEADING_ID}
-      className="gap-6 lg:max-w-4xl"
+      className="gap-6"
     >
       <p className="sr-only" role="status" aria-live="polite">
         {trends.liveAnnouncement}
@@ -127,9 +128,16 @@ export function TrendsScreen() {
         </StaggerFadeIn>
       ) : null}
 
-      <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[240px_1fr] lg:items-start lg:gap-6">
+      {/* Controls-then-chart is a toolbar + content composition, not a same-kind tile
+          collection — .fluid-grid split it into an oversized cell that stretched the
+          toolbar's own internal justify-between apart. Stacked, always, is already fully
+          continuous (no breakpoint to snap). The toolbar keeps a reading-width cap so its
+          two pill groups don't spread across the full row; the chart below is deliberately
+          left uncapped — its ResponsiveContainer fills whatever width it's given, so it
+          reads better (more resolution) as the window widens instead of sitting empty. */}
+      <div className="flex flex-col gap-6">
         {(showExerciseSelector || showGranularity) && (
-          <StaggerFadeIn animationKey="trends-controls" delayMs={STAGGER_MS}>
+          <StaggerFadeIn animationKey="trends-controls" delayMs={STAGGER_MS} className="max-w-shell">
             <TrendsControlsToolbar<ExerciseId>
               exerciseLabel={strings.trends.exerciseSelectorLabel}
               granularityLabel={strings.trends.granularity.label}
@@ -177,7 +185,7 @@ export function TrendsScreen() {
         ) : null}
       </div>
 
-      <div className="mt-auto border-t border-border/60 pt-6">
+      <div className="mt-auto max-w-shell border-t border-border/60 pt-6">
         <QuietNavLink
           to="/home"
           label={strings.trends.nav.back}

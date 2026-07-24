@@ -41,7 +41,8 @@
 
 ## Locked design decisions (2026-07-24)
 
-1. **One app, one language.** Same components/tokens on phone and desktop; chrome adapts (sidebar ≥1024 / bottom tabs &lt;1024). No separate mobile build. Breakpoint remains Tailwind `lg` (1024px) unless Task 1 proves a second soft breakpoint is required for onboarding steppers — if so, document in FRONTEND §1.1 in the same commit.
+1. **One app, one language.** Same components/tokens on phone and desktop; chrome adapts (sidebar ≥1024 / bottom tabs &lt;1024). No separate mobile build.
+1a. **LAYOUT CONTRACT (Task 1 shipped — binding on B/C/D/E; do not regress):** See `docs/FRONTEND.md` §1.1. `ScreenShell` variants: `reading` (onboarding only, centered prose cap), `wide` (hub screens — **no** outer max-width; fills AppShell `flex-1`), plus `standalone` fluid cap for Session/Summary when not AppShell-wrapped. Tile collections use **`.fluid-grid`** (`auto-fit` / continuous columns) — **never** reintroduce `md:grid-cols-*` / `lg:grid-cols-*` content swaps. Do **not** re-cap `variant="wide"` with `max-w-shell` on the shell itself; inner `max-w-shell` only for linear form columns (Export/Settings pattern). Asymmetric toolbar+content (Trends controls+chart) stays stacked — not `.fluid-grid`. Only discrete breakpoint left: AppShell sidebar↔bottom-tabs. Tracks polish content **inside** this system; they do not invent a second width model.
 2. **Keep the calm clinical palette** (muted sage/slate, gauge/target green accent). Redesign components/spacing/type/motion — not a new brand color system.
 3. **Session is chrome-free** during active capture (existing AppShell rule). Stage owns the viewport.
 4. **Patient-facing session metaphor (replaces lab-primary UI):**

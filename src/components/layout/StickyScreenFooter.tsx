@@ -14,7 +14,7 @@ export function StickyScreenFooter({
   return (
     <footer
       className={cn(
-        'sticky bottom-0 z-10 -mx-4 mt-auto border-t border-border/60 bg-background/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6 backdrop-blur-sm sm:-mx-6 sm:px-6',
+        'sticky bottom-0 z-10 -mx-xs mt-auto border-t border-border/60 bg-background/95 px-xs pb-[max(1rem,env(safe-area-inset-bottom))] pt-md backdrop-blur-sm sm:-mx-sm sm:px-sm',
         className,
       )}
     >

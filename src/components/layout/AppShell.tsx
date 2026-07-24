@@ -45,7 +45,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="min-h-dvh lg:flex">
-      <aside className="hidden lg:flex lg:w-56 lg:shrink-0 lg:flex-col lg:gap-1 lg:border-r lg:border-border/60 lg:p-4">
+      <aside className="hidden lg:flex lg:w-56 lg:shrink-0 lg:flex-col lg:gap-1 lg:border-r lg:border-border/60 lg:p-sm">
         <nav aria-label={strings.home.nav.primaryLabel} className="flex flex-col gap-1">
           {items.map((item) => (
             <NavLink key={item.to} to={item.to} aria-label={item.ariaLabel} className={navLinkClassName}>

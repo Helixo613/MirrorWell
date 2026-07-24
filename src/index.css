@@ -25,6 +25,46 @@
     --safety: 38 90% 96%;
     --safety-foreground: 30 60% 22%;
     --safety-border: 38 70% 55%;
+
+    /* Fluid type scale (Task 1 craft): clamp(min, preferred, max) so text grows
+       continuously with viewport instead of jumping only at Tailwind's `lg`.
+       Named to match Tailwind's default fontSize keys so every existing
+       text-sm/base/lg/xl/2xl/3xl utility in the app becomes fluid for free
+       (wired in tailwind.config.js) — no per-screen class changes needed. */
+    --step-sm: clamp(0.8125rem, 0.79rem + 0.15vw, 0.9375rem);
+    --step-base: clamp(0.9375rem, 0.9rem + 0.2vw, 1.0625rem);
+    --step-lg: clamp(1.0625rem, 1rem + 0.3vw, 1.25rem);
+    --step-xl: clamp(1.15rem, 1.05rem + 0.5vw, 1.5rem);
+    --step-2xl: clamp(1.3rem, 1.15rem + 0.75vw, 1.875rem);
+    --step-3xl: clamp(1.5rem, 1.25rem + 1.25vw, 2.25rem);
+
+    /* Fluid spacing scale — for shell/panel padding + gaps that should grow with
+       viewport (not the whole numeric Tailwind spacing scale, to avoid
+       re-tuning every icon gap in the app). */
+    --space-xs: clamp(0.75rem, 0.68rem + 0.3vw, 1rem);
+    --space-sm: clamp(1rem, 0.9rem + 0.4vw, 1.25rem);
+    --space-md: clamp(1.5rem, 1.3rem + 0.8vw, 2rem);
+    --space-lg: clamp(2rem, 1.6rem + 1.6vw, 3rem);
+    --space-xl: clamp(2.5rem, 2rem + 2vw, 4rem);
+
+    /* Reading measure — the ONLY capped ScreenShell variant (onboarding text/
+       steps). Widened past strict prose (38rem) to ~44rem so the auto-fit
+       checklist steps (attestation/exercises) can actually reach 2 columns
+       before the cap bites — still reads fine as a single paragraph column.
+       `wide` (hub/data/session screens) applies NO max-width at all — it
+       fills AppShell's fluid flex-1 main beside the sidebar; content spread
+       is the job of .fluid-grid below, not a container cap (owner feedback
+       2026-07-24: a re-imposed max-width here was "mobile app stretched onto
+       desktop" regardless of how fluid the cap's clamp() was). */
+    --shell-width: clamp(20rem, 92vw, 44rem);
+
+    /* Standalone screens — Session/Summary are never AppShell-wrapped (no
+       sidebar to fill beside; the session flow is chrome-free by design), so
+       ScreenShell's `wide` (zero cap) would run the full viewport width with
+       nothing to stop it. These need "wide but sane" — fluid, no hard
+       breakpoint, but capped so a celebration message or the capture stage
+       doesn't stretch edge-to-edge at 1920px. */
+    --shell-width-standalone: clamp(20rem, 92vw, 64rem);
   }
 
   .dark {
@@ -63,5 +103,20 @@
 @layer utilities {
   .motion-safe-animate-fade-in {
     @apply motion-safe:animate-fade-in motion-reduce:animate-none;
+  }
+
+  /* Continuous fluid grid — replaces md:/lg: grid-cols swaps. Columns of
+     minmax(min(100%,20rem), 1fr) appear/vanish continuously as the
+     container widens/narrows (CSS auto-fit), never a discrete "mobile
+     layout" vs "desktop layout" snap. Stretch so uneven-height siblings
+     (e.g. a short card next to a tall one) still align per row. */
+  .fluid-grid {
+    display: grid;
+    gap: var(--space-md);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    align-items: stretch;
+  }
+  .fluid-grid > * {
+    min-width: 0;
   }
 }
