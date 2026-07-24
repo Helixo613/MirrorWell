@@ -10,6 +10,7 @@ import { exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
 import { useSummaryScreen } from '@/hooks/useSummaryScreen';
 import { gentlenessStat, symmetryPlainLabel } from '@/lib/summaryMetrics';
+import { milestonesFrom } from '@/screens/home/milestones';
 
 const STAGGER_MS = 60;
 
@@ -36,6 +37,7 @@ export function SummaryScreen() {
   }
 
   const { isDemo, textScale, highContrast, handleDone, headingId } = summary;
+  const milestones = milestonesFrom(summary.history).filter((milestone) => milestone.achieved);
   const hasResults = record.results.length > 0;
   const { gentle, total } = gentlenessStat(record.results);
   const celebration =
@@ -88,6 +90,16 @@ export function SummaryScreen() {
                 {celebration}
               </p>
             </div>
+          </section>
+        ) : null}
+
+        {milestones.length > 0 ? (
+          <section aria-label={strings.summary.milestones.label} className="flex flex-wrap gap-2">
+            {milestones.map((milestone) => (
+              <span key={milestone.id} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                {strings.home.milestones[milestone.id]}
+              </span>
+            ))}
           </section>
         ) : null}
 

@@ -48,10 +48,10 @@ One dynamic, responsive app — no separate mobile build. Desktop-first, calm-cl
 ### 2.3 `HomeScreen`
 
 - **Purpose:** single-decision hub.
-- **Layout:** one primary button ("Start my exercises", full-width, ≥ 64 px tall); last-session line ("Tuesday — all exercises done"); recalibration prompt card when the active baseline's `capturedAt` is older than `staleDays` — a **date-only comparison; no camera ever opens on this screen** (BACKEND §1.1 camera rule; the 3 s `checkBaselineDrift` capture runs inside `SessionController.start`); quiet links: Trends, Export, Settings; Caregiver View entry **only** when enabled.
+- **Layout:** one primary button ("Start my exercises", full-width, ≥ 64 px tall); `AdherenceGarden` showing the last eight Monday-start local calendar weeks (seed/sprout/leaf/bloom = 0/1/2/3+ sessions); last-session line ("Tuesday — all exercises done"); derived milestone badges that celebrate practice only; recalibration prompt card when the active baseline's `capturedAt` is older than `staleDays` — a **date-only comparison; no camera ever opens on this screen** (BACKEND §1.1 camera rule; the 3 s `checkBaselineDrift` capture runs inside `SessionController.start`); quiet links: Trends, Export, Settings; Caregiver View entry **only** when enabled.
 - **States:** *empty* (no sessions yet) — encouraging first-run copy, no guilt; *error* `DB_UNAVAILABLE` → blocking notice; *success* default.
-- **Calls:** `StorageService.getSessions` (last 7 days), `StorageService.getActiveBaseline` (date comparison only), `SettingsService.get`.
-- **Rule:** no streaks, no "you missed X days" — missed sessions change nothing on this screen (SAFETY §8.8).
+- **Calls:** `StorageService.getSessions` (local session history: last-session line, garden, and milestones), `StorageService.getActiveBaseline` (date comparison only), `SettingsService.get`.
+- **Rule:** no streaks, no "you missed X days" — missed sessions change nothing on this screen (SAFETY §8.8). The garden only grows: a week without a session stays a seed and never changes an earlier plant.
 
 ### 2.4 `SessionScreen`
 
@@ -65,10 +65,10 @@ One dynamic, responsive app — no separate mobile build. Desktop-first, calm-cl
 
 ### 2.5 `SummaryScreen`
 
-- **Purpose:** kind session close-out. Reads the `sessionEnded` record only — no new queries.
+- **Purpose:** kind session close-out. Reads the `sessionEnded` record for session details and derives the same practice-only milestone badges from local session history; nothing is stored for milestones.
 - **Layout:** celebration header first: a session-wide gentleness stat framed as control practice; per-exercise cards: reps done, then mean symmetry (as a filled bar, not a number-forward grade); a single-session movement note last; Done → `HomeScreen`. The celebration card uses a soft one-time CSS reveal and check-mark draw, disabled by reduced-motion preference.
 - **States:** *success* only (record passed in); DEMO variant watermarked, ends at `OnboardingScreen`.
-- **Rule:** no comparisons to previous sessions here — single-session numbers are inside the noise floor; trends belong to `TrendsScreen` (honesty rule, ARCHITECTURE §4.5).
+- **Rule:** no comparisons to previous sessions here — single-session numbers are inside the noise floor; trends belong to `TrendsScreen` (honesty rule, ARCHITECTURE §4.5). `weeks_4` requires a full 28-day local-date span between the earliest and latest sessions; it is a time-with-practice marker, not a streak.
 
 ### 2.6 `TrendsScreen`
 

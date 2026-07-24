@@ -39,6 +39,7 @@ Enforced by `SafetyGate` + `OnboardingScreen` (FRONTEND §2.1; IMPLEMENTATION Ta
 | Confident wrong feedback | Structural quality gate — metric code cannot run on non-`QUALITY_OK` frames; frozen-bar rule |
 | Misleading progress | Noise-floor rule; baseline partitioning; excluded `quality_abandoned`/`red_flag_stopped` sessions; no cross-session comparisons on `SummaryScreen` |
 | Emotional harm | Kind summary framing; `reducedFacePreview`; no streaks/guilt; §8 language audit |
+| Guilt mechanics from missed practice | `AdherenceGarden` only grows: missed weeks pause growth; it never wilts, shrinks, or displays a broken streak |
 | Wrong-population use | §2 attestations; minors excluded (§9); Demo Mode bounded |
 | Data exposure | §6 |
 
@@ -85,6 +86,8 @@ The app must **never**, in any screen, cue, summary, export, or listing:
 7. Present a metric when quality gates failed (structurally prevented; plus the language rule: "that one didn't count — the light dipped", never a substituted guess).
 8. Pressure the user: no streaks, no shame for missed sessions, no urgency mechanics.
 
+**Garden rule:** `AdherenceGarden` is a practice-only, derived display. A missed week may remain a seed, but no prior week is reduced, removed, wilted, or framed as a broken streak.
+
 **Audit process:** every user-facing string lives in `src/config/strings.ts`; before any demo/release a checklist pass verifies rules 1–8 against every string (first run: IMPLEMENTATION Task 9; automated forbidden-vocabulary scan + manual pass; TESTS.md §4). Violations are release blockers, equal to the fairness gate.
 
 ## 9. Minors
@@ -115,6 +118,7 @@ The app must **never**, in any screen, cue, summary, export, or listing:
 | Optional nickname remains local (§6) | `ExportService` explicit profile allow-list excludes `nickname` | §2 (ExportService exclusion test) |
 | Optional motivation remains local (§6) | `ExportService` explicit profile allow-list excludes `motivation` | §2 (ExportService exclusion test) |
 | Language rules 1–8 (§8) | `strings.ts` single source + audit checklist + forbidden-vocabulary scan | §4.6 |
+| Garden never penalizes missed practice (§8.8) | `gardenWeeks` + `AdherenceGarden` | `tests/unit/garden-data.test.ts` |
 | No time pressure (§8.8, FRONTEND §4) | `extendRest` extension-only API; user-paced reps | §2 (SessionController) |
 
 ## 11. Residual-risk register (acknowledged, accepted for a prototype)

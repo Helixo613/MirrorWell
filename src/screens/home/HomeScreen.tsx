@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BlockingNotice } from '@/components/feedback/BlockingNotice';
 import { HomeActionFooter } from '@/components/home/HomeActionFooter';
+import { AdherenceGarden } from '@/components/progress/AdherenceGarden';
 import { HomeEmptyState } from '@/components/home/HomeEmptyState';
 import { HOME_HEADING_ID, HomeHeader } from '@/components/home/HomeHeader';
 import { LastSessionLine } from '@/components/home/LastSessionLine';
@@ -13,6 +14,8 @@ import { strings } from '@/config/strings';
 import { useAppState } from '@/context/useAppState';
 import { useHomeScreen } from '@/hooks/useHomeScreen';
 import { greetingFor } from '@/screens/home/homeHelpers';
+import { gardenWeeks } from '@/screens/home/gardenData';
+import { milestonesFrom } from '@/screens/home/milestones';
 
 const STAGGER_MS = 60;
 
@@ -30,7 +33,19 @@ export function HomeScreen() {
     isFirstRun,
     errorTitle,
     errorBody,
+    sessions,
   } = useHomeScreen(profileCreatedAt, assignedExerciseCount);
+
+  const gardenToday = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  const garden = gardenWeeks(
+    sessions.map((session) => session.startedAt.slice(0, 10)),
+    gardenToday,
+  );
+  const milestones = milestonesFrom(sessions).filter((milestone) => milestone.achieved);
 
   const startSession = useCallback(() => {
     navigate('/session');
@@ -88,6 +103,20 @@ export function HomeScreen() {
             ) : null}
           </HomeHeader>
         </StaggerFadeIn>
+
+        <StaggerFadeIn animationKey={`${status}-garden`} delayMs={STAGGER_MS}>
+          <AdherenceGarden weeks={garden} />
+        </StaggerFadeIn>
+
+        {milestones.length > 0 ? (
+          <section aria-label={strings.home.milestones.label} className="flex flex-wrap gap-2">
+            {milestones.map((milestone) => (
+              <span key={milestone.id} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                {strings.home.milestones[milestone.id]}
+              </span>
+            ))}
+          </section>
+        ) : null}
 
         <div className="flex flex-col gap-8 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
           {isFirstRun ? (

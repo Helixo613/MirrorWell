@@ -375,6 +375,22 @@ export const strings = Object.freeze({
       action: 'Recalibrate',
       actionAriaLabel: 'Go to calibration to refresh your baseline',
     },
+    garden: {
+      title: 'Your practice garden',
+      label: 'Your practice garden',
+      ariaLabel: (growingWeeks: number, totalWeeks: number) =>
+        `Your practice garden: ${growingWeeks} of ${totalWeeks} weeks growing`,
+      weekAriaLabel: (week: number, stage: number) =>
+        `Week ${week}: ${['seed', 'sprout', 'leaf', 'bloom'][stage]}`,
+    },
+    milestones: {
+      label: 'Practice milestones',
+      first_session: 'First session of practice',
+      sessions_10: '10 sessions of showing up',
+      sessions_25: '25 sessions of showing up',
+      weeks_4: 'Four weeks with practice',
+      gentle_100: '100 gentle reps',
+    },
     nav: {
       primaryLabel: 'Primary navigation',
       home: 'Home',
@@ -506,6 +522,9 @@ export const strings = Object.freeze({
       allGentle: 'Every single rep gentle. Perfect restraint.',
       someGentle: (gentle: number, total: number) =>
         `You kept it gentle ${gentle} of ${total} times — that's exactly the skill.`,
+    },
+    milestones: {
+      label: 'Practice milestones',
     },
     qualityNote: 'This is a single-session snapshot of movement.',
     demoWatermark: 'DEMO — not for exercise use',
