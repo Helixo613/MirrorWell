@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { AppShell } from '@/components/layout/AppShell';
 import { ScreenShell } from '@/components/layout/ScreenShell';
 import { strings } from '@/config/strings';
 import { AppStateProvider } from '@/context/AppStateContext';
@@ -21,6 +22,17 @@ const TrendsScreen = lazy(() =>
     default: module.TrendsScreen,
   })),
 );
+
+// Hub shell layout route: wraps only the hub screens (Home/Trends/Export/Settings/
+// Caregiver) in the sidebar/tab-bar shell. Calibration stays a sibling route under the
+// same ATTESTED guard but outside the shell — its camera-top layout owns the viewport.
+function HubShellLayout() {
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+}
 
 function TrendsRouteFallback() {
   return (
@@ -68,25 +80,27 @@ function ProductApp() {
           />
           <Route element={<GateRoute allowed={['ATTESTED']} redirectTo="/" />}>
             <Route path="/calibration" element={<CalibrationScreen />} />
-            <Route path="/home" element={<HomeScreen />} />
-            <Route
-              path="/trends"
-              element={
-                <Suspense fallback={<TrendsRouteFallback />}>
-                  <TrendsScreen />
-                </Suspense>
-              }
-            />
-            <Route path="/export" element={<ExportScreen />} />
-            <Route path="/settings" element={<SettingsScreen />} />
-            <Route
-              path="/caregiver"
-              element={
-                <CaregiverRoute>
-                  <CaregiverScreen />
-                </CaregiverRoute>
-              }
-            />
+            <Route element={<HubShellLayout />}>
+              <Route path="/home" element={<HomeScreen />} />
+              <Route
+                path="/trends"
+                element={
+                  <Suspense fallback={<TrendsRouteFallback />}>
+                    <TrendsScreen />
+                  </Suspense>
+                }
+              />
+              <Route path="/export" element={<ExportScreen />} />
+              <Route path="/settings" element={<SettingsScreen />} />
+              <Route
+                path="/caregiver"
+                element={
+                  <CaregiverRoute>
+                    <CaregiverScreen />
+                  </CaregiverRoute>
+                }
+              />
+            </Route>
           </Route>
           <Route
             element={<GateRoute allowed={['ATTESTED', 'DEMO']} redirectTo="/" />}
