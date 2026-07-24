@@ -113,13 +113,6 @@ export function SessionScreen() {
             <FeedbackCanvas onMount={s.mountFeedbackCanvas} onUnmount={s.unmountFeedbackCanvas} />
           </div>
           <DemoWatermark label={strings.session.demoWatermark} visible={s.isDemo} />
-          {s.phase === 'active' && s.coachText ? (
-            <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-4">
-              <p className="rounded-lg bg-background/90 px-5 py-2.5 text-center text-xl font-semibold shadow-md">
-                {s.coachText}{s.holdText ? ` ${s.holdText}` : ''}
-              </p>
-            </div>
-          ) : null}
           <QuickSetupOverlay
             visible={s.phase === 'quickSetup'}
             title={strings.session.quickSetup.title}
@@ -167,6 +160,13 @@ export function SessionScreen() {
           // Cap + scroll the text zone so extra text (a quality banner over the rep box, longer
           // rest copy) scrolls inside it instead of shrinking the camera stage above.
           <div className="mt-3 max-h-[34vh] shrink-0 overflow-y-auto">
+            {/* Coach line BELOW the camera (not over it) — the face stays fully visible, which a
+                symmetry app needs. */}
+            {s.coachText ? (
+              <p className="mb-3 rounded-lg bg-secondary/60 px-4 py-2 text-center text-lg font-semibold text-foreground">
+                {s.coachText}{s.holdText ? ` ${s.holdText}` : ''}
+              </p>
+            ) : null}
             {s.subState === 'DEMO' ? (
               <div className="space-y-4 text-center">
                 <p className="text-base leading-relaxed text-muted-foreground">{s.instruction}</p>
