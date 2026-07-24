@@ -41,15 +41,28 @@ function pad2(n: number): string {
 
 // periodStart buckets are local-time calendar dates (ARCHITECTURE §13). Weekly buckets are
 // Monday-start calendar weeks — a documented choice, not specified verbatim by the docs.
-function bucketStart(iso: string, granularity: 'weekly' | 'monthly'): string {
+//
+// Returns a Date, not a string: getAdherence's bucket loop needs to walk period boundaries
+// with .getTime()/.setDate(), and re-parsing a formatted "YYYY-MM-DD" key with `new Date(key)`
+// reads as UTC midnight (ES2015+ date-only parsing), not local midnight — silently shifting
+// every bucket by the local UTC offset in any negative-offset timezone. Callers that need the
+// string key call formatDateKey() on the Date this returns instead of reparsing.
+function periodStartDate(iso: string, granularity: 'weekly' | 'monthly'): Date {
   const d = new Date(iso);
   if (granularity === 'monthly') {
-    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-01`;
+    return new Date(d.getFullYear(), d.getMonth(), 1);
   }
   const day = d.getDay(); // 0=Sun..6=Sat
   const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffToMonday);
-  return `${monday.getFullYear()}-${pad2(monday.getMonth() + 1)}-${pad2(monday.getDate())}`;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffToMonday);
+}
+
+function formatDateKey(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function bucketStart(iso: string, granularity: 'weekly' | 'monthly'): string {
+  return formatDateKey(periodStartDate(iso, granularity));
 }
 
 async function getTrend(exerciseId: ExerciseId, granularity: 'weekly' | 'monthly'): Promise<TrendSeries> {
@@ -117,10 +130,10 @@ async function getAdherence(range: { from: string; to: string }): Promise<Adhere
   const completionRate = total === 0 ? 0 : completed / total;
 
   const sessionsPerWeek: number[] = [];
-  const cursor = new Date(bucketStart(range.from, 'weekly'));
-  const end = new Date(bucketStart(range.to, 'weekly'));
+  const cursor = periodStartDate(range.from, 'weekly');
+  const end = periodStartDate(range.to, 'weekly');
   while (cursor.getTime() <= end.getTime()) {
-    const key = `${cursor.getFullYear()}-${pad2(cursor.getMonth() + 1)}-${pad2(cursor.getDate())}`;
+    const key = formatDateKey(cursor);
     sessionsPerWeek.push(sessions.filter((s) => bucketStart(s.startedAt, 'weekly') === key).length);
     cursor.setDate(cursor.getDate() + 7);
   }

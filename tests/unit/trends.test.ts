@@ -296,9 +296,13 @@ describe('TrendsService.getAdherence', () => {
       }),
     );
 
+    // Midday UTC, matching makeSession's convention above — dodges the TZ boundary flip that a
+    // midnight-literal range would hit (a UTC-midnight instant is still the previous local
+    // calendar day in any negative-offset timezone, e.g. US zones, shifting which Monday-start
+    // week the range boundary falls into).
     const adherence = await TrendsService.getAdherence({
-      from: '2026-01-05T00:00:00.000Z',
-      to: '2026-01-25T23:59:59.000Z',
+      from: '2026-01-05T12:00:00.000Z',
+      to: '2026-01-25T12:00:00.000Z',
     });
 
     expect(adherence.sessionsPerWeek).toEqual([2, 2, 1]);
