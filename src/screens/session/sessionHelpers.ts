@@ -71,7 +71,7 @@ export function hapticCueEnabled(settings: AppSettings | null, available: boolea
 
 /**
  * The demo baseline invariant (ARCHITECTURE §11, TESTS.md §2): the gentle rep must produce a
- * peak activation at least `thresholds.blendshapes.activationFloor` ABOVE the exercise's
+ * peak activation at least `thresholds.calibration.comfortableMaxMinRise` ABOVE the exercise's
  * resting (neutral) activation, or the demo has measured nothing and there is no honest
  * baseline. A faceless device yields zero approved gentle-rep frames →
  * `Math.max(...[]) === -Infinity` → this throws `NO_BASELINE` loudly. The floor matters just
@@ -89,7 +89,7 @@ export function demoComfortableMax(
   for (const value of gentleActivations) {
     if (value > peak) peak = value;
   }
-  if (!Number.isFinite(peak) || peak - neutralActivation < thresholds.blendshapes.activationFloor) {
+  if (!Number.isFinite(peak) || peak - neutralActivation < thresholds.calibration.comfortableMaxMinRise) {
     throw new MirrorWellError('NO_BASELINE', 'demo quick-setup captured no measurable movement');
   }
   return peak;

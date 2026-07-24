@@ -187,10 +187,13 @@ async function captureComfortableMax(exerciseId: ExerciseId): Promise<number> {
   // then reads ANY facial motion, including cross-activation from an unrelated movement (e.g.
   // an eye squeeze bleeding into the brow blendshapes), as a full-effort rep. The peak must
   // clear the exercise's RESTING activation (captured in the neutral windows) by at least
-  // activationFloor, the documented "below this is noise" boundary (API §15): an absolute
-  // check misses pairs whose resting read is already nonzero (eyeBlink, browOuterUp).
+  // calibration.comfortableMaxMinRise: an absolute check misses pairs whose resting read is
+  // already nonzero (eyeBlink, browOuterUp). This is its own tunable rather than
+  // blendshapes.activationFloor (which it used to share) because the value guarded here becomes
+  // the denominator of every later effortIndex, so it must stay strict even when the SI
+  // activation floor is loosened for sensitivity. See the thresholds.ts comment.
   // QUALITY_TOO_LOW (not NO_BASELINE): CalibrationScreen coaches and retries on this code.
-  if (result - (neutralActivation[exerciseId] ?? 0) < thresholds.blendshapes.activationFloor) {
+  if (result - (neutralActivation[exerciseId] ?? 0) < thresholds.calibration.comfortableMaxMinRise) {
     throw new MirrorWellError('QUALITY_TOO_LOW', 'comfortable-max capture measured no movement');
   }
   comfortableMax = { ...comfortableMax, [exerciseId]: result };

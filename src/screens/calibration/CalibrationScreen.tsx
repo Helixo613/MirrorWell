@@ -348,6 +348,10 @@ export function CalibrationScreen() {
   const total = captureTotal(phase);
   const completed = windowsElapsed(elapsedMs, total);
   const copy = phaseCopy(phase, exerciseList[step.exerciseIndex] ?? null, completed);
+  const coachingCopy =
+    phase === 'comfortableMax'
+      ? strings.errors.QUALITY_TOO_LOW_NO_MOVEMENT
+      : strings.errors.QUALITY_TOO_LOW;
 
   return (
     <ScreenShell textScale={settings.textScale} ariaLabelledBy={HEADING_ID}>
@@ -373,10 +377,13 @@ export function CalibrationScreen() {
         label={copy.progressLabel}
       />
       {coaching ? (
+        // Chosen by step, not by parsing the error message: on the comfortable-max step a
+        // QUALITY_TOO_LOW almost always means "that was too close to resting to measure", and
+        // the generic "hold steady, add light" coaching would send the user the wrong way.
         <BlockingNotice
           className="mt-6"
-          title={strings.errors.QUALITY_TOO_LOW.title}
-          body={strings.errors.QUALITY_TOO_LOW.body}
+          title={coachingCopy.title}
+          body={coachingCopy.body}
         />
       ) : null}
       <CalibrationActionBar

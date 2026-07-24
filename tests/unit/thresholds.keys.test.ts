@@ -61,9 +61,18 @@ describe('thresholds', () => {
     );
   });
 
-  it('calibration exposes all five calibration tunables', () => {
+  it('calibration exposes the capture tunables and the comfortable-max rise floor', () => {
     expect(Object.keys(thresholds.calibration).sort()).toEqual(
-      ['captureSeconds', 'driftMaxPct', 'minQualityScore', 'neutralCaptures', 'staleDays'].sort(),
+      [
+        'captureSeconds', 'driftMaxPct', 'minQualityScore', 'neutralCaptures', 'staleDays',
+        'comfortableMaxMinRise',
+      ].sort(),
+    );
+    // Must stay well ABOVE the SI activation floor: it guards the effort denominator, whereas
+    // activationFloor only guards whether a symmetry ratio is defined. Collapsing them is what
+    // let a resting face be accepted as a comfortable max.
+    expect(thresholds.calibration.comfortableMaxMinRise).toBeGreaterThan(
+      thresholds.blendshapes.activationFloor,
     );
   });
 

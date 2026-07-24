@@ -88,7 +88,8 @@ export async function seedDev(): Promise<void> {
     REGION_MOUTH_CORNER: { left: { u: 0.507, v: 0.05 }, right: { u: -0.503, v: 0.05 } },
     REGION_LIP: { left: { u: 0.231, v: 0.08 }, right: { u: -0.229, v: 0.08 } },
   };
-  // Keep comfortableMax clearly above activationFloor and leave room for neutralActivation.
+  // Keep comfortableMax clearly above calibration.comfortableMaxMinRise once neutralActivation
+  // is subtracted, so seeded baselines have a realistic effort span.
   const comfortableMax: CalibrationBaseline['comfortableMax'] = Object.fromEntries(
     assignableExercises.map((ex) => [ex, 0.35 + rng() * 0.25]),
   );

@@ -266,6 +266,13 @@ export const strings = Object.freeze({
       title: 'That capture did not meet quality',
       body: 'Try again with more light, a steady position, and your face centered. There is no rush.',
     },
+    // Same error code, different step. On the comfortable-max step the usual cause is that the
+    // movement was too small to measure against the resting face, and the generic advice above
+    // (more light, hold steady) actively points the wrong way: holding steadier makes it worse.
+    QUALITY_TOO_LOW_NO_MOVEMENT: {
+      title: 'That one did not register a movement',
+      body: 'The movement needs to be a little bigger than resting for us to measure it. Make it slightly larger than feels necessary, still comfortable, and hold it briefly. There is no rush.',
+    },
     // API §16: NO_BASELINE and RECALIBRATION_REQUIRED both route to CalibrationScreen. Without
     // their own copy they fell back to the VALIDATION_FAILED "something went wrong" text, which
     // tells an attested-but-uncalibrated user nothing about what to do (S3-REQ-4).

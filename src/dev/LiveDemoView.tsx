@@ -169,7 +169,10 @@ export function LiveDemoView() {
         setStep('holdPrompt');
         return;
       }
-      const peak = Math.max(...holdActsRef.current, thresholds.blendshapes.activationFloor);
+      // Floor the span at the calibration rise, not at activationFloor: this peak becomes
+      // comfortableMax, so flooring it at the (deliberately low) SI floor would build a
+      // collapsed span in which resting noise reads as full effort.
+      const peak = Math.max(...holdActsRef.current, thresholds.calibration.comfortableMaxMinRise);
       const baseline = buildEphemeralBaseline(neutralAbsRef.current, peak, floor);
       NormalizationLayer.setBaseline(baseline);
       MetricEngine.setBaseline(baseline);

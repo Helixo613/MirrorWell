@@ -88,6 +88,22 @@ export const thresholds = Object.freeze({
 
   // CalibrationFlow tunables. Owning section: docs/API.md §15 / docs/BACKEND.md (CalibrationFlow).
   calibration: Object.freeze({
+    /**
+     * Minimum rise ABOVE the resting read for a comfortable-max capture to be accepted.
+     *
+     * Deliberately NOT blendshapes.activationFloor, which this used to share. The two pull in
+     * opposite directions and cannot be one number:
+     *   * activationFloor asks "is there enough signal to define a symmetry ratio?", and wants
+     *     to be LOW so faint movement on an affected side still reads.
+     *   * this asks "did the user actually move?", and wants to be HIGH, because the value it
+     *     guards becomes the DENOMINATOR of every later effortIndex. Calibrate at rest and the
+     *     span collapses, so resting noise reads as full effort and the gauge pins immediately.
+     * Sharing one constant meant loosening sensitivity silently loosened calibration too.
+     *
+     * act is max(left, right), i.e. the stronger side, so a genuine gentle rep clears this
+     * comfortably even when the affected side barely moves.
+     */
+    comfortableMaxMinRise: 0.15,
     minQualityScore: 0.7,
     neutralCaptures: 3,
     captureSeconds: 3,

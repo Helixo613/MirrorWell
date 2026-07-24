@@ -202,7 +202,7 @@ describe('CalibrationFlow', () => {
   });
 
   it('rejects a comfortable-max median peak below activationFloor (held-still capture)', async () => {
-    const NOISE = thresholds.blendshapes.activationFloor;
+    const NOISE = thresholds.calibration.comfortableMaxMinRise;
     // Same invariant demoComfortableMax enforces: a noise-level comfortableMax makes
     // effortIndex = activation / comfortableMax read ANY facial motion, including
     // cross-activation bleed from an unrelated movement, as a full-effort rep.
@@ -254,7 +254,7 @@ describe('CalibrationFlow', () => {
     // Peaks sit above the 0.3 resting read but by less than activationFloor, so they clear the
     // absolute floor and still fail the rebased one. Derived, so a retune cannot invert the case.
     const REST = 0.3;
-    const step = thresholds.blendshapes.activationFloor;
+    const step = thresholds.calibration.comfortableMaxMinRise;
     const result = CalibrationFlow.captureComfortableMax('EX_SMILE');
     await captureThree(result.then(() => undefined, () => undefined), [
       frame({ mouthSmileLeft: REST + step * 0.6, mouthSmileRight: REST + step * 0.6 }),

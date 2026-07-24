@@ -58,7 +58,7 @@ describe('demoComfortableMax; the demo baseline invariant', () => {
   it('applies the floor RELATIVE to the resting activation (neutral rebase)', () => {
     // A pair with a nonzero neutral read (eyeBlink-like): a peak barely above rest is a
     // held-still capture even though it clears the absolute floor.
-    const floor = thresholds.blendshapes.activationFloor;
+    const floor = thresholds.calibration.comfortableMaxMinRise;
     const rest = 0.3;
     // Peaks that clear the ABSOLUTE floor but not the floor above rest: the case under test.
     expect(() => demoComfortableMax([rest + floor * 0.4, rest + floor * 0.8], rest)).toThrow(
@@ -67,16 +67,34 @@ describe('demoComfortableMax; the demo baseline invariant', () => {
     expect(demoComfortableMax([rest + floor * 4, rest], rest)).toBe(rest + floor * 4);
   });
 
-  it('throws NO_BASELINE when the peak is below activationFloor (a held-still face → noise peak)', () => {
+  it('throws NO_BASELINE when the peak barely clears rest (a held-still face → noise peak)', () => {
     // A noise-level comfortableMax makes effortIndex = activation / comfortableMax read pure
     // sensor noise as full-effort movement, phantom reps at a timer-like cadence.
-    // Floor-relative, so "below the floor" stays below it across retunes.
-    const floor = thresholds.blendshapes.activationFloor;
+    // Floor-relative, so "below the floor" stays below it across retunes. This is the
+    // calibration rise, NOT the SI activation floor: the value guarded here becomes the
+    // denominator of every later effortIndex.
+    const floor = thresholds.calibration.comfortableMaxMinRise;
     expect(() => demoComfortableMax([floor * 0.2, floor * 0.5, floor * 0.9])).toThrow(
       expect.objectContaining({ code: 'NO_BASELINE' }),
     );
     // At the floor exactly is accepted (>= activationFloor, mirroring the SI activation rule).
     expect(demoComfortableMax([floor])).toBe(floor);
+  });
+
+  it('rejects a peak that clears the SI activation floor but not the calibration rise', () => {
+    // The exact regression this pair of thresholds was split to prevent. When calibration shared
+    // blendshapes.activationFloor, lowering that floor for sensitivity silently allowed a
+    // resting-level capture to become comfortableMax; effortIndex then divides by a collapsed
+    // span, so the gauge pins and reps fire on resting noise ("it's calibrating on resting").
+    const si = thresholds.blendshapes.activationFloor;
+    const rise = thresholds.calibration.comfortableMaxMinRise;
+    expect(rise).toBeGreaterThan(si);
+
+    const between = (si + rise) / 2; // clears the SI floor, does not clear the rise
+    expect(() => demoComfortableMax([between])).toThrow(
+      expect.objectContaining({ code: 'NO_BASELINE' }),
+    );
+    expect(demoComfortableMax([rise])).toBe(rise);
   });
 
   it('throws NO_BASELINE on non-finite input', () => {
