@@ -21,7 +21,7 @@ export function ExportSetupPanel({
   className,
 }: ExportSetupPanelProps) {
   return (
-    <SoftPanel className={cn('space-y-5', className)}>
+    <SoftPanel className={cn('space-y-5 border border-border/50', className)}>
       <DateRangeFields
         groupLabel={strings.export.dateRange.label}
         fromId="export-from"

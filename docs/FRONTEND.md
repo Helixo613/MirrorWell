@@ -71,21 +71,21 @@ One dynamic, responsive app — no separate mobile build, no separate "mobile la
 ### 2.5 `SummaryScreen`
 
 - **Purpose:** kind session close-out. Reads the `sessionEnded` record for session details and derives the same practice-only milestone badges from local session history; nothing is stored for milestones.
-- **Layout:** celebration header first: a session-wide gentleness stat framed as control practice; per-exercise cards: reps done, then mean symmetry (as a filled bar, not a number-forward grade); a single-session movement note last; Done → `HomeScreen`. The celebration card uses a soft one-time CSS reveal and check-mark draw, disabled by reduced-motion preference.
+- **Layout:** celebration header first: a session-wide gentleness stat framed as control practice; bordered per-exercise cards: reps done, then mean symmetry (as a filled bar, not a number-forward grade); a single-session movement note last; Done → `HomeScreen`. The celebration card uses a soft one-time CSS reveal and check-mark draw, disabled by reduced-motion preference.
 - **States:** *success* only (record passed in); DEMO variant watermarked, ends at `OnboardingScreen`.
 - **Rule:** no comparisons to previous sessions here — single-session numbers are inside the noise floor; trends belong to `TrendsScreen` (honesty rule, ARCHITECTURE §4.5). `weeks_4` requires a full 28-day local-date span between the earliest and latest sessions; it is a time-with-practice marker, not a streak.
 
 ### 2.6 `TrendsScreen`
 
 - **Purpose:** honest longitudinal view.
-- **Layout:** exercise selector (segmented, only `assignedExercises`); Recharts line chart of `meanSymmetryIndex` per period; "steady" pill markers where `aboveNoiseFloor: false`; plain-language caption ("your gentle smile has been getting more even over the last two months"); granularity toggle (monthly default).
+- **Layout:** a compact bordered control surface contains the exercise selector (segmented, only `assignedExercises`) and granularity toggle (monthly default); a separate full-width bordered surface contains the Recharts line chart of `meanSymmetryIndex` per period, "steady" pill markers where `aboveNoiseFloor: false`, and plain-language caption ("your gentle smile has been getting more even over the last two months").
 - **States:** *empty* — "trends appear after a couple of weeks of practice" (no fake early trends); *loading* spinner; *error* `DB_UNAVAILABLE`; *success* chart.
 - **Calls:** `TrendsService.getTrend` per selected exercise; `SettingsService.get` (granularity).
 
 ### 2.7 `CaregiverScreen`
 
 - **Purpose:** read-only trusted-person view on the patient's device (SAFETY §5), with exactly one narrow exception.
-- **Layout:** banner "Read-only view, enabled by the device owner"; adherence block (`getAdherence`); per-exercise mini-trends; last-session summary; data-quality line (`lowQualityFramePct` averaged, phrased as "measurement quality"); the encouragement-note compose box (below); link to `ExportScreen`.
+- **Layout:** bordered banner "Read-only view, enabled by the device owner"; adherence block (`getAdherence`); per-exercise mini-trends; last-session summary; data-quality line (`lowQualityFramePct` averaged, phrased as "measurement quality"); the encouragement-note compose box (below), gently distinguished from the otherwise read-only cards; link to `ExportScreen`.
 - **States:** *guard* — redirect to `HomeScreen` when `caregiverViewEnabled` is false (including deep links); *empty/loading/error* as TrendsScreen.
 - **Calls:** `TrendsService.getTrend/getAdherence`, `StorageService.getSessions/getEncouragementNote/saveEncouragementNote`, `SettingsService.get`.
 - **Rule:** mutation confined to the encouragement-note compose box (SAFETY §5 narrow carve-out — plain text, ≤200 chars, singleton, never exported, never parsed as an instruction). Any OTHER interactive element that changes state is a review-blocking defect (TESTS.md audits every control).
@@ -93,7 +93,7 @@ One dynamic, responsive app — no separate mobile build, no separate "mobile la
 ### 2.8 `ExportScreen`
 
 - **Purpose:** generate the clinician summary, and download a weekly `progressCard` PNG.
-- **Layout:** date-range picker (defaults: last 8 weeks); plain-language "what's in this file" list; Generate button; after generation, download cards (JSON / printable HTML / weekly progress card) + advisory "share this only with your care team." The weekly card is also offered on the setup surface so it does not require generating the clinician summary first.
+- **Layout:** a softly distinguished non-diagnostic scope notice remains visible above the bordered setup surface; date-range picker (defaults: last 8 weeks); plain-language "what's in this file" list; Generate button; after generation, download cards (JSON / printable HTML / weekly progress card) + advisory "share this only with your care team." The weekly card is also offered on the setup surface so it does not require generating the clinician summary first.
 - **Weekly `progressCard`:** offscreen canvas 1080×1350, calm-clinical styling; contents = Monday-start week date range, session count, gentleness stat (reuse `gentlenessStat`), garden plant stage for the week (`min(3, sessions)`), **no raw metrics tables**. Local download only via the same `downloadBlob` helper as JSON/HTML (`canvas.toBlob` → object URL → anchor) — no Web Share API, no clipboard, no network. Same data class as the JSON export: derived aggregates the user already sees.
 - **States:** *loading* during generation; *error* `DB_UNAVAILABLE`/`VALIDATION_FAILED`; *empty* — range with no sessions → "nothing to export for these dates"; *success* downloads.
 - **Calls:** `ExportService.generateSummary`; `generateWeeklyProgressCard` (`src/data/progressCard.ts`).
@@ -101,7 +101,7 @@ One dynamic, responsive app — no separate mobile build, no separate "mobile la
 ### 2.9 `SettingsScreen`
 
 - **Purpose:** accessibility, honesty settings, consent toggles, deletion.
-- **Layout:** grouped lists — **Your profile** (optional `nickname` + `motivation`, saved via `StorageService.saveProfile` — same fields as onboarding so already-attested users can edit without re-onboarding); Display (highContrast, textScale slider 100–200%, reducedFacePreview, showAffectedSideMarker); Cues (haptics — hidden on desktop, audio); Trends (granularity); Sharing (caregiverViewEnabled with one-line explanation of what it reveals — Home only shows the Caregiver nav link when this is on); Calibration (Recalibrate now → `CalibrationScreen`); Danger zone (Delete everything → typed "DELETE" confirmation → `deleteAllData` → `OnboardingScreen`).
+- **Layout:** bordered grouped lists — **Your profile** (optional `nickname` + `motivation`, saved via `StorageService.saveProfile` — same fields as onboarding so already-attested users can edit without re-onboarding); Display (highContrast, textScale slider 100–200%, reducedFacePreview, showAffectedSideMarker); Cues (haptics — hidden on desktop, audio); Trends (granularity); Sharing (caregiverViewEnabled with one-line explanation of what it reveals — Home only shows the Caregiver nav link when this is on); Calibration (Recalibrate now → `CalibrationScreen`); Danger zone (Delete everything → typed "DELETE" confirmation → `deleteAllData` → `OnboardingScreen`).
 - **States:** standard; deletion has its own confirm/progress/done micro-flow.
 - **Calls:** `SettingsService.get/update`, `StorageService.saveProfile` (profile fields), `StorageService.deleteAllData`.
 

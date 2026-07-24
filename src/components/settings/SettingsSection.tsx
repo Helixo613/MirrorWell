@@ -23,7 +23,9 @@ export function SettingsSection({
       >
         {title}
       </h2>
-      <SoftPanel className="divide-y divide-border/60 p-0">{children}</SoftPanel>
+      <SoftPanel className="divide-y divide-border/60 border border-border/50 p-0">
+        {children}
+      </SoftPanel>
     </section>
   );
 }
