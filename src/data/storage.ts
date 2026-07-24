@@ -154,6 +154,17 @@ function assertComfortableMax(max: CalibrationBaseline['comfortableMax'], assign
       throw new MirrorWellError('VALIDATION_FAILED', `comfortableMax.${key} must be finite and > 0`);
     }
   }
+  // Every assigned exercise must be calibrated before a baseline can become active —
+  // subset-only maps used to let SessionController.start run exercises with no gentle-max.
+  for (const exerciseId of assigned) {
+    const value = max[exerciseId];
+    if (value === undefined || !Number.isFinite(value) || value <= 0) {
+      throw new MirrorWellError(
+        'VALIDATION_FAILED',
+        `comfortableMax missing or invalid for assigned exercise ${exerciseId}`,
+      );
+    }
+  }
 }
 
 function assertNeutralActivation(b: CalibrationBaseline, assigned: ExerciseId[]): void {

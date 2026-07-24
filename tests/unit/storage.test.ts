@@ -192,6 +192,13 @@ describe('StorageService.saveBaseline', () => {
     ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
   });
 
+  it('rejects comfortableMax missing an assigned exercise', async () => {
+    await StorageService.saveProfile(makeProfile()); // EX_SMILE + EX_BROW_RAISE
+    await expect(
+      StorageService.saveBaseline(makeBaseline({ comfortableMax: { EX_SMILE: 0.092 } })),
+    ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' });
+  });
+
   it('rejects non-finite vector components in neutralStats', async () => {
     await StorageService.saveProfile(makeProfile());
     await expect(

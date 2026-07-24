@@ -136,7 +136,7 @@ Persists a new calibration and atomically deactivates the previous active baseli
 }
 ```
 **Response:** `"0b7e4d2a-1c3f-4a8b-b6d9-5e2f8a7c4d10"`
-**Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (missing region keys, non-finite vector components, missing noise fields, `comfortableMax` keys ⊄ `assignedExercises`; `neutralActivation` — optional field, DATABASE §3 — keys ⊄ `assignedExercises`, values outside `[0, 1)`, or value ≥ `comfortableMax[key]`); `QUALITY_TOO_LOW` (`qualityScore < 0.7` — distinct code so `CalibrationScreen` can show capture coaching, not a generic error)
+**Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (missing region keys, non-finite vector components, missing noise fields, `comfortableMax` keys outside `assignedExercises`, **or any assigned exercise missing a finite `> 0` `comfortableMax` entry**; `neutralActivation` — optional field, DATABASE §3 — keys ⊄ `assignedExercises`, values outside `[0, 1)`, or value ≥ `comfortableMax[key]`); `QUALITY_TOO_LOW` (`qualityScore < 0.7` — distinct code so `CalibrationScreen` can show capture coaching, not a generic error)
 
 > **Rule:** the isActive flip (old → 0, new → 1) happens inside the same Dexie transaction as the insert. Two active baselines must be impossible at any observable instant.
 
@@ -372,9 +372,9 @@ Thresholds (`repStartThreshold` 0.15, `repMinDurationMs` 800, `repEndThreshold` 
 
 ### `start(exerciseIds: ExerciseId[]): Promise<void>`
 
-Preconditions checked in order: gate (ATTESTED or DEMO) → active baseline exists → baseline drift re-check passes (else recalibration prompt) → camera starts.
+Preconditions checked in order: gate (ATTESTED or DEMO) → active baseline exists with `neutralActivation` → **active baseline `comfortableMax` covers every `exerciseIds` entry** (else `NO_BASELINE`) → baseline drift re-check passes (else recalibration prompt) → camera starts.
 
-**Errors:** `NOT_ATTESTED`, `NO_BASELINE`, `RECALIBRATION_REQUIRED`, `CAMERA_DENIED`, `CAMERA_UNAVAILABLE`, `VALIDATION_FAILED` (empty list or non-assigned exercise)
+**Errors:** `NOT_ATTESTED`, `NO_BASELINE` (missing active baseline **or** any session exercise lacks a finite `> 0` `comfortableMax`), `RECALIBRATION_REQUIRED`, `CAMERA_DENIED`, `CAMERA_UNAVAILABLE`, `VALIDATION_FAILED` (empty list or non-assigned exercise)
 
 ### `advance(): void` · `extendRest(seconds: number): void`
 

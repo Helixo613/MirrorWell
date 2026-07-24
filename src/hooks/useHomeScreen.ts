@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { isBaselineStale } from '@/lib/baselineStale';
+import { baselineCoversExercises } from '@/lib/baselineCoverage';
 import { buildLastSessionSummary } from '@/lib/lastSessionSummary';
 import {
   sessionLookbackRange,
@@ -9,6 +10,7 @@ import { strings } from '@/config/strings';
 import { MirrorWellError } from '@/data/errors';
 import { StorageService } from '@/data/storage';
 import type { SessionRecordFull } from '@/data/storage';
+import type { ExerciseId } from '@/data/schema';
 import { SettingsService } from '@/data/settings';
 import type { AppSettings } from '@/types/app';
 import { DEFAULT_SETTINGS } from '@/types/app';
@@ -19,6 +21,8 @@ export interface HomeScreenData {
   status: HomeScreenStatus;
   settings: AppSettings;
   showRecalibration: boolean;
+  /** True when there is no active baseline, or it lacks gentle-max for an assigned exercise. */
+  needsCalibration: boolean;
   lastSessionSummary: string | null;
   isFirstRun: boolean;
   errorTitle: string | null;
@@ -29,11 +33,12 @@ export interface HomeScreenData {
 
 export function useHomeScreen(
   profileCreatedAt: string,
-  assignedExerciseCount: number,
+  assignedExercises: readonly ExerciseId[],
 ): HomeScreenData {
   const [status, setStatus] = useState<HomeScreenStatus>('loading');
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [showRecalibration, setShowRecalibration] = useState(false);
+  const [needsCalibration, setNeedsCalibration] = useState(true);
   const [lastSessionSummary, setLastSessionSummary] = useState<string | null>(
     null,
   );
@@ -46,6 +51,9 @@ export function useHomeScreen(
   const reload = useCallback(() => {
     setReloadToken((value) => value + 1);
   }, []);
+
+  const assignedExerciseCount = assignedExercises.length;
+  const assignedKey = assignedExercises.join(',');
 
   useEffect(() => {
     if (!profileCreatedAt) {
@@ -74,8 +82,12 @@ export function useHomeScreen(
 
         setSettings(loadedSettings);
         setSessions(allSessions);
+        const complete =
+          baseline !== null &&
+          baselineCoversExercises(baseline.comfortableMax, assignedExercises);
+        setNeedsCalibration(!complete);
         setShowRecalibration(
-          baseline !== null && isBaselineStale(baseline.capturedAt),
+          complete && baseline !== null && isBaselineStale(baseline.capturedAt),
         );
 
         const lookbackFrom = sessionLookbackRange().from;
@@ -119,12 +131,13 @@ export function useHomeScreen(
     return () => {
       cancelled = true;
     };
-  }, [profileCreatedAt, assignedExerciseCount, reloadToken]);
+  }, [profileCreatedAt, assignedExerciseCount, assignedKey, assignedExercises, reloadToken]);
 
   return {
     status,
     settings: settings ?? DEFAULT_SETTINGS,
     showRecalibration,
+    needsCalibration,
     lastSessionSummary,
     isFirstRun,
     errorTitle,

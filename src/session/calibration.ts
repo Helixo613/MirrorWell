@@ -127,6 +127,16 @@ async function makeBaseline(noiseFloorSymmetry: number): Promise<CalibrationBase
   }
   const profile = await StorageService.getProfile();
   if (!profile) throw new MirrorWellError('VALIDATION_FAILED', 'profile required for calibration');
+  // Every assigned exercise must have been gentle-max captured before the baseline can save.
+  for (const exerciseId of profile.assignedExercises) {
+    const value = comfortableMax[exerciseId];
+    if (value === undefined || !Number.isFinite(value) || value <= 0) {
+      throw new MirrorWellError(
+        'NO_BASELINE',
+        `comfortableMax missing for assigned exercise ${exerciseId}`,
+      );
+    }
+  }
   return {
     baselineId: crypto.randomUUID(),
     profileId: profile.profileId,
