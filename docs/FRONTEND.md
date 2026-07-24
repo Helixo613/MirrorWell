@@ -86,10 +86,11 @@ One dynamic, responsive app — no separate mobile build. Desktop-first, calm-cl
 
 ### 2.8 `ExportScreen`
 
-- **Purpose:** generate the clinician summary.
-- **Layout:** date-range picker (defaults: last 8 weeks); plain-language "what's in this file" list; Generate button; after generation, two download cards (JSON / printable HTML) + advisory "share this only with your care team."
+- **Purpose:** generate the clinician summary, and download a weekly `progressCard` PNG.
+- **Layout:** date-range picker (defaults: last 8 weeks); plain-language "what's in this file" list; Generate button; after generation, download cards (JSON / printable HTML / weekly progress card) + advisory "share this only with your care team." The weekly card is also offered on the setup surface so it does not require generating the clinician summary first.
+- **Weekly `progressCard`:** offscreen canvas 1080×1350, calm-clinical styling; contents = Monday-start week date range, session count, gentleness stat (reuse `gentlenessStat`), garden plant stage for the week (`min(3, sessions)`), **no raw metrics tables**. Local download only via the same `downloadBlob` helper as JSON/HTML (`canvas.toBlob` → object URL → anchor) — no Web Share API, no clipboard, no network. Same data class as the JSON export: derived aggregates the user already sees.
 - **States:** *loading* during generation; *error* `DB_UNAVAILABLE`/`VALIDATION_FAILED`; *empty* — range with no sessions → "nothing to export for these dates"; *success* downloads.
-- **Calls:** `ExportService.generateSummary`.
+- **Calls:** `ExportService.generateSummary`; `generateWeeklyProgressCard` (`src/data/progressCard.ts`).
 
 ### 2.9 `SettingsScreen`
 

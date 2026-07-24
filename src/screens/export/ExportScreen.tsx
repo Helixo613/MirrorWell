@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { DownloadCard } from '@/components/export/DownloadCard';
 import { ExportGeneratingPlaceholder } from '@/components/export/ExportGeneratingPlaceholder';
 import { ExportSetupPanel } from '@/components/export/ExportSetupPanel';
 import { ExportSuccessSection } from '@/components/export/ExportSuccessSection';
@@ -16,14 +17,16 @@ import { EXPORT_HEADING_ID } from '@/types/export';
 const STAGGER_MS = 60;
 
 /**
- * ExportScreen (FRONTEND §2.8): generate a clinician summary from ExportService.generateSummary.
- * Download only — no Web Share API, no clipboard. Carries the mandatory non-diagnostic notice.
+ * ExportScreen (FRONTEND §2.8): generate a clinician summary from ExportService.generateSummary,
+ * plus weekly progressCard PNG. Download only — no Web Share API, no clipboard.
  */
 export function ExportScreen() {
   const { settings } = useAppState();
   const exportScreen = useExportScreen();
   const copy = strings.export;
+  const card = copy.card;
   const isGenerating = exportScreen.status === 'generating';
+  const cardBusy = exportScreen.weeklyCardStatus === 'generating';
 
   return (
     <ScreenShell
@@ -64,6 +67,8 @@ export function ExportScreen() {
             preview={exportScreen.preview}
             onDownloadJson={exportScreen.downloadJson}
             onDownloadHtml={exportScreen.downloadHtml}
+            onDownloadWeeklyCard={() => void exportScreen.downloadWeeklyCard()}
+            weeklyCardBusy={cardBusy}
           />
         </StaggerFadeIn>
       ) : (
@@ -89,6 +94,18 @@ export function ExportScreen() {
           </Button>
 
           {isGenerating ? <ExportGeneratingPlaceholder /> : null}
+
+          {/* Weekly progressCard — available without generating the clinician summary. */}
+          <StaggerFadeIn animationKey="export-weekly-card" delayMs={STAGGER_MS * 3}>
+            <DownloadCard
+              title={card.title}
+              description={card.description}
+              actionLabel={cardBusy ? card.generating : card.download}
+              actionAriaLabel={card.downloadAriaLabel}
+              onDownload={() => void exportScreen.downloadWeeklyCard()}
+              disabled={cardBusy || isGenerating}
+            />
+          </StaggerFadeIn>
 
           {exportScreen.status === 'empty' ? (
             <SoftPanel aria-labelledby="export-empty-heading">
