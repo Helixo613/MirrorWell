@@ -216,70 +216,78 @@ export function OnboardingScreen() {
   ]);
 
   return (
-    <ScreenShell textScale={settings.textScale}>
-      <OnboardingHeader
-        showBack={canGoBack}
-        backLabel={strings.onboarding.actions.back}
-        backAriaLabel={strings.onboarding.actions.backAriaLabel}
-        onBack={goBack}
-        showDemo={demoEnabled}
-        demoLabel={strings.onboarding.actions.tryDemo}
-        onDemo={handleDemo}
-      />
-
-      <p className="sr-only" aria-live="polite" aria-atomic="true">
-        {stepAnnouncement}
-      </p>
-
-      <StepIndicator
-        totalSteps={ONBOARDING_STEP_COUNT}
-        currentStep={step}
-        getLabel={strings.onboarding.stepIndicator}
-      />
-
-      {blockingError ? (
-        <BlockingNotice
-          title={blockingError.title}
-          body={blockingError.body}
+    <ScreenShell
+      textScale={settings.textScale}
+      className="lg:max-w-none lg:items-center lg:justify-center lg:bg-secondary/35 lg:px-md lg:py-lg"
+    >
+      {/* Phone: full-bleed column. Desktop: soft stage + restrained card (Kairos-style
+          reflow of composition, MirrorWell calm language — no flashy chrome). */}
+      <div className="flex w-full min-h-0 flex-1 flex-col lg:max-w-shell-onboarding lg:min-h-[min(40rem,calc(100dvh-4rem))] lg:rounded-2xl lg:border lg:border-border/70 lg:bg-card lg:px-md lg:py-md lg:shadow-sm">
+        <OnboardingHeader
+          showBack={canGoBack}
+          backLabel={strings.onboarding.actions.back}
+          backAriaLabel={strings.onboarding.actions.backAriaLabel}
+          onBack={goBack}
           showDemo={demoEnabled}
           demoLabel={strings.onboarding.actions.tryDemo}
-          onTryDemo={handleDemo}
-          className="mb-6"
+          onDemo={handleDemo}
         />
-      ) : null}
 
-      <FadeIn animationKey={step} className="flex flex-1 flex-col pb-4">
-        <OnboardingStepContent
-          step={step}
-          attestations={attestations}
-          onAttestationToggle={toggleAttestation}
-          selectedExercises={selectedExercises}
-          onExerciseToggle={toggleExercise}
-          nickname={nickname}
-          onNicknameChange={setNickname}
-          motivation={motivation}
-          onMotivationChange={setMotivation}
-          disabled={isSubmitting}
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {stepAnnouncement}
+        </p>
+
+        <StepIndicator
+          totalSteps={ONBOARDING_STEP_COUNT}
+          currentStep={step}
+          getLabel={strings.onboarding.stepIndicator}
         />
-      </FadeIn>
 
-      <OnboardingFooter
-        helperText={primaryHelperText}
-        helperId={PRIMARY_HELPER_ID}
-      >
-        <Button
-          type="button"
-          size="lg"
-          className="w-full"
-          disabled={primaryDisabled}
-          aria-describedby={
-            primaryHelperText ? PRIMARY_HELPER_ID : undefined
-          }
-          onClick={() => void handlePrimary()}
+        {blockingError ? (
+          <BlockingNotice
+            title={blockingError.title}
+            body={blockingError.body}
+            showDemo={demoEnabled}
+            demoLabel={strings.onboarding.actions.tryDemo}
+            onTryDemo={handleDemo}
+            className="mb-6"
+          />
+        ) : null}
+
+        <FadeIn animationKey={step} className="flex flex-1 flex-col pb-4">
+          <OnboardingStepContent
+            step={step}
+            attestations={attestations}
+            onAttestationToggle={toggleAttestation}
+            selectedExercises={selectedExercises}
+            onExerciseToggle={toggleExercise}
+            nickname={nickname}
+            onNicknameChange={setNickname}
+            motivation={motivation}
+            onMotivationChange={setMotivation}
+            disabled={isSubmitting}
+          />
+        </FadeIn>
+
+        <OnboardingFooter
+          helperText={primaryHelperText}
+          helperId={PRIMARY_HELPER_ID}
+          className="lg:-mx-0 lg:bg-card/95"
         >
-          {isSubmitting ? strings.onboarding.actions.saving : primaryLabel}
-        </Button>
-      </OnboardingFooter>
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            disabled={primaryDisabled}
+            aria-describedby={
+              primaryHelperText ? PRIMARY_HELPER_ID : undefined
+            }
+            onClick={() => void handlePrimary()}
+          >
+            {isSubmitting ? strings.onboarding.actions.saving : primaryLabel}
+          </Button>
+        </OnboardingFooter>
+      </div>
     </ScreenShell>
   );
 }
