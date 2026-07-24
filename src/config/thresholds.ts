@@ -68,6 +68,11 @@ export const thresholds = Object.freeze({
     restExtendSeconds: 30,
   }),
 
+  // VoiceCoach pacing. Owning section: docs/FRONTEND.md §2.4.
+  feedback: Object.freeze({
+    voiceMinGapMs: 2500,
+  }),
+
   // Optional local-only profile text. Owning section: docs/DATABASE.md §3.
   profile: Object.freeze({
     nicknameMaxLength: 30,

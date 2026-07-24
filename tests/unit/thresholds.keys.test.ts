@@ -7,7 +7,7 @@ describe('thresholds', () => {
   it('exports the full key list from API.md §15', () => {
     expect(Object.keys(thresholds).sort()).toEqual(
       [
-        'blendshapes', 'calibration', 'landmarker', 'liveDemo', 'metrics',
+        'blendshapes', 'calibration', 'feedback', 'landmarker', 'liveDemo', 'metrics',
         'profile', 'qualityGates', 'reps', 'session', 'v1Protocol',
         // UI presentation tunables (frontend salvage, Gate 0)
         'home', 'summary', 'trends', 'export', 'settings',
@@ -61,6 +61,11 @@ describe('thresholds', () => {
 
   it('session exposes the quality-problem stop-offer and metric-throttle tunables', () => {
     expect(Object.keys(thresholds.session).sort()).toEqual(['metricEventMinIntervalMs', 'qualityProblemOfferStopMs', 'restExtendSeconds'].sort());
+  });
+
+  it('feedback exposes the VoiceCoach minimum gap', () => {
+    expect(Object.keys(thresholds.feedback)).toEqual(['voiceMinGapMs']);
+    expect(thresholds.feedback.voiceMinGapMs).toBe(2500);
   });
 
   it('profile exposes local-only text limits', () => {

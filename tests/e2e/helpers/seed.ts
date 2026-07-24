@@ -118,6 +118,7 @@ function buildPayload(spec: SeedSpec): SeedPayload {
     textScale: 1.0,
     hapticsEnabled: true,
     audioCuesEnabled: true,
+    voiceCoachEnabled: false,
     reducedFacePreview: false,
     trendGranularity: spec.trendGranularity ?? 'monthly',
     showAffectedSideMarker: true,

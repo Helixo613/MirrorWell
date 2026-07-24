@@ -12,6 +12,7 @@ import { LandmarkEngine } from '@/sensing/landmarks';
 import type { QualityState } from '@/sensing/quality';
 import { SessionController } from '@/session/controller';
 import { FeedbackRenderer } from '@/session/renderer';
+import { VoiceCoach } from '@/session/voice';
 import {
   DEMO_EXERCISE_ID,
   runDemoQuickSetup,
@@ -136,6 +137,7 @@ export function useSessionScreen(): UseSessionScreenResult {
   const repTotalRef = useRef(0);
   const isDemoRef = useRef(isDemo);
   const restDeadlineRef = useRef(0);
+  const coachPhaseRef = useRef<CoachPhase | null>(null);
   const teardownTimerRef = useRef<number | null>(null);
   const resumingRef = useRef(false);
   phaseRef.current = phase;
@@ -173,6 +175,11 @@ export function useSessionScreen(): UseSessionScreenResult {
     FeedbackRenderer.applySettings(settings, profile?.affectedSide ?? 'unknown');
     FeedbackRenderer.setWatermark(isDemo);
   }, [settings, profile?.affectedSide, isDemo]);
+
+  useEffect(() => {
+    VoiceCoach.setEnabled(settings.voiceCoachEnabled);
+    return () => VoiceCoach.setEnabled(false);
+  }, [settings.voiceCoachEnabled]);
 
   // Warm-up, then start (real) or hand off to the quick-setup overlay (demo). StrictMode-safe via
   // mountedRef + startedRef (mirrors CalibrationScreen).
@@ -244,7 +251,12 @@ export function useSessionScreen(): UseSessionScreenResult {
         FeedbackRenderer.render(sample, qualityRef.current);
         // metricUpdate is already throttled (~15 Hz) and only fires during REPS; setState with
         // an unchanged value is a no-op re-render-wise, so no extra guard is needed.
-        setCoachPhase(coachPhaseFor(sample.effortIndex));
+        const nextCoachPhase = coachPhaseFor(sample.effortIndex);
+        setCoachPhase(nextCoachPhase);
+        if (nextCoachPhase !== coachPhaseRef.current) {
+          coachPhaseRef.current = nextCoachPhase;
+          VoiceCoach.speak(strings.session.voice[nextCoachPhase]);
+        }
       }),
       SessionController.on('qualityUpdate', ({ state }) => {
         qualityRef.current = state;
@@ -258,6 +270,7 @@ export function useSessionScreen(): UseSessionScreenResult {
         setRepDone(done);
         FeedbackRenderer.setRepCount(done, repTotalRef.current);
         setLiveAnnouncement(strings.session.a11y.repCompleted(done, repTotalRef.current));
+        VoiceCoach.speak(strings.session.voice.rep(done));
       }),
       SessionController.on('easeOff', ({ active }) => {
         // Ease-off's persistent aria-live text is carried by the SessionStatusStrip (safety
