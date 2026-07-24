@@ -24,7 +24,7 @@ describe('App DebugHud routing', () => {
     expect(children).toHaveLength(2);
     expect(isValidElement(children[0])).toBe(true);
 
-    // The overlay must be DebugOverlay — NOT DebugHud. DebugHud owns its own CaptureService
+    // The overlay must be DebugOverlay; NOT DebugHud. DebugHud owns its own CaptureService
     // loop, so mounting it over the product app would put two consumers on CaptureService's
     // single <video> (the camera rule, ARCH §11).
     const loader = (children[1] as ReactElement<{ loader: () => Promise<{ default: unknown }> }>)
@@ -48,7 +48,7 @@ describe('App DebugHud routing', () => {
     // imports the capture/inference stack it would contend with the product screens for the one
     // shared <video>, which is exactly the defect that made the old HUD un-overlayable.
     const src = readFileSync(new URL('../../src/dev/DebugOverlay.tsx', import.meta.url), 'utf8');
-    // Assert on the IMPORT graph, not raw text — the prose above these imports legitimately
+    // Assert on the IMPORT graph, not raw text; the prose above these imports legitimately
     // names CaptureService when explaining why the overlay must not use it.
     const imports = src.split('\n').filter((l) => l.trimStart().startsWith('import'));
 

@@ -1,4 +1,4 @@
-# Task 2 — SettingsService report
+# Task 2: SettingsService report
 
 Status: DONE
 
@@ -22,13 +22,13 @@ The new test file first failed because `src/data/settings.ts` did not exist. Aft
 
 ## Validation
 
-- `npx vitest run tests/unit/settings.test.ts` — 5 passed
-- `node scripts/check-docs.mjs` — OK (13 existing allowed cross-document-reference warnings)
-- `npx vitest run` — 14 files, 145 tests passed
-- `npx tsc --noEmit` — no errors
-- `git diff --check` — passed
+- `npx vitest run tests/unit/settings.test.ts`, 5 passed
+- `node scripts/check-docs.mjs`, OK (13 existing allowed cross-document-reference warnings)
+- `npx vitest run`, 14 files, 145 tests passed
+- `npx tsc --noEmit`; no errors
+- `git diff --check`, passed
 
-DOCS-CHANGE: API.md §3 — StorageService settings accessors (get/save app_settings singleton) for SettingsService (§14)
+DOCS-CHANGE: API.md §3. StorageService settings accessors (get/save app_settings singleton) for SettingsService (§14)
 
 ## Concerns
 
@@ -36,4 +36,4 @@ None. No git commit was made. `task-1-report.md` was already untracked and was l
 
 
 ---
-**CORRECTION (2026-07-20, controller):** every `tsc --noEmit` result recorded in this report is VOID. The root `tsconfig.json` is a solution-style config (`"files": []` + project references), so `npx tsc --noEmit` type-checks an empty file set and always reports success. The real gate is `npm run typecheck` (`tsc -b`). Re-verified after commit f046bee: `tsc -b` clean and `npm run build` green across the whole branch, so this task compiles — but the original claim was not evidence for that.
+**CORRECTION (2026-07-20, controller):** every `tsc --noEmit` result recorded in this report is VOID. The root `tsconfig.json` is a solution-style config (`"files": []` + project references), so `npx tsc --noEmit` type-checks an empty file set and always reports success. The real gate is `npm run typecheck` (`tsc -b`). Re-verified after commit f046bee: `tsc -b` clean and `npm run build` green across the whole branch, so this task compiles; but the original claim was not evidence for that.

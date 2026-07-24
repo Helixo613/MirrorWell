@@ -1,4 +1,4 @@
-// tests/analysis/blendshape-smirk-probe.mjs — RESEARCH PROBE: unilateral sensitivity.
+// tests/analysis/blendshape-smirk-probe.mjs, RESEARCH PROBE: unilateral sensitivity.
 // A deliberate one-sided smirk must yield blendshape-SI well below the ~0.99 symmetric
 // smile reading, else the blendshape model symmetrizes and the modality is disqualified.
 // Usage: node tests/analysis/blendshape-smirk-probe.mjs

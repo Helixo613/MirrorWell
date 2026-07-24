@@ -1,6 +1,6 @@
-# Session handoff — MirrorWell V3 dispatch (2026-07-23)
+# Session handoff: MirrorWell V3 dispatch (2026-07-23)
 
-For a fresh agent (Claude Code / Cursor / ChatGPT / Grok / other). **Do not re-explore the whole repo — read the linked plans and execute your track.**
+For a fresh agent (Claude Code / Cursor / ChatGPT / Grok / other). **Do not re-explore the whole repo; read the linked plans and execute your track.**
 
 ## Current product state (do not redo)
 

@@ -33,13 +33,13 @@ function settings(overrides: Partial<AppSettings>): AppSettings {
   };
 }
 
-describe('demoComfortableMax — the demo baseline invariant', () => {
+describe('demoComfortableMax; the demo baseline invariant', () => {
   it('returns the positive peak activation of the gentle rep', () => {
     expect(demoComfortableMax([0.1, 0.42, 0.3])).toBe(0.42);
   });
 
   it('throws NO_BASELINE when the gentle rep captured no frames (faceless device)', () => {
-    // Math.max(...[]) === -Infinity — a demo that measured nothing must fail loudly, not sail
+    // Math.max(...[]) === -Infinity; a demo that measured nothing must fail loudly, not sail
     // through MetricEngine.setBaseline as comfortableMax <= 0.
     try {
       demoComfortableMax([]);
@@ -66,7 +66,7 @@ describe('demoComfortableMax — the demo baseline invariant', () => {
 
   it('throws NO_BASELINE when the peak is below activationFloor (a held-still face → noise peak)', () => {
     // A noise-level comfortableMax makes effortIndex = activation / comfortableMax read pure
-    // sensor noise as full-effort movement — phantom reps at a timer-like cadence.
+    // sensor noise as full-effort movement, phantom reps at a timer-like cadence.
     expect(() => demoComfortableMax([0.01, 0.02, 0.04])).toThrow(
       expect.objectContaining({ code: 'NO_BASELINE' }),
     );
@@ -80,7 +80,7 @@ describe('demoComfortableMax — the demo baseline invariant', () => {
   });
 });
 
-describe('coachPhaseFor — live coaching phase from the smoothed effortIndex', () => {
+describe('coachPhaseFor, live coaching phase from the smoothed effortIndex', () => {
   it('maps below-zone to raise, in-zone (edges inclusive) to hold, above-zone to easeBack', () => {
     const [low, high] = thresholds.metrics.effortTargetZone;
     expect(coachPhaseFor(0)).toBe('raise');
@@ -93,12 +93,12 @@ describe('coachPhaseFor — live coaching phase from the smoothed effortIndex', 
   });
 });
 
-describe('advanceBar — THE frozen-bar guard (a moving bar on a bad frame is a critical defect)', () => {
+describe('advanceBar; THE frozen-bar guard (a moving bar on a bad frame is a critical defect)', () => {
   it('holds the displayed value EXACTLY on a frozen (non-OK) frame, whatever the target', () => {
     expect(advanceBar(true, 0.7, 0.2, 0.2)).toBe(0.7);
     expect(advanceBar(true, 0, 0.9, 0.2)).toBe(0);
     expect(advanceBar(true, 0.42, 0.42, 0.2)).toBe(0.42);
-    // Repeated frozen frames never drift — the pixel-diff invariant, proven arithmetically.
+    // Repeated frozen frames never drift; the pixel-diff invariant, proven arithmetically.
     let v = 0.55;
     for (let i = 0; i < 100; i += 1) v = advanceBar(true, v, 0.1, 0.2);
     expect(v).toBe(0.55);
@@ -112,7 +112,7 @@ describe('advanceBar — THE frozen-bar guard (a moving bar on a bad frame is a 
   });
 });
 
-describe('advanceArcPhase — the guide arc is held on a frozen frame too', () => {
+describe('advanceArcPhase; the guide arc is held on a frozen frame too', () => {
   it('holds phase on a frozen frame', () => {
     expect(advanceArcPhase(true, 0.5, 0.012)).toBe(0.5);
   });
@@ -155,7 +155,7 @@ describe('cue-channel gating (ease-off is never colour-only, but neither cue is 
   });
 });
 
-describe('resolveSessionStatus — one visible status at a time (quality > ease-off)', () => {
+describe('resolveSessionStatus; one visible status at a time (quality > ease-off)', () => {
   it('shows the quality banner on any non-OK state, even during ease-off', () => {
     expect(resolveSessionStatus('FACE_LOST', true, null)).toEqual({
       message: strings.quality.FACE_LOST,

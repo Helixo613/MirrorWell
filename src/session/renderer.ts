@@ -1,14 +1,14 @@
-// src/session/renderer.ts — FeedbackRenderer (docs/API.md §18). All in-session output.
+// src/session/renderer.ts, FeedbackRenderer (docs/API.md §18). All in-session output.
 //
 // Responsibility split (API §18): the CANVAS layer (redrawn every animation frame) owns the
 // symmetry bar, the guide arc and the focus-side dot; the AUDIO/HAPTIC channels for cues. The
 // DOM layer (quality banners, ease-off chip, rep counter, rest timer, watermark) is React and
-// lives in SessionScreen — this module never composes user-facing text.
+// lives in SessionScreen; this module never composes user-facing text.
 //
 // THE load-bearing rule (API §18 / FRONTEND §5 / TESTS.md §3.3): during ANY non-`QUALITY_OK`
 // state the symmetry bar is frozen and visibly labeled. A bar that moves on a bad frame is a
 // critical defect. Here that is guaranteed structurally: the draw loop redraws every frame, but
-// on a non-OK state it advances neither the bar value nor the arc phase — so successive frames
+// on a non-OK state it advances neither the bar value nor the arc phase, so successive frames
 // are pixel-identical (a pure function of frozen inputs), while still being drawn (immune to a
 // late canvas-resize blanking the last skipped frame).
 import type { ExerciseId, AppSettings, UserProfile } from '@/data/schema';
@@ -24,20 +24,20 @@ import {
 } from '@/screens/session/sessionHelpers';
 
 // ponytail: canvas geometry, cue frequencies and vibration durations are PRESENTATION / cue-design
-// constants (like the pixel sizes throughout src/components/**), not metric or session tunables —
+// constants (like the pixel sizes throughout src/components/**), not metric or session tunables
 // they do not belong in thresholds.ts (API §15) and the canvas is aria-hidden/decorative (every
 // value a user reads off it also exists as DOM live-text). Tune on real hardware.
 const BAR_MAX_HALF_FRAC = 0.4; // half-width of a fully-symmetric bar, as a fraction of canvas width
 const BAR_HEIGHT_PX = 22;
 const BAR_EASE = 0.2; // per-frame approach of the displayed bar toward its target (OK frames only)
 // Effort meter (API §18): vertical gauge at the left edge. Reps are DETECTED on effortIndex,
-// so without this gauge the one value that decides "did that count?" was invisible — users
+// so without this gauge the one value that decides "did that count?" was invisible, users
 // steered by the symmetry bar, which can move on movements that never cross repStartThreshold.
 const METER_X_FRAC = 0.05; // meter centreline, as a fraction of canvas width (clear of the bar track at 0.1)
 const METER_WIDTH_PX = 24;
 const METER_TOP_FRAC = 0.18;
 const METER_BOTTOM_FRAC = 0.82;
-const ZONE_COLOR = 'rgba(22, 163, 74, 0.5)'; // effortTargetZone band — visible on both video and scrim
+const ZONE_COLOR = 'rgba(22, 163, 74, 0.5)'; // effortTargetZone band, visible on both video and scrim
 const ARC_SPEED = 0.012; // guide-arc sweep per frame (calm pace)
 const ARC_SPEED_EASE = 0.005; // slower sweep while easing off (FRONTEND §5: "arc slows")
 const FOCUS_DOT_RADIUS_PX = 5;
@@ -64,7 +64,7 @@ const EASE_PULSE_GAP_MS = 60;
 let canvasEl: HTMLCanvasElement | null = null;
 // videoEl is retained per the API §18 `mount(canvas, video)` contract; the live preview is a
 // separate <video> sharing the same MediaStream (SessionScreen), so the canvas overlays it
-// rather than re-drawing frames — nothing is painted from videoEl.
+// rather than re-drawing frames, nothing is painted from videoEl.
 let videoEl: HTMLVideoElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
 let rafId: number | null = null;
@@ -163,9 +163,9 @@ function draw(frozen: boolean): void {
     g.fillRect(cx - track / 2, barY + BAR_HEIGHT_PX, track * progress, 3);
   }
 
-  // Effort meter (left) — the gauge reps are actually detected on. Fill rises with smoothed
+  // Effort meter (left); the gauge reps are actually detected on. Fill rises with smoothed
   // effortIndex; the translucent green band marks effortTargetZone ("raise into the band, hold,
-  // then relax back down — that's one rep"). Same freeze discipline as the bar: on a non-OK
+  // then relax back down; that's one rep"). Same freeze discipline as the bar: on a non-OK
   // frame the fill is held and dimmed, never advanced.
   {
     const meterX = cssW * METER_X_FRAC;
@@ -182,7 +182,7 @@ function draw(frozen: boolean): void {
     g.lineTo(meterX, meterBottom);
     g.stroke();
 
-    // Target-zone band (always visible, even frozen — it is a fixed landmark, not live data).
+    // Target-zone band (always visible, even frozen; it is a fixed landmark, not live data).
     g.fillStyle = ZONE_COLOR;
     g.fillRect(
       meterX - METER_WIDTH_PX,
@@ -197,7 +197,7 @@ function draw(frozen: boolean): void {
     g.fillRect(meterX - METER_WIDTH_PX / 2, meterBottom - fillH, METER_WIDTH_PX, fillH);
   }
 
-  // Guide arc (top) — only once an exercise sets the pacing. Frozen → held at a static
+  // Guide arc (top), only once an exercise sets the pacing. Frozen → held at a static
   // mid-sweep; motion is paused, not the drawing.
   if (exerciseId !== null) {
     const arcY = cssH * 0.28;
@@ -301,7 +301,7 @@ function mount(canvas: HTMLCanvasElement, video: HTMLVideoElement): void {
   // These are module globals and no event ever clears them: SessionController.start() resets its
   // easeOffWasActive flag WITHOUT emitting, so no easeOff{active:false} reaches the renderer. Left
   // unreset, session 2 opened drawing the bar and arc in amber EASE_COLOR at ARC_SPEED_EASE while
-  // the DOM chip (fresh React state) said nothing — canvas and DOM contradicting each other on a
+  // the DOM chip (fresh React state) said nothing, canvas and DOM contradicting each other on a
   // safety-relevant cue. mount() is the session boundary, so it is where they reset.
   easeOff = false;
   repDone = 0;

@@ -1,4 +1,4 @@
-# Stream A — outgoing requests
+# Stream A: outgoing requests
 
 Stream A (`src/session/**`, `src/config/exercises.ts`, `src/dev/**`, API §10/§11/§16,
 ARCHITECTURE §12/§13, `FRONTEND.md`, `TESTS.md`, `SAFETY_AND_COMPLIANCE.md`) files requests here for
@@ -8,15 +8,15 @@ stream's file. Each entry states the target owner, the exact change, and why it 
 
 ---
 
-## A-REQ-1 → Stream C (`src/metrics/metrics.ts`) — annotate the EX_PUCKER guard as an intentional invariant
+## A-REQ-1 → Stream C (`src/metrics/metrics.ts`): annotate the EX_PUCKER guard as an intentional invariant
 
 **Origin:** plan task A1 ("File a request to Stream C to … annotate the `metrics.ts` guard as an
 intentional invariant").
 
 `MetricEngine.compute()` throws `VALIDATION_FAILED` when the requested exercise has no
 `blendshapePair` (`src/metrics/metrics.ts:129-131`). Stream A has **not** touched this code and asks
-that it stay exactly as it is. The v1 decision is that `EX_PUCKER` is *not assignable* — enforced as a
-derived filter in `src/config/exercises.ts` — but `EX_PUCKER` deliberately remains a valid
+that it stay exactly as it is. The v1 decision is that `EX_PUCKER` is *not assignable*, enforced as a
+derived filter in `src/config/exercises.ts`, but `EX_PUCKER` deliberately remains a valid
 `ExerciseId`. The guard is therefore the last line of defence for a caller that bypasses the filter,
 and CLAUDE.md's "loud stop, never a silent fallback" applies.
 
@@ -24,22 +24,22 @@ and CLAUDE.md's "loud stop, never a silent fallback" applies.
 code, and that removing it (or replacing it with a fallback) is a defect. No behaviour change.
 `tests/unit/metrics.test.ts:135` already covers it.
 
-## A-REQ-2 → Stream C (`docs/MODEL_AND_DATA.md` §7) — record the EX_PUCKER decision and its reversal path
+## A-REQ-2 → Stream C (`docs/MODEL_AND_DATA.md` §7): record the EX_PUCKER decision and its reversal path
 
 **Origin:** plan task A1 ("update the existing EX_PUCKER note in `MODEL_AND_DATA.md` §7 with the
-decision + reversal path"). §7 already carries an EX_PUCKER open-decision note — please **extend** it
+decision + reversal path"). §7 already carries an EX_PUCKER open-decision note, please **extend** it
 rather than adding a second one.
 
 **Decision to record:** `EX_PUCKER` is not assignable in v1 because no per-side blendshape pair for
 lip pucker has been validated. It is **not deleted**: the `exercises['EX_PUCKER']` config entry and
 the `ExerciseId` / `EXERCISE_IDS` unions all remain.
 
-**Reversal path to record:** assignability is a *derived filter* — the set of exercises carrying a
+**Reversal path to record:** assignability is a *derived filter*; the set of exercises carrying a
 `blendshapePair` in `src/config/exercises.ts`. Adding a validated `blendshapePair` to the `EX_PUCKER`
 entry re-enables it everywhere at once (profile assignment, calibration, `SessionController.start()`,
 the dev seed) with no other code change.
 
-## A-REQ-3 → owner of `src/App.tsx` — mount the A3 live-demo view, and correct a plan claim
+## A-REQ-3 → owner of `src/App.tsx`: mount the A3 live-demo view, and correct a plan claim
 
 **Origin:** plan task A3 and Verification step 4. `src/App.tsx` is in **no** stream's exclusive write
 scope, so Stream A is not editing it.
@@ -48,8 +48,8 @@ scope, so Stream A is not editing it.
 out of prod (`App.tsx:29` gates it on `import.meta.env.DEV && VITE_ENABLE_CAPTURE_HARNESS`)". In the
 code on `main`, `App.tsx:29` gates **`CaptureHarness`**; `LiveV1Harness` is mounted at `App.tsx:20-26`
 under a bare `import.meta.env.DEV` with no env flag. Prod safety is unaffected (the `DEV` branch is
-eliminated and the `grep dist/` check passes either way), but Verification step 4 as written —
-`npm run dev` with `VITE_ENABLE_CAPTURE_HARNESS=true` — would mount the fixture **recorder** and
+eliminated and the `grep dist/` check passes either way), but Verification step 4 as written
+`npm run dev` with `VITE_ENABLE_CAPTURE_HARNESS=true`, would mount the fixture **recorder** and
 `CaptureHarness` together, and they collide on `CaptureService`'s single `<video>` element.
 
 **Requested change:** mount Stream A's new `src/dev/LiveDemoView.tsx` alongside the existing dev
@@ -71,14 +71,14 @@ minimum skip it when `VITE_ENABLE_LIVE_DEMO === 'true'`) so the live demo is usa
 documented `VITE_ENABLE_LIVE_DEMO` and the previously-undocumented `VITE_ENABLE_CAPTURE_HARNESS` in
 the `ARCHITECTURE.md` §12 env-flag list.
 
-## A-REQ-4 → owner of `docs/API.md` §15 — document the new `thresholds.liveDemo` group
+## A-REQ-4 → owner of `docs/API.md` §15: document the new `thresholds.liveDemo` group
 
 **Origin:** plan task A3, after owner adjudication of the symmetric/asymmetric boundary.
 
-Per the plan's doc-ownership table, `API.md` §15 (config module shapes — the canonical `thresholds`
+Per the plan's doc-ownership table, `API.md` §15 (config module shapes; the canonical `thresholds`
 key list) is **Gate 0's** ("thresholds reconciled once"), not Stream A's, so Stream A has not edited
 it. Note that `node scripts/check-docs.mjs` does **not** validate thresholds↔API §15 drift (plan P2),
-so nothing automated will catch this omission — it needs a human.
+so nothing automated will catch this omission; it needs a human.
 
 **What landed in code:** `src/config/thresholds.ts` gains a new top-level group
 
@@ -89,7 +89,7 @@ liveDemo: Object.freeze({
 ```
 
 `tests/unit/thresholds.keys.test.ts` has been updated accordingly (top-level exact-match list plus a
-per-group exact-match test) — that file's assertions are exact-match per group, so **this is the
+per-group exact-match test); that file's assertions are exact-match per group, so **this is the
 cross-stream coordination point flagged by plan P1 rule 2**: a new top-level group, announced here.
 
 **Why the tunable exists:** `src/dev/LiveDemoView.tsx` (dev-only, A3) classifies its live readout as

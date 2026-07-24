@@ -1,4 +1,4 @@
-# Track B refined — palsynet exploratory protocol (time-boxed)
+# Track B refined: palsynet exploratory protocol (time-boxed)
 
 **Date:** 2026-07-21  
 **Status:** Active near-term path while formal MEEI (Track A) is deferred for schedule.  
@@ -15,7 +15,7 @@ Naive Track B (“download videos, dump mean SI, shrug”) wastes the only free 
 
 - Answers the **same scientific question** as V2, in weaker form: *does blendshape SI collapse real asymmetry toward 1.0?*
 - Uses **predeclared** analysis choices **before any app scores** (same discipline as V1/V2; no post-hoc bar shopping).
-- Produces **actionable** product language: *supportive / concerning / inconclusive* for shipping **PROVISIONAL** claims — never a formal PASS.
+- Produces **actionable** product language: *supportive / concerning / inconclusive* for shipping **PROVISIONAL** claims; never a formal PASS.
 
 | Formal V2 (MEEI, frozen) | Refined Track B (palsynet) |
 |---|---|
@@ -34,7 +34,7 @@ MirrorWell’s near-term needs, in priority order:
 1. **Prior-suppression (primary):** Real palsy faces must **not** look like S01 symmetric smile (SI ≈ 0.98–0.99). If median affected SI sits in the “almost symmetric” band, that is a **product-risk signal** (same #1 risk as MODEL_AND_DATA §2).
 2. **Ordering (secondary):** App SI rank order should roughly match a blinded human “how asymmetric?” ranking on the same clips.
 3. **Quality fairness (guard):** Pipeline must not silently reject most palsy faces (`QUALITY_OK` starvation).
-4. **Direction (tertiary, weak):** Where two raters agree on affected side, lower blendshape side should match — **exploratory only**, not B7.
+4. **Direction (tertiary, weak):** Where two raters agree on affected side, lower blendshape side should match; **exploratory only**, not B7.
 
 If (1) fails hard → treat like early fallback pressure (document; do not invent PASS).  
 If (1)+(2)+(3) look good → ship demo/backend still **PROVISIONAL**, with language: *“exploratory real-palsy video set supports prior-sensitivity; formal V2 (MEEI) still owed.”*
@@ -47,7 +47,7 @@ If (1)+(2)+(3) look good → ship demo/backend still **PROVISIONAL**, with langu
 |---|---|
 | Download | `huggingface-cli download jasir/palsynet-data --repo-type dataset --local-dir <scratch>` then copy videos only |
 | Store | `tests/fixtures/v2/palsynet/{affected,unaffected}/*.mp4` (**gitignored**) |
-| License notes | `tests/fixtures/v2/LICENSE_NOTES.md` — CC-BY-4.0, YouTube-sourced faces, eval-only, no redistrib of clips, cite HF card |
+| License notes | `tests/fixtures/v2/LICENSE_NOTES.md`, CC-BY-4.0, YouTube-sourced faces, eval-only, no redistrib of clips, cite HF card |
 | Anchors | Always score **S01** `EX_SMILE` (+ smirk if present) in the same runner batch as reference |
 | Never commit | Any mp4/webm/frame dump under `tests/fixtures/v2/**` |
 
@@ -57,7 +57,7 @@ If (1)+(2)+(3) look good → ship demo/backend still **PROVISIONAL**, with langu
 
 Raters watch clips **without** app scores, manifest grades, or SI UI.
 
-### 4.1 Inclusion screen (per clip) — binary include/exclude
+### 4.1 Inclusion screen (per clip): binary include/exclude
 
 Exclude if **any** hold (record reason):
 
@@ -70,7 +70,7 @@ Exclude if **any** hold (record reason):
 | `E_TOO_SHORT` | Usable continuous face segment &lt; 2 s |
 | `E_NO_MOTION` | Static still / slideshow posing as video |
 
-**Predeclared n floor:** need ≥ **15 included affected** and ≥ **10 included control** after screen, else verdict = **INCONCLUSIVE (under-enrolled)** — stop; do not loosen filters after seeing SI.
+**Predeclared n floor:** need ≥ **15 included affected** and ≥ **10 included control** after screen, else verdict = **INCONCLUSIVE (under-enrolled)**; stop; do not loosen filters after seeing SI.
 
 ### 4.2 Per included clip (human fields)
 
@@ -109,7 +109,7 @@ Store in `tests/fixtures/v2/human_labels_palsynet.json` (committed: IDs + intege
 
 Declared **here, before scoring**. Changing after results is a defect for Track B.
 
-### E1 — Prior-suppression (primary)
+### E1: Prior-suppression (primary)
 
 Let \(S_{\mathrm{aff}}\) = median of per-clip mean smoothed SI over `QUALITY_OK` frames (included affected only).  
 Let \(S_{\mathrm{ctrl}}\) = same for included controls.  
@@ -123,7 +123,7 @@ Let \(S_{\mathrm{S01}}\) = S01 symmetric smile mean SI (known ~0.98–0.99).
 
 Rationale: 0.15 gap is a **predeclared** practical separation from “almost 1”; not a clinical cut-score. S01 smirk (~0.43–0.72) is a lower reference only (acted asymmetry), not a pass bar.
 
-### E2 — Ordering (secondary)
+### E2: Ordering (secondary)
 
 Spearman ρ between app mean SI (ascending = more asymmetric) and human `severityRank` on **included affected** with ranks.
 
@@ -133,9 +133,9 @@ Spearman ρ between app mean SI (ascending = more asymmetric) and human `severit
 | **CONCERNING** on E2 | ρ &lt; **0.2** and n ≥ 15 |
 | **INCONCLUSIVE** on E2 | 0.2 ≤ ρ &lt; 0.5, or n &lt; 15 |
 
-Weaker than formal V2’s 0.7 on purpose — noisy YouTube + non-clinician raters.
+Weaker than formal V2’s 0.7 on purpose, noisy YouTube + non-clinician raters.
 
-### E3 — Quality guard
+### E3: Quality guard
 
 | Outcome | Condition |
 |---|---|
@@ -143,9 +143,9 @@ Weaker than formal V2’s 0.7 on purpose — noisy YouTube + non-clinician rater
 | **CONCERNING** on E3 | &lt; **50%** of included affected have OK% ≥ 50% |
 | **INCONCLUSIVE** on E3 | In between |
 
-### E4 — Direction (tertiary, optional)
+### E4: Direction (tertiary, optional)
 
-Only on multi-rater-agreed side ≠ `unclear`. Rate = fraction where mean activation on guessed affected side is the **lower** of L/R (`mouthSmileLeft/Right` when expression is smile-like; else max of available per-side smile blendshapes — **same mapping as production smile SI**, document which pair).
+Only on multi-rater-agreed side ≠ `unclear`. Rate = fraction where mean activation on guessed affected side is the **lower** of L/R (`mouthSmileLeft/Right` when expression is smile-like; else max of available per-side smile blendshapes, **same mapping as production smile SI**, document which pair).
 
 | Outcome | Condition |
 |---|---|
@@ -170,9 +170,9 @@ Only on multi-rater-agreed side ≠ `unclear`. Rate = fraction where mean activa
 Reuse V1/V2 measurement stack unchanged:
 
 - Sample ≥ 100 frames in usable window (or full clip if short); keep `QUALITY_OK` only.
-- SI: min/max per-side blendshapes, activation floor **0.05**, trailing **5-frame median** — copy constants from production / `run-v1.mjs`, cite lines.
+- SI: min/max per-side blendshapes, activation floor **0.05**, trailing **5-frame median**; copy constants from production / `run-v1.mjs`, cite lines.
 - Aggregates only in `tests/analysis/v2_palsynet_exploratory_report.json`.
-- Dry-run **first** on S01: smile ≈ 0.98, smirk SI in known band — if dry-run fails, stop (tooling bug, not dataset).
+- Dry-run **first** on S01: smile ≈ 0.98, smirk SI in known band; if dry-run fails, stop (tooling bug, not dataset).
 
 Manifest fields (palsynet):
 

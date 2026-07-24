@@ -37,7 +37,7 @@ beforeEach(() => {
   forVisionTasks.mockResolvedValue({ fake: 'fileset' });
 });
 
-describe('LandmarkEngine.detect — NOT_INITIALIZED', () => {
+describe('LandmarkEngine.detect; NOT_INITIALIZED', () => {
   it('throws NOT_INITIALIZED when called before init()', async () => {
     const { LandmarkEngine } = await import('../../src/sensing/landmarks.ts');
     expect(() => LandmarkEngine.detect({} as HTMLVideoElement, 0)).toThrow(
@@ -84,7 +84,7 @@ describe('LandmarkEngine.init', () => {
   });
 });
 
-describe('LandmarkEngine.detect — after init', () => {
+describe('LandmarkEngine.detect, after init', () => {
   it('throws INFERENCE_FAILED when detectForVideo throws', async () => {
     const detectForVideo = vi.fn().mockImplementation(() => {
       throw new Error('inference crashed');
@@ -137,7 +137,7 @@ describe('LandmarkEngine.detect — after init', () => {
 
   it('feeds detectForVideo strictly increasing timestamps even when caller timestamps repeat or go backwards', async () => {
     // The MediaPipe graph is poisoned unrecoverably by a non-increasing timestamp
-    // (google-ai-edge/mediapipe#5743) — e.g. a camera restart resetting the clock a caller
+    // (google-ai-edge/mediapipe#5743), e.g. a camera restart resetting the clock a caller
     // derives timestamps from. detect() must clamp forward, and the returned LandmarkFrame
     // must keep the CALLER's timestamp (window/deadline logic runs on the caller clock).
     const detectForVideo = vi.fn().mockReturnValue(makeFakeResult());

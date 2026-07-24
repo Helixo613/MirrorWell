@@ -1,13 +1,13 @@
-// src/data/schema.ts — canonical schema for mirrorwell_db, version 2.
+// src/data/schema.ts, canonical schema for mirrorwell_db, version 2.
 // RULE (non-negotiable): only derived numeric data. Never images, video,
 // raw landmark arrays, audio, emails, or free-text health notes. The narrow
 // nickname/motivation exceptions are optional, user-authored, local-only, and
 // never exported. encouragement_note is a third narrow exception (SAFETY §5/§6):
 // caregiver-authored, about the patient rather than by them, local-only, never
-// exported, never parsed — display-only text that can never gate exercise behavior.
+// exported, never parsed; display-only text that can never gate exercise behavior.
 // RULE: the type exports below (ExerciseId, RegionId, EndReason, row types)
 // are the single canonical definitions. src/config/exercises.ts and all
-// services IMPORT them from here — never redeclare them anywhere.
+// services IMPORT them from here; never redeclare them anywhere.
 import Dexie, { type Table } from 'dexie';
 
 export type ExerciseId = 'EX_BROW_RAISE' | 'EX_EYE_CLOSURE' | 'EX_SMILE' | 'EX_PUCKER';
@@ -30,14 +30,14 @@ export interface CalibrationBaseline {
   profileId: string;              // FK -> user_profile.profileId (enforced by StorageService)
   capturedAt: string;             // UTC ISO 8601
   // Face-local vector medians in IOD units (ARCHITECTURE §7 / §13). Components are signed
-  // projections — legitimately negative; do NOT require > 0.
+  // projections, legitimately negative; do NOT require > 0.
   neutralStats: Record<RegionId, { left: { u: number; v: number }; right: { u: number; v: number } }>;
   comfortableMax: Partial<Record<ExerciseId, number>>; // median gentle-max peak max(mL,mR), keys = assignedExercises
   // Median NEUTRAL max(mL,mR) per assigned exercise, captured during the neutral windows.
   // MediaPipe reports nonzero resting activation for some blendshapes (browOuterUp, eyeBlink),
   // so effortIndex rebases: (act − neutralActivation) / (comfortableMax − neutralActivation)
   // (ARCHITECTURE §7). Optional so pre-field rows stay readable; SessionController.start
-  // refuses a baseline without it (RECALIBRATION_REQUIRED) — a session must never silently
+  // refuses a baseline without it (RECALIBRATION_REQUIRED); a session must never silently
   // run the pre-rebase formula.
   neutralActivation?: Partial<Record<ExerciseId, number>>;
   qualityScore: number;           // [0..1] = fraction of QUALITY_OK capture frames; >= 0.7 enforced
@@ -76,10 +76,10 @@ export interface RepMetric {
   easeOffTriggered: 0 | 1;
 }
 
-// The caregiver's single free-text encouragement note (SAFETY §5 narrow carve-out — the sole
+// The caregiver's single free-text encouragement note (SAFETY §5 narrow carve-out; the sole
 // mutating control on CaregiverScreen). Singleton semantics: StorageService.saveEncouragementNote
-// replaces any existing row in one transaction. Never parsed, never referenced by gating logic —
-// display-only text — and never included in ExportService.
+// replaces any existing row in one transaction. Never parsed, never referenced by gating logic
+// display-only text, and never included in ExportService.
 export interface EncouragementNote {
   noteId: string;                 // PK, uuid v4
   text: string;                   // trimmed length 1..200
@@ -126,7 +126,7 @@ export class MirrorWellDB extends Dexie {
       app_settings:         'settingsId',
     });
     // Additive-only migration (DATABASE §7): version 1 is never edited post-release. This adds
-    // one new, empty table — no .upgrade() needed (nothing to backfill), and every table left
+    // one new, empty table; no .upgrade() needed (nothing to backfill), and every table left
     // unlisted here (all six from version(1)) carries forward unchanged per Dexie semantics.
     this.version(2).stores({
       encouragement_note: 'noteId',

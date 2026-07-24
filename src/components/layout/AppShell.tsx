@@ -22,7 +22,7 @@ const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
 
 /**
  * Hub shell: sidebar nav at lg+ (1024px), bottom tab bar below it. Wraps only the
- * hub screens (Home/Trends/Export/Settings/Caregiver, FRONTEND §1 nav map) — Onboarding,
+ * hub screens (Home/Trends/Export/Settings/Caregiver, FRONTEND §1 nav map); Onboarding,
  * Calibration, and the Session/Summary flow are never mounted inside this shell, so
  * the session stage stays chrome-free without any phase-aware toggle here.
  */

@@ -7,7 +7,7 @@ export interface InstructionCardProps {
   subtitle?: string | null;
   meta?: string;
   id?: string;
-  /** `inline` — compact copy under the preview; `card` — bordered panel (default). */
+  /** `inline`, compact copy under the preview; `card`, bordered panel (default). */
   variant?: 'card' | 'inline';
   className?: string;
   children?: ReactNode;

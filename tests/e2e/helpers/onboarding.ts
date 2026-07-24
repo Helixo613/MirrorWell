@@ -4,7 +4,7 @@ import { expect, type Page } from '@playwright/test';
  * Walks the camera-free onboarding stepper to the attested state, landing on
  * /calibration. `StorageService.saveProfile` + `SafetyGate.recordAttestation`
  * run before that navigation (OnboardingScreen), so on any later full reload
- * `hydrateAppState` derives `gate === 'ATTESTED'` from the stored profile — the
+ * `hydrateAppState` derives `gate === 'ATTESTED'` from the stored profile; the
  * only camera-free way an e2e test reaches the ATTESTED-gated /home and /settings.
  *
  * Button copy is asserted verbatim on purpose: SAFETY §8 language is a release
@@ -18,7 +18,7 @@ export async function completeOnboarding(page: Page): Promise<void> {
 }
 
 /**
- * The stepper itself, from step 0 to `/calibration`, with no navigation of its own — for
+ * The stepper itself, from step 0 to `/calibration`, with no navigation of its own; for
  * specs that must arrive at `/onboarding` by some other route (e.g. the DEMO exit, which a
  * `goto` would falsify by reloading the in-memory demo flag away).
  */
@@ -28,7 +28,7 @@ export async function walkOnboardingStepper(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'I understand' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  // Step 3: attestation — the primary action is uncallable until all four boxes
+  // Step 3: attestation; the primary action is uncallable until all four boxes
   // are checked (the real attestation gate).
   await expect(page.getByRole('checkbox').first()).toBeVisible();
   const boxes = page.getByRole('checkbox');
@@ -37,7 +37,7 @@ export async function walkOnboardingStepper(page: Page): Promise<void> {
   }
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  // Step 4: optional "About you" (nickname + why) — skip with Continue.
+  // Step 4: optional "About you" (nickname + why), skip with Continue.
   await expect(page.getByRole('heading', { name: 'A little about you' })).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
 

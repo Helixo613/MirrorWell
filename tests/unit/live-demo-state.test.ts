@@ -1,4 +1,4 @@
-// tests/unit/live-demo-state.test.ts — pure display logic for the dev-only live demo view.
+// tests/unit/live-demo-state.test.ts, pure display logic for the dev-only live demo view.
 import { describe, it, expect } from 'vitest';
 import {
   classifySymmetry,
@@ -91,7 +91,7 @@ describe('decideCaptureWindow', () => {
   });
 
   // The residual hang: samples were collected, then quality degraded at/after the deadline and
-  // stayed bad. The decision may never be keep_waiting — that is what left it stuck in
+  // stayed bad. The decision may never be keep_waiting; that is what left it stuck in
   // "Capturing…" forever. The function is quality-independent by design, so the caller can (and
   // does) run it on non-OK and inference-failed frames alike.
   it('never keeps waiting past the deadline, even though the frame that reached it was bad', () => {

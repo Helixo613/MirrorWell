@@ -159,7 +159,7 @@ async function captureNeutral(): Promise<{ neutralStats: NeutralStats; qualitySc
   noiseFloorDisplacement = standardDeviation(neutralActivations(capture.approved, assigned));
   for (const exerciseId of assigned) {
     if (!assignableExercises.includes(exerciseId)) continue;
-    // Median (not mean) of per-frame resting activation — robust to blink/expression spikes
+    // Median (not mean) of per-frame resting activation, robust to blink/expression spikes
     // inside the neutral windows, mirroring the median discipline of comfortableMax.
     neutralActivation[exerciseId] = median(
       capture.approved.map((frame) => activation(frame, exerciseId)),
@@ -184,8 +184,8 @@ async function captureComfortableMax(exerciseId: ExerciseId): Promise<number> {
   const result = median(peaks);
   // Same invariant the demo quick setup enforces (demoComfortableMax): a user who held still
   // through the "gentle movements" windows yields a noise-level median peak, and effortIndex
-  // then reads ANY facial motion — including cross-activation from an unrelated movement (e.g.
-  // an eye squeeze bleeding into the brow blendshapes) — as a full-effort rep. The peak must
+  // then reads ANY facial motion, including cross-activation from an unrelated movement (e.g.
+  // an eye squeeze bleeding into the brow blendshapes), as a full-effort rep. The peak must
   // clear the exercise's RESTING activation (captured in the neutral windows) by at least
   // activationFloor, the documented "below this is noise" boundary (API §15): an absolute
   // check misses pairs whose resting read is already nonzero (eyeBlink, browOuterUp).
@@ -215,7 +215,7 @@ async function runNoiseFloorSelfTest(): Promise<number> {
     return noiseFloorSymmetry;
   } finally {
     // Tidy-up (M5, Gate 0 T7): don't leave the engines pinned to the throwaway makeBaseline(0)
-    // used only to measure the noise floor. Only existing API — NormalizationLayer has
+    // used only to measure the noise floor. Only existing API, NormalizationLayer has
     // clearBaseline(); MetricEngine does not (adding one would be new API §8 surface for a
     // tidy-up), so its own activeBaseline stays pinned to the throwaway, which is harmless:
     // SessionController.start() re-setBaseline()s both engines before any real use
@@ -223,7 +223,7 @@ async function runNoiseFloorSelfTest(): Promise<number> {
     // reset() still clears MetricEngine's smoothing/ease-off state so a later caller (e.g. a
     // stray compute() before the next setBaseline()) doesn't see leftover self-test samples.
     // In `finally` rather than only after the save: a capture/compute/save failure mid-self-test
-    // would otherwise leave the engines pinned to the throwaway with no baseline saved at all —
+    // would otherwise leave the engines pinned to the throwaway with no baseline saved at all
     // worse than the success-path leak this task was filed for.
     NormalizationLayer.clearBaseline();
     MetricEngine.reset();

@@ -27,7 +27,7 @@
     },
     "rules": [
       "Per-trial evaluation; PASS only if every trial passes every bar",
-      "Missing/invalid cells are the string INVALID — no fallback statistics",
+      "Missing/invalid cells are the string INVALID; no fallback statistics",
       "Yaw validity requires measured mean |yaw| ∈ [7°, 13°] from headPose",
       "Phase valid only if ≥70% frames QUALITY_OK"
     ]

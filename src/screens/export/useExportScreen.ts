@@ -11,7 +11,7 @@ import type {
 } from '@/types/export';
 
 // ExportScreen status: it needs no initial fetch (the setup form shows immediately), so there is
-// no 'loading' state — generation drives 'generating' -> 'success' | 'empty' | 'error'.
+// no 'loading' state, generation drives 'generating' -> 'success' | 'empty' | 'error'.
 export type ExportStatus = 'ready' | 'generating' | 'success' | 'empty' | 'error';
 
 export type WeeklyCardStatus = 'idle' | 'generating' | 'error';
@@ -79,7 +79,7 @@ export function useExportScreen(): UseExportScreenResult {
     setErrorBody(null);
     try {
       const { json, html } = await ExportService.generateSummary(range);
-      // Parse the JSON payload to detect the empty-range case and build the preview — the
+      // Parse the JSON payload to detect the empty-range case and build the preview; the
       // service returns Blobs only, so this is the single source of the on-screen summary.
       const parsed = JSON.parse(await json.text()) as {
         sessions: unknown[];
@@ -115,7 +115,7 @@ export function useExportScreen(): UseExportScreenResult {
     }
   }, [range]);
 
-  // Download only — shared downloadBlob helper (object-URL anchor, no Web Share / clipboard).
+  // Download only, shared downloadBlob helper (object-URL anchor, no Web Share / clipboard).
   const downloadJson = useCallback(() => {
     if (result) {
       downloadBlob(result.json, `${strings.export.filename(range.to)}.json`);

@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import Dexie, { type Table } from 'dexie';
 
 // First migration since the v1.0/v2.0 tags (V3 Task 4: encouragement_note, DATABASE.md §7).
-// version(2).stores() in src/data/schema.ts lists ONLY the new table — this test proves the
+// version(2).stores() in src/data/schema.ts lists ONLY the new table; this test proves the
 // assumption that relies on: Dexie carries every store left unlisted forward unchanged, so an
 // existing user's rows survive the upgrade untouched and gain nothing but the new, empty table.
-// "silently dropping health history is forbidden" (§7) — this is the guard for that.
+// "silently dropping health history is forbidden" (§7); this is the guard for that.
 //
 // version(1) is frozen forever (§7: "never edit version(1) after first release"), so the literal
-// store list below is safe to duplicate here — it will never drift from schema.ts.
+// store list below is safe to duplicate here; it will never drift from schema.ts.
 const DB_NAME = 'mirrorwell_db_migration_v1_to_v2_test';
 
 const V1_STORES = {

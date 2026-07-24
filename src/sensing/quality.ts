@@ -1,8 +1,8 @@
-// src/sensing/quality.ts — emits exactly one QualityResult per frame; the fail-safe core
+// src/sensing/quality.ts, emits exactly one QualityResult per frame; the fail-safe core
 // (docs/BACKEND.md §1.3). Contracts: docs/API.md §6.
 //
 // STRUCTURAL RULE: ApprovedFrame is constructible ONLY inside this module (private brand
-// symbol). Metric code (normalize / geometry) accepts ApprovedFrame only — a raw
+// symbol). Metric code (normalize / geometry) accepts ApprovedFrame only; a raw
 // LandmarkFrame is a compile error. Non-OK results are state-only objects with no `frame`
 // key, so callers cannot reach normalize without a QUALITY_OK branch.
 import type { LandmarkFrame } from './landmarks.ts';
@@ -10,7 +10,7 @@ import { thresholds } from '../config/thresholds.ts';
 
 export type QualityState = 'QUALITY_OK' | 'LOW_LIGHT' | 'FACE_LOST' | 'TOO_FAR' | 'POSE_OUT_OF_RANGE' | 'LOW_CONFIDENCE';
 
-// Brand is module-private — not exported. Outside this file, ApprovedFrame is only obtainable
+// Brand is module-private; not exported. Outside this file, ApprovedFrame is only obtainable
 // via evaluate() returning QUALITY_OK. Runtime Symbol so approve() can set the key; const
 // Symbol() is a unique typeof that makes the brand unforgeable at compile time.
 const approvedBrand = Symbol('ApprovedFrame');
@@ -32,7 +32,7 @@ function approve(lf: LandmarkFrame, videoWidth: number, videoHeight: number): Ap
 
 // Standard MediaPipe canonical face-mesh eye-outer-corner indices (468-point topology shared
 // by FaceMesh and FaceLandmarker). PLACEHOLDER pending docs/IMPLEMENTATION.md Task 6 ("Fixtures
-// + landmark indices") fixture validation — same treatment as src/config/exercises.ts's region
+// + landmark indices") fixture validation, same treatment as src/config/exercises.ts's region
 // indices. Task 5's deliverable is the gate STRUCTURE/ORDER; exact indices are swappable later
 // without changing it.
 // Anatomical = subject's side: 33 = subject's RIGHT eye outer corner, 263 = subject's LEFT
@@ -40,7 +40,7 @@ function approve(lf: LandmarkFrame, videoWidth: number, videoHeight: number): Ap
 const EYE_R_OUTER_CORNER = 33;
 const EYE_L_OUTER_CORNER = 263;
 
-// Landmark bbox expansion fraction (10% of width/height) for face-region luma — BACKEND §1.3.
+// Landmark bbox expansion fraction (10% of width/height) for face-region luma, BACKEND §1.3.
 const FACE_BBOX_MARGIN = 0.1;
 const LUMA_DOWNSAMPLE = 64;
 
@@ -61,7 +61,7 @@ function getLumaContext(): CanvasRenderingContext2D | null {
 
 // Jitter history: last two landmark frames in pixel-comparable normalized form for the
 // second-difference estimator. Assumption (BACKEND §1.3): frame intervals are approximately
-// uniform — second difference is computed per sample without Δt scaling.
+// uniform, second difference is computed per sample without Δt scaling.
 let prevLandmarks: LandmarkFrame['landmarks'] | null = null;
 let prevPrevLandmarks: LandmarkFrame['landmarks'] | null = null;
 let jitterHistory: number[] = [];
@@ -79,7 +79,7 @@ function resetJitterState(): void {
  * Mean luma over the face bounding box only (landmark AABB + 10% margin), sampled from a
  * 64×64 downsample of the full video. Avoids bright backgrounds masking a dark face (and
  * vice versa). Empty mapped region → fail open (255). Face must already be present (gate
- * order: FACE_LOST before LOW_LIGHT) — a face too dark to detect yields FACE_LOST, not
+ * order: FACE_LOST before LOW_LIGHT); a face too dark to detect yields FACE_LOST, not
  * LOW_LIGHT (intended, BACKEND §1.3).
  */
 function faceRegionLuma64(video: HTMLVideoElement, landmarks: LandmarkFrame['landmarks']): number {
@@ -155,7 +155,7 @@ function interOcularDistancePx(landmarks: LandmarkFrame['landmarks'], videoWidth
 // exact handedness/axis-order convention MediaPipe's facialTransformationMatrixes uses does
 // not affect gate correctness, as long as an identity matrix yields all-zero angles (verified
 // in tests/unit/quality.test.ts). True alignment with MediaPipe's real convention is validated
-// empirically at the Task 6 V1 kill-gate (B3: pose invariance against real fixtures) — this is
+// empirically at the Task 6 V1 kill-gate (B3: pose invariance against real fixtures); this is
 // a reasonable, internally-consistent implementation, not yet camera-verified.
 function extractEulerAnglesDeg(headPose: number[]): { yaw: number; pitch: number; roll: number } {
   const r = (row: number, col: number) => headPose[row * 4 + col] ?? 0;
@@ -172,7 +172,7 @@ function extractEulerAnglesDeg(headPose: number[]): { yaw: number; pitch: number
  * Constant-velocity intentional motion → second difference ≈ 0 → passes.
  * Oscillating tracking noise → high second difference → LOW_CONFIDENCE.
  * Needs 3 frames; first two samples return 0. Rolling mean over smoothingWindow for stability.
- * Assumes approximately uniform frame intervals (no Δt scaling) — BACKEND §1.3.
+ * Assumes approximately uniform frame intervals (no Δt scaling), BACKEND §1.3.
  */
 function rollingJitterSecondDiff(
   landmarks: LandmarkFrame['landmarks'],
@@ -205,7 +205,7 @@ function rollingJitterSecondDiff(
 }
 
 function evaluate(video: HTMLVideoElement, lf: LandmarkFrame | null): QualityResult {
-  // Gate order (first failure wins) — docs/BACKEND.md §1.3.
+  // Gate order (first failure wins), docs/BACKEND.md §1.3.
   // FACE_LOST before LOW_LIGHT: a face too dark to detect cannot yield face-region luma →
   // FACE_LOST is honest (message still prompts lighting/position adjustment).
   if (!lf || !lf.facePresent) {

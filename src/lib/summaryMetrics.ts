@@ -2,7 +2,7 @@ import { strings } from '@/config/strings';
 import { thresholds } from '@/config/thresholds';
 import type { SessionRecordFull } from '@/data/storage';
 
-/** Plain-language symmetry label for summary bars — no numeric grades. */
+/** Plain-language symmetry label for summary bars; no numeric grades. */
 export function symmetryPlainLabel(value: number | null): string {
   if (value === null) {
     return strings.summary.symmetry.noMovement;
@@ -31,7 +31,7 @@ export function symmetryBarFill(value: number | null): number {
   return Math.min(1, Math.max(0, value));
 }
 
-/** Reps completed without an ease-off cue — positive control-practice framing. */
+/** Reps completed without an ease-off cue, positive control-practice framing. */
 export function gentlenessStat(results: SessionRecordFull['results']): {
   gentle: number;
   total: number;

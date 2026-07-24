@@ -105,7 +105,7 @@ describe('openFrameSource camera ownership', () => {
 
     expect(capture.subscribers.size).toBe(0);
     expect(capture.running).toBe(false);
-    // Finding 1: a rejected start() acquired nothing, so stop() must not run — it could tear
+    // Finding 1: a rejected start() acquired nothing, so stop() must not run; it could tear
     // down a DIFFERENT consumer's legitimately-owned camera.
     expect(capture.stop).not.toHaveBeenCalled();
   });

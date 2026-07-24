@@ -41,7 +41,7 @@ export type SessionSubState = 'DEMO' | 'REPS' | 'REST';
 // Memoizes an in-flight CaptureService.start(), same shape as src/session/frames.ts and
 // CalibrationScreen. capture.ts only flips `running` AFTER getUserMedia resolves, so two
 // overlapping starts each acquire a MediaStream and the second overwrites the first in
-// capture.ts — orphaning the first stream's tracks where no stop() can ever reach them
+// capture.ts, orphaning the first stream's tracks where no stop() can ever reach them
 // (camera light on for the life of the page). The resume path was the one caller in the
 // codebase that reached for CaptureService.start() raw.
 let startInFlight: Promise<void> | null = null;
@@ -68,7 +68,7 @@ export interface UseSessionScreenResult {
   exerciseName: string;
   instruction: string;
   motivation: string | undefined;
-  /** Caregiver encouragement note (SAFETY §5 narrow carve-out), shown on arrival only — display
+  /** Caregiver encouragement note (SAFETY §5 narrow carve-out), shown on arrival only; display
    *  text, never parsed. null once dismissed or when none exists (never fetched in demo). */
   encouragementNote: string | null;
   handleDismissNote: () => void;
@@ -159,7 +159,7 @@ export function useSessionScreen(): UseSessionScreenResult {
       setError(strings.errors.CAMERA_UNAVAILABLE);
     }
     // API §16: NO_BASELINE and RECALIBRATION_REQUIRED both route to CalibrationScreen. The copy
-    // said "calibrate" while the only button went to /home — a dead end for the exact user the
+    // said "calibrate" while the only button went to /home; a dead end for the exact user the
     // message is aimed at.
     setErrorExit(
       code === 'NO_BASELINE' || code === 'RECALIBRATION_REQUIRED' ? '/calibration' : '/',
@@ -205,7 +205,7 @@ export function useSessionScreen(): UseSessionScreenResult {
         if (!mountedRef.current) {
           // Unmounted while start() was still opening the camera. The teardown effect's
           // deferred stop() may already have run (a macrotask) BEFORE start() resolved, when
-          // the stream did not exist yet — so its CaptureService.stop() was a no-op and the
+          // the stream did not exist yet, so its CaptureService.stop() was a no-op and the
           // stream that arrived afterward would leak. Release it here (idempotent with the
           // teardown). The hard camera rule (CLAUDE.md): open only while this screen is mounted.
           void SessionController.stop('user_stopped').catch(() => {});
@@ -216,7 +216,7 @@ export function useSessionScreen(): UseSessionScreenResult {
         // already live behind it. Demo keeps its quick-setup flow, which goes straight to 'active'
         // from handleQuickSetup below.
         setPhase('arrival');
-        // Caregiver encouragement note (SAFETY §5): fetched only for real sessions, never demo —
+        // Caregiver encouragement note (SAFETY §5): fetched only for real sessions, never demo
         // CaregiverScreen (the only writer) is itself unreachable in demo mode. Best-effort: a
         // failed fetch just means no note shows, never a blocking error on the arrival moment.
         StorageService.getEncouragementNote()
@@ -235,7 +235,7 @@ export function useSessionScreen(): UseSessionScreenResult {
     };
   }, [isDemo, sessionExercises, applyStartError]);
 
-  // Share CaptureService's MediaStream into the preview <video> — no detect loop here; the
+  // Share CaptureService's MediaStream into the preview <video>; no detect loop here; the
   // SessionController owns inference during the session (one detect per frame).
   useEffect(() => {
     return CaptureService.onFrame((video) => {
@@ -312,7 +312,7 @@ export function useSessionScreen(): UseSessionScreenResult {
     };
   }, [navigate]);
 
-  // REST countdown — derived from the event stream (there is no getRestEndsAt). Display-only; the
+  // REST countdown, derived from the event stream (there is no getRestEndsAt). Display-only; the
   // controller auto-advances REST on its own frame timestamps.
   useEffect(() => {
     if (subState !== 'REST') {
@@ -334,7 +334,7 @@ export function useSessionScreen(): UseSessionScreenResult {
       // FRONTEND §6: hidden tab → camera off (light off, privacy). This must also fire while a
       // resume is in flight: phase is still 'paused' then, and gating on 'active' alone left the
       // camera live on a hidden tab once getUserMedia resolved. Stopping here is safe even if
-      // the start has not resolved — handleResume re-checks document.hidden after its await and
+      // the start has not resolved, handleResume re-checks document.hidden after its await and
       // stops again, so whichever ordering wins, the camera ends up off.
       if (phaseRef.current === 'active' || resumingRef.current) {
         CaptureService.stop();
@@ -346,7 +346,7 @@ export function useSessionScreen(): UseSessionScreenResult {
   }, []);
 
   // Camera + session teardown on REAL unmount. Deferred by a macrotask so a StrictMode
-  // fake-unmount (dev only) — immediately followed by a remount that clears the timer — does not
+  // fake-unmount (dev only), immediately followed by a remount that clears the timer, does not
   // tear down a live session. In production (the e2e gate) effects run once, so this fires on the
   // genuine unmount and releases every camera track.
   useEffect(() => {
@@ -372,7 +372,7 @@ export function useSessionScreen(): UseSessionScreenResult {
         });
         if (!mountedRef.current) {
           // runDemoQuickSetup's capture windows release the camera on their own teardown, so a
-          // mid-quick-setup unmount leaves nothing open here — but start() below has not run.
+          // mid-quick-setup unmount leaves nothing open here, but start() below has not run.
           CaptureService.stop();
           return;
         }
@@ -404,7 +404,7 @@ export function useSessionScreen(): UseSessionScreenResult {
     SessionController.advance();
   }, []);
 
-  // The patient's dismiss control (SAFETY §5: "deletable by the user"). Optimistic — the note
+  // The patient's dismiss control (SAFETY §5: "deletable by the user"). Optimistic; the note
   // leaves the screen immediately; a failed delete just means it may reappear next arrival,
   // never a blocking error over the breathing moment.
   const handleDismissNote = useCallback(() => {
@@ -429,7 +429,7 @@ export function useSessionScreen(): UseSessionScreenResult {
 
   // User-initiated stops surface a failure loudly. On success stop() emits sessionEnded and the
   // screen navigates away; on failure (e.g. the session record is rejected at save) a silent
-  // catch left a live-looking screen where every control was a no-op — the controller's
+  // catch left a live-looking screen where every control was a no-op; the controller's
   // idempotent-stop guard swallows all later advance()/stop() calls. The unmount/teardown stops
   // above keep their silent catch: there is no UI left to inform.
   const applyStopError = useCallback(
@@ -468,7 +468,7 @@ export function useSessionScreen(): UseSessionScreenResult {
         await startCamera();
         if (!mountedRef.current) {
           // Unmounted while getUserMedia was pending. The teardown effect's deferred stop()
-          // already ran as a macrotask while `stream` was still null, so it was a no-op — this
+          // already ran as a macrotask while `stream` was still null, so it was a no-op; this
           // is the only place that can release the stream that arrived afterwards. Same window
           // the warm-up and quick-setup paths guard; resume was missed.
           void SessionController.stop('user_stopped').catch(() => {});

@@ -1,11 +1,11 @@
-# D1 focused evaluation — track-b-palsynet-v1 as V2 source substitute?
+# D1 focused evaluation: track-b-palsynet-v1 as V2 source substitute?
 
 **Date:** 2026-07-21  
 **Branch:** `stream-d-external`  
 **Dataset under evaluation:** Hugging Face [`jasir/palsynet-data`](https://huggingface.co/datasets/jasir/palsynet-data) + refined protocol **`track-b-palsynet-v1`**  
 (`docs/superpowers/reports/external-evidence/2026-07-21-track-b-refined.md`)  
-**Frozen bars:** `docs/superpowers/plans/2026-07-20-v2-palsy-dataset-gate.md` Task 2 — **not modified**.  
-**Prior Stream C stance (raw palsynet):** exploratory-only, cannot substitute for V2 PASS — re-tested only for whether **Track B refinement** changes that.
+**Frozen bars:** `docs/superpowers/plans/2026-07-20-v2-palsy-dataset-gate.md` Task 2. **not modified**.  
+**Prior Stream C stance (raw palsynet):** exploratory-only, cannot substitute for V2 PASS; re-tested only for whether **Track B refinement** changes that.
 
 ---
 
@@ -17,14 +17,14 @@
 | HF API tree `data/affected` | **27** files, all **`.mp4`** (`1.mp4`…`27.mp4`) |
 | HF API tree `data/unaffected` | **22** files, all **`.mp4`** (`1.mp4`…`22.mp4`) |
 | HF API dataset object | `license: cc-by-4.0`; tags include `modality:video`, `medical` |
-| Card structure text | *"The data is provided as **videos, one per person**"* — only folder labels are `affected` / `unaffected` |
-| Track B protocol doc | Explicitly: no flaccid/synkinetic in dataset; rater L/R is optional weak probe; **`isGateEvidence: false` always**; weaker E1–E4 bars — **not** formal V2 bars |
+| Card structure text | *"The data is provided as **videos, one per person**"*; only folder labels are `affected` / `unaffected` |
+| Track B protocol doc | Explicitly: no flaccid/synkinetic in dataset; rater L/R is optional weak probe; **`isGateEvidence: false` always**; weaker E1–E4 bars; **not** formal V2 bars |
 
 No linked scientific paper on the HF card (no DOI/citation block beyond the card itself). No clinician-grade metadata files appear in the repo tree (`data/` contains only the two video directories).
 
 ---
 
-## Frozen V2 bars (verbatim reference — not restated as new values)
+## Frozen V2 bars (verbatim reference: not restated as new values)
 
 From v2-gate Task 2 (must remain measurable for a source to **QUALIFY**):
 
@@ -33,20 +33,20 @@ From v2-gate Task 2 (must remain measurable for a source to **QUALIFY**):
 3. **Missing-data:** ≥ **20** scoreable smile clips **spanning both presentations** (flaccid + synkinetic); else `UNDERPOWERED`.  
 4. Secondary prior-suppression + quality OK% reporting.
 
-Task 1 binding rule: `affectedSide` / `sourceGrade` come from **dataset labels only** — never from watching the clip (that contaminates blinded ordering).
+Task 1 binding rule: `affectedSide` / `sourceGrade` come from **dataset labels only**; never from watching the clip (that contaminates blinded ordering).
 
 ---
 
 ## Criteria 1–5
 
-### 1. Modality — video clips vs stills?
+### 1. Modality: video clips vs stills?
 
 | Result | **PASS (supports video SI pipeline)** |
 |---|---|
 | Evidence | Card: *"data is provided as videos, one per person"*; frame script is optional post-process. API: **27 + 22 `.mp4`** under `data/affected` and `data/unaffected`. |
 | Gate impact | Live-pipeline / `detectForVideo`-style ordering is **technically feasible** on modality alone. |
 
-### 2. n and composition — ≥20 clips spanning flaccid **and** synkinetic?
+### 2: n and composition: ≥20 clips spanning flaccid **and** synkinetic?
 
 | Result | **FAIL** |
 |---|---|
@@ -55,9 +55,9 @@ Task 1 binding rule: `affectedSide` / `sourceGrade` come from **dataset labels o
 
 ### 3. Labels usable for blinded human ordering vs app SI?
 
-| Result | **PARTIAL — ordering yes; clinical/dataset grades no** |
+| Result | **PARTIAL, ordering yes; clinical/dataset grades no** |
 |---|---|
-| Evidence | **Shipped labels:** binary folder class only (`affected` / `unaffected`). No eFACE, House–Brackmann, Sunnybrook, severity ordinals, or affected side in the HF tree. **Track B** predeclares *project-collected* blinded human severity ranks (and optional side guesses) **before** scoring — which mirrors v2-gate Task 3 *method*, but those ranks are **not dataset-provided** and Track B itself forbids treating rater side as B7 ground truth. |
+| Evidence | **Shipped labels:** binary folder class only (`affected` / `unaffected`). No eFACE, House–Brackmann, Sunnybrook, severity ordinals, or affected side in the HF tree. **Track B** predeclares *project-collected* blinded human severity ranks (and optional side guesses) **before** scoring, which mirrors v2-gate Task 3 *method*, but those ranks are **not dataset-provided** and Track B itself forbids treating rater side as B7 ground truth. |
 | Gate impact | A **pooled** human-vs-app Spearman can be *attempted* on included affected videos. It does **not** enable flaccid/synkinetic subset reporting required by the frozen ordering protocol text. B7 remains blocked (see §5). |
 
 ### 4. Licence / consent scope
@@ -65,16 +65,16 @@ Task 1 binding rule: `affectedSide` / `sourceGrade` come from **dataset labels o
 | Result | **PASS for local evaluation (with flags)** |
 |---|---|
 | Evidence | Card frontmatter and body: **`license: cc-by-4.0`**. CC-BY-4.0 permits use, modification, and redistribution **with attribution**. Evaluation-only local use for SI aggregates is **in scope**. |
-| Flags | (a) Content is **YouTube-curated** faces (card) — original subject consent for *this* research use is not documented on the card; treat as higher privacy sensitivity; **do not commit clips** (project rule / MODEL_AND_DATA §3). (b) Card use text emphasizes **training image classifiers** — not a prohibition on eval, but not a clinical DUA. (c) Redistribution of the *videos* is legally allowed under CC-BY-4.0 but **project policy still forbids** committing patient-like media to git. Aggregate numeric reports only. |
+| Flags | (a) Content is **YouTube-curated** faces (card), original subject consent for *this* research use is not documented on the card; treat as higher privacy sensitivity; **do not commit clips** (project rule / MODEL_AND_DATA §3). (b) Card use text emphasizes **training image classifiers**; not a prohibition on eval, but not a clinical DUA. (c) Redistribution of the *videos* is legally allowed under CC-BY-4.0 but **project policy still forbids** committing patient-like media to git. Aggregate numeric reports only. |
 
-### 5. Feasibility — can frozen bars be **measured** as-is?
+### 5. Feasibility: can frozen bars be **measured** as-is?
 
 | Frozen requirement | Measurable on palsynet / track-b as-is? |
 |---|---|
 | B7 (≥80% with **dataset-labeled** `affectedSide` + smile) | **No.** No dataset `affectedSide`. Task 1 forbids inventing it by watching. Track B rater side is explicitly **not** B7. |
-| Ordering ρ ≥ 0.7, **flaccid + synkinetic subsets + pooled** | **No** for subset protocol. Pooled human rank ρ only if we redefine the protocol — which **would change frozen bars** (forbidden). |
+| Ordering ρ ≥ 0.7, **flaccid + synkinetic subsets + pooled** | **No** for subset protocol. Pooled human rank ρ only if we redefine the protocol, which **would change frozen bars** (forbidden). |
 | ≥20 scoreable smile clips **both presentations** | **No.** Presentations not labeled; smile/expression not labeled (card has no expression metadata). |
-| Secondary SI vs S01 + OK% tables | **Yes** — measurable as exploratory diagnostics. |
+| Secondary SI vs S01 + OK% tables | **Yes**, measurable as exploratory diagnostics. |
 
 | Result | **FAIL overall feasibility for formal V2** |
 |---|---|

@@ -1,4 +1,4 @@
-// src/session/frames.ts — the single frame-source seam shared by src/session/calibration.ts
+// src/session/frames.ts; the single frame-source seam shared by src/session/calibration.ts
 // and src/session/controller.ts. Module-internal plumbing (no canonical identifier): it wraps
 // CaptureService subscription + LandmarkEngine inference and owns the camera *idempotently*.
 //
@@ -31,11 +31,11 @@ let startInFlight: Promise<void> | null = null;
  * `onCameraStopped` is the abort path for a consumer whose window closes only on an ARRIVING
  * frame (both capture windows). Stop the camera mid-window and no frame ever arrives: the
  * consumer's promise hangs, its teardown never runs, and its subscriber is orphaned in
- * CaptureService's module-level Set for the page lifetime — the next session then runs two
+ * CaptureService's module-level Set for the page lifetime; the next session then runs two
  * LandmarkEngine.detect() per frame on the same timestamp, breaking the one-detect-per-frame
  * invariant `detectForVideo` requires. The subscription is released here before the callback
  * runs, so the caller only has to settle. Consumers that legitimately outlive a stop (the
- * SessionScreen pause/resume path re-uses its subscription) simply omit it — which is why
+ * SessionScreen pause/resume path re-uses its subscription) simply omit it, which is why
  * CaptureService.stop() must never clear `subscribers` wholesale.
  */
 export async function openFrameSource(

@@ -1,9 +1,9 @@
-// src/metrics/reps.ts — rep state machine over MetricSample streams (docs/BACKEND.md §1.5).
+// src/metrics/reps.ts, rep state machine over MetricSample streams (docs/BACKEND.md §1.5).
 // Contracts: docs/API.md §9. Canonical math: docs/ARCHITECTURE.md §7. Pure, stateful per
-// exercise instance — SessionController calls reset() on every exercise transition.
+// exercise instance, SessionController calls reset() on every exercise transition.
 //
 // easeOffTriggered note: MetricSample (API.md §8) carries only {symmetryIndex, effortIndex,
-// timestampMs} — no ease-off flag. RepDetector already receives smoothed effortIndex +
+// timestampMs}; no ease-off flag. RepDetector already receives smoothed effortIndex +
 // timestampMs for every frame of the active rep, so it independently applies the same
 // sustained-threshold rule ARCHITECTURE §7 defines for MetricEngine.isEaseOffActive()
 // (effortIndex > easeOffThreshold sustained >= easeOffSustainMs) to flag the rep, rather than
@@ -12,7 +12,7 @@
 // DOCS-CHANGE (Task 8, 2026-07-10): API.md §9 amended to add getState(). ARCHITECTURE §12's
 // canonical DebugHud CSV columns include repState, and feed()/reset() alone give no way to
 // observe whether a rep is currently in progress. 'idle' | 'active' isn't defined anywhere in
-// the docs — it's the simplest honest exposure of the internal `active` flag already tracked
+// the docs; it's the simplest honest exposure of the internal `active` flag already tracked
 // above, named to match the isReady()/isRunning()/isDemoMode() query-method convention.
 //
 // DOCS-CHANGE (Task B4): gap > metrics.gapResetMs while active aborts the rep without emitting

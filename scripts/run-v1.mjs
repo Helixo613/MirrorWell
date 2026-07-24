@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Task B7 — V1 kill-gate runner (docs/MODEL_AND_DATA.md §7 B1a/B1b/B2/B3).
+ * Task B7. V1 kill-gate runner (docs/MODEL_AND_DATA.md §7 B1a/B1b/B2/B3).
  *
  * Default mode (dry-run / discovery):
  *   node scripts/run-v1.mjs --subject S01 --candidate face-local-vector-v1
@@ -16,13 +16,13 @@
  *
  * Optional sampling (--sample): when every required master is present, serves a
  * same-origin local server and samples via Playwright + tests/analysis/v1-runner.html
- * (bundled wasm only — no CDN). Sampling is skipped automatically when the grid
+ * (bundled wasm only; no CDN). Sampling is skipped automatically when the grid
  * is incomplete so dry-run against old fixtures still proves rejection rules.
  *
  * Exit codes:
- *   0 — protocol PASS
- *   2 — protocol FAIL or PROTOCOL_LIMITED (runner executed successfully)
- *   1 — infrastructure error
+ *   0: protocol PASS
+ *   2: protocol FAIL or PROTOCOL_LIMITED (runner executed successfully)
+ *   1: infrastructure error
  */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -169,7 +169,7 @@ function neutralMouthStats(rows) {
   };
 }
 
-// Blendshape candidate (blendshape-si-v1): SI/act from per-side smile scores — absolute,
+// Blendshape candidate (blendshape-si-v1): SI/act from per-side smile scores, absolute,
 // no neutral baseline needed. Mirrors src/metrics/metrics.ts rawSymmetryAndEffort +
 // thresholds.blendshapes.activationFloor.
 const ACTIVATION_FLOOR = 0.05;
@@ -279,7 +279,7 @@ function samplesFromDiscovery(discovery, { sampled = null } = {}) {
       } else {
         // Master exists but not sampled → still cannot evaluate metrics.
         // Mark as present-but-unsampled by leaving frames null with a note
-        // via phase validity missing_fixture semantics: use empty? No —
+        // via phase validity missing_fixture semantics: use empty? No
         // use null so reason is missing_fixture OR we could use a sentinel.
         // Spec: dry-run without sampling → INVALID. null is correct.
         samplesByTrialPhase[t][phase] = null;
@@ -404,7 +404,7 @@ Exit: 0 PASS, 2 FAIL/PROTOCOL_LIMITED, 1 infrastructure error`);
   const wantSample = args.sample && !args.dryRun;
 
   if (wantSample && discovery.allPresent) {
-    console.log('Complete fixture grid found — sampling via Playwright…');
+    console.log('Complete fixture grid found, sampling via Playwright…');
     sampled = await sampleAll(discovery, args.subject, args.candidate);
   } else if (wantSample && !discovery.allPresent) {
     console.warn(

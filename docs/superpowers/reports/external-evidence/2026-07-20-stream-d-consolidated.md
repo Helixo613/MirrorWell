@@ -1,4 +1,4 @@
-# Stream D consolidated — learnings + next steps
+# Stream D consolidated: learnings + next steps
 
 **Date:** 2026-07-20 (Track B refined 2026-07-21; Track A deferred for schedule)  
 **Branch:** `stream-d-external`  
@@ -14,8 +14,8 @@ Stream D is **docs-only** (no source, no `IMPLEMENTATION.md`). Merge **last**, a
 
 From `docs/superpowers/plans/2026-07-20-parallel-completion.md` Stream D:
 
-1. **D1** — Survey external palsy evidence (MEEI, YFP, Toronto NeuroFace, registries).
-2. **D2** — Decide: run v2-gate plan as written, substitute a source, or defer. **Bars frozen.** Publish one-line disposition for Stream C.
+1. **D1**, Survey external palsy evidence (MEEI, YFP, Toronto NeuroFace, registries).
+2. **D2**, Decide: run v2-gate plan as written, substitute a source, or defer. **Bars frozen.** Publish one-line disposition for Stream C.
 
 Scientific question the V2 gate answers: does MediaPipe blendshape SI suppress real palsy asymmetry? (MODEL_AND_DATA §2 #1 risk / §7 V2 row.)
 
@@ -38,7 +38,7 @@ Scientific question the V2 gate answers: does MediaPipe blendshape SI suppress r
 | Source | Access now? | Formal V2? | Role |
 |---|---|---|---|
 | **Repo S01 masters** | Yes (already present) | No | v2-runner dry-run / regression only |
-| **HF `jasir/palsynet-data`** | **Yes — minutes** (CC-BY-4.0) | **No** | Best *immediate* real-palsy video set for **exploratory** work |
+| **HF `jasir/palsynet-data`** | **Yes, minutes** (CC-BY-4.0) | **No** | Best *immediate* real-palsy video set for **exploratory** work |
 | **YFP** (GitHub + request) | 3–7 workdays, edu email | No (no flaccid/synkinetic) | Contingency exploratory |
 | **Toronto NeuroFace** | Request page 404; email authors | No (ALS/stroke) | Optional strengthener |
 | **Kaggle / other HF / Zenodo / figshare** | Mixed | No | No flaccid+synkinetic clinical video gate |
@@ -61,14 +61,14 @@ Parallel completion does **not** require V2 closed for backend + live demo. Hone
 
 - V1 / Task 6 → `PROTOCOL_LIMITED` (Stream C).
 - Backend halves → **PROVISIONAL** until external evidence can support claims.
-- V2 → plan **active**, acquisition **pending**, bars **frozen** — not "dataset already in hand."
+- V2 → plan **active**, acquisition **pending**, bars **frozen**; not "dataset already in hand."
 
 ---
 
-## 3. Disposition (D2) — one line for Stream C
+## 3. Disposition (D2): one line for Stream C
 
 ```
-V2 gate: RUN AS WRITTEN on MEEI (bars frozen); SCBS membership/author access not public-open — correct MODEL_AND_DATA §3/§7; immediate palsynet-data = exploratory only (isGateEvidence:false), not a PASS substitute.
+V2 gate: RUN AS WRITTEN on MEEI (bars frozen); SCBS membership/author access not public-open, correct MODEL_AND_DATA §3/§7; immediate palsynet-data = exploratory only (isGateEvidence:false), not a PASS substitute.
 ```
 
 | Axis | Choice |
@@ -82,7 +82,7 @@ V2 gate: RUN AS WRITTEN on MEEI (bars frozen); SCBS membership/author access not
 
 ## 4. Next steps (ordered)
 
-### Track A — Human / formal gate (owner: human + later tooling owner)
+### Track A: Human / formal gate (owner: human + later tooling owner)
 
 | # | Action | When |
 |---|---|---|
@@ -93,7 +93,7 @@ V2 gate: RUN AS WRITTEN on MEEI (bars frozen); SCBS membership/author access not
 
 **Expected wait:** ~1–4 weeks after A1. Do not block product merge on A.
 
-### Track B — Near-term path (Track A deferred for schedule)
+### Track B: Near-term path (Track A deferred for schedule)
 
 **Refined protocol (authoritative):** `docs/superpowers/reports/external-evidence/2026-07-21-track-b-refined.md`  
 Protocol id: **`track-b-palsynet-v1`**. Always `isGateEvidence: false`. Formal V2 bars untouched.
@@ -109,7 +109,7 @@ Protocol id: **`track-b-palsynet-v1`**. Always `isGateEvidence: false`. Formal V
 
 **Why refined:** raw “mean SI dump” does not answer prior-suppression well. Predeclared QC + human ranks + S01 anchors + E1 gap vs 0.98 make Track B decision-grade *exploratory* evidence.
 
-### Track C — Docs / other streams (not D files)
+### Track C: Docs / other streams (not D files)
 
 | Who | Action |
 |---|---|
@@ -135,7 +135,7 @@ Protocol id: **`track-b-palsynet-v1`**. Always `isGateEvidence: false`. Formal V
 |---|---|
 | `docs/superpowers/plans/2026-07-20-v2-palsy-dataset-gate.md` | Operational plan + disposition; bars; Tasks 0–5 |
 | `docs/superpowers/reports/external-evidence/2026-07-20-d1-dataset-survey.md` | Full per-source research table |
-| `docs/superpowers/reports/external-evidence/2026-07-20-stream-d-consolidated.md` | **This file** — learnings + next steps |
+| `docs/superpowers/reports/external-evidence/2026-07-20-stream-d-consolidated.md` | **This file**, learnings + next steps |
 | `docs/superpowers/coordination/stream-d-requests.md` | One-line for C + §3/§7 correction request |
 
 ---
@@ -157,7 +157,7 @@ Protocol id: **`track-b-palsynet-v1`**. Always `isGateEvidence: false`. Formal V
 
 ## 8. Settled schedule decision (2026-07-21)
 
-**Owner decision:** Use the **available free set now** (HF `jasir/palsynet-data` + refined Track B protocol). Treat **MEEI / formal V2 as future work** — still required for a formal PASS, not on the critical path for current product completion.
+**Owner decision:** Use the **available free set now** (HF `jasir/palsynet-data` + refined Track B protocol). Treat **MEEI / formal V2 as future work**, still required for a formal PASS, not on the critical path for current product completion.
 
 | Horizon | What |
 |---|---|

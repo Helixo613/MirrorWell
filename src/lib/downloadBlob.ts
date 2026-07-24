@@ -1,4 +1,4 @@
-/** Trigger a local file download — no Web Share API, no clipboard. */
+/** Trigger a local file download; no Web Share API, no clipboard. */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

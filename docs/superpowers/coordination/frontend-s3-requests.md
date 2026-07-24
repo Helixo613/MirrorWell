@@ -1,4 +1,4 @@
-# Frontend Stream S3 — outgoing requests
+# Frontend Stream S3: outgoing requests
 
 Stream S3 (`src/screens/{trends,caregiver,export}/**` + their tests;
 `strings.{trends,caregiver,export}`; trends/export presentation utils in `src/lib/`) files requests
@@ -19,14 +19,14 @@ One file per stream = never conflicts.
   consent gate (`CaregiverRoute`). Build the read-only summary; **zero mutating controls**
   (any interactive state-changing element is a review-blocking defect).
 - **`ExportScreen`** is a routed `PlaceholderScreen` stub. Rebuild against main's
-  `ExportService.generateSummary(range)` (`@/data/export`) — the salvage hook assumed
+  `ExportService.generateSummary(range)` (`@/data/export`); the salvage hook assumed
   `defaultRange`/`.blobs`/`.preview` which do not exist. Reference:
   `origin/sai-shanmukh-progress:src/screens/ExportScreen.tsx`, `:src/hooks/useExportScreen.ts`.
   Presentational components under `src/components/export/**` survived intact.
 - Export is **download-only** (no share/clipboard), mandatory non-diagnostic notice, one A4 page.
   Enrich the printable HTML trend rows (latest value per exercise + steady/up/down from
-  `aboveNoiseFloor`) — the known under-informative-export follow-up.
-- Trend periods are **local-time** Monday-start ISO weeks / local calendar months (ARCH §13) —
+  `aboveNoiseFloor`); the known under-informative-export follow-up.
+- Trend periods are **local-time** Monday-start ISO weeks / local calendar months (ARCH §13)
   never label or compute them as UTC. `completionRate` = completed ÷ all sessions in range.
 - Your write globs (committed tree): `src/screens/{trends,caregiver,export}/**`,
   `src/components/{trends,export}/**`, `strings.{trends,caregiver,export}`, trends/export utils in
@@ -34,7 +34,7 @@ One file per stream = never conflicts.
 
 <!-- Append requests below. Template:
 
-## S3-REQ-N → <owner or "integration owner (frozen shell)"> (`<path>`) — <one-line summary>
+## S3-REQ-N → <owner or "integration owner (frozen shell)"> (`<path>`): <one-line summary>
 
 **Origin:** <plan task / screen>.
 
@@ -43,19 +43,19 @@ One file per stream = never conflicts.
 **Why:** <reason, citing the contract/doc §>.
 -->
 
-## S3-REQ-1 → integration owner (frozen shell) (`vitest.config.ts`) — add `@`→src alias
+## S3-REQ-1 → integration owner (frozen shell) (`vitest.config.ts`): add `@`→src alias
 
 **Origin:** Task 1 (TrendsScreen unit tests), Stream S3.
 
 **Requested change:** Added `resolve: { alias: { '@': <src> } }` to `vitest.config.ts`, mirroring
 `vite.config.ts`. Applied in this branch (additive; carried in the S3 Trends commit).
 
-**Why:** Vitest does not merge the app's vite config, so co-located `src/**/*.test.ts` — and any
+**Why:** Vitest does not merge the app's vite config, so co-located `src/**/*.test.ts`; and any
 source module they import that uses the `@` alias (e.g. `src/lib/trendCaption.ts` importing
-`@/config/strings`) — fail with "Cannot find package '@/...'". The vitest `include` already lists
+`@/config/strings`), fail with "Cannot find package '@/...'". The vitest `include` already lists
 `src/**/*.test.ts`; this makes those runnable. No runtime/build effect; all existing suites stay green.
 
-## S3-REQ-2 → integration owner (`src/data/export.ts`, `strings.exportSummary`) — enrich export HTML trend rows
+## S3-REQ-2 → integration owner (`src/data/export.ts`, `strings.exportSummary`): enrich export HTML trend rows
 
 **Origin:** Task 15 (export half) / handoff "under-informative-export follow-up", Stream S3.
 
@@ -76,7 +76,7 @@ not appear in every export. Note: the two orphaned salvage modules `src/lib/expo
 `src/lib/validateExport.ts` remain unused dead code (the canonical renderer is `data/export.ts`);
 left in place, flagged for the final whole-branch review to delete.
 
-## S3-REQ-3 → reconvergence / backend owner (`src/data/export.ts`) — sessions table is uncapped (one-A4-page risk)
+## S3-REQ-3 → reconvergence / backend owner (`src/data/export.ts`): sessions table is uncapped (one-A4-page risk)
 
 **Origin:** Task 15 export review, Stream S3. **Pre-existing, NOT an S3 regression.**
 
@@ -90,7 +90,7 @@ trends table (no new rows), so it does not change page length.
 one page, plus an automated page-count check. Left unfixed in S3: outside this stream's task and
 outside the enrichment.
 
-## S3-REQ-4 → integration owner (`strings.errors`) — no NO_BASELINE copy
+## S3-REQ-4 → integration owner (`strings.errors`): no NO_BASELINE copy
 
 **Origin:** Task 15 (ExportScreen), Stream S3.
 

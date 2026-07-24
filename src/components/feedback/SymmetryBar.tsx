@@ -13,7 +13,7 @@ export interface SymmetryBarProps {
 }
 
 /**
- * Center-anchored horizontal symmetry bar — matches in-session visual language
+ * Center-anchored horizontal symmetry bar, matches in-session visual language
  * without showing numeric grades (FRONTEND §2.5). Carries the plain-language
  * value as its accessible label (FRONTEND §4).
  */

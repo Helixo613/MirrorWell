@@ -52,7 +52,7 @@ export function ExportSuccessSection({
         {strings.export.advisory}
       </p>
 
-      {/* Download cards (JSON / printable HTML / weekly progressCard) — download only. */}
+      {/* Download cards (JSON / printable HTML / weekly progressCard), download only. */}
       <div className="space-y-3">
         <DownloadCard
           title={strings.export.success.jsonTitle}

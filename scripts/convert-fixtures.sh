@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# scripts/convert-fixtures.sh — converts recorded fixture masters (webm/mp4) into .mjpeg
+# scripts/convert-fixtures.sh: converts recorded fixture masters (webm/mp4) into .mjpeg
 # replays for Chromium's fake video capture (docs/IMPLEMENTATION.md Task 6 /
 # docs/MODEL_AND_DATA.md §4). Chromium's --use-file-for-fake-video-capture accepts ONLY
-# .y4m/.mjpeg (AGENTS.md verified fact #3) — y4m is uncompressed and too large to commit,
+# .y4m/.mjpeg (AGENTS.md verified fact #3): y4m is uncompressed and too large to commit,
 # so every master gets an mjpeg replay instead.
 #
 # Usage: scripts/convert-fixtures.sh
@@ -15,7 +15,7 @@ MASTERS_DIR="$ROOT_DIR/tests/fixtures/masters"
 REPLAY_DIR="$ROOT_DIR/tests/fixtures/replay"
 
 if ! command -v ffmpeg >/dev/null 2>&1; then
-  echo "ffmpeg not found on PATH — required to convert fixture masters to mjpeg." >&2
+  echo "ffmpeg not found on PATH, required to convert fixture masters to mjpeg." >&2
   exit 1
 fi
 
@@ -26,7 +26,7 @@ masters=("$MASTERS_DIR"/*.webm "$MASTERS_DIR"/*.mp4)
 shopt -u nullglob
 
 if [ ${#masters[@]} -eq 0 ]; then
-  echo "No fixture masters found in $MASTERS_DIR — nothing to convert."
+  echo "No fixture masters found in $MASTERS_DIR, nothing to convert."
   exit 0
 fi
 

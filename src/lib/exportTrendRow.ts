@@ -6,7 +6,7 @@ type TrendPoints = TrendSeries['points'];
 
 /**
  * Recent direction for one exercise's trend series, for the printable export's enriched rows.
- * Sub-noise-floor change (or too few points) reads "Steady" — never up/down (API §12 semantics:
+ * Sub-noise-floor change (or too few points) reads "Steady"; never up/down (API §12 semantics:
  * the last point's `aboveNoiseFloor` already encodes whether the most recent period-over-period
  * change cleared the baseline noise floor). Otherwise the sign of that change decides more/less
  * even (a higher meanSymmetryIndex is more even).
@@ -37,7 +37,7 @@ export function exportTrendDirection(points: TrendPoints): string {
  */
 export function exportTrendLatestLabel(points: TrendPoints): string {
   if (points.length === 0) {
-    return '—';
+    return '-';
   }
   return symmetryPlainLabel(points[points.length - 1].meanSymmetryIndex);
 }

@@ -18,7 +18,7 @@ const STAGGER_MS = 60;
 
 /**
  * ExportScreen (FRONTEND §2.8): generate a clinician summary from ExportService.generateSummary,
- * plus weekly progressCard PNG. Download only — no Web Share API, no clipboard.
+ * plus weekly progressCard PNG. Download only; no Web Share API, no clipboard.
  */
 export function ExportScreen() {
   const { settings } = useAppState();
@@ -46,7 +46,7 @@ export function ExportScreen() {
         />
       </StaggerFadeIn>
 
-      {/* Mandatory non-diagnostic notice (SAFETY §8) — always visible. */}
+      {/* Mandatory non-diagnostic notice (SAFETY §8); always visible. */}
       <StaggerFadeIn animationKey="export-notice" delayMs={STAGGER_MS}>
         <SoftPanel aria-labelledby="export-notice-heading">
           <h2
@@ -95,7 +95,7 @@ export function ExportScreen() {
 
           {isGenerating ? <ExportGeneratingPlaceholder /> : null}
 
-          {/* Weekly progressCard — available without generating the clinician summary. */}
+          {/* Weekly progressCard, available without generating the clinician summary. */}
           <StaggerFadeIn animationKey="export-weekly-card" delayMs={STAGGER_MS * 3}>
             <DownloadCard
               title={card.title}

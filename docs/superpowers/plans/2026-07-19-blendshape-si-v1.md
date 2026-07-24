@@ -1,28 +1,28 @@
-# blendshape-si-v1 — symmetry/effort from MediaPipe blendshapes
+# blendshape-si-v1: symmetry/effort from MediaPipe blendshapes
 
 > **For agentic workers:** execute task-by-task with TDD (failing test → verify failure → minimal fix → verify pass → commit, shell via `rtk`). Self-contained; other required reading: `docs/ARCHITECTURE.md` §12/§13, `docs/API.md`, `docs/MODEL_AND_DATA.md` §7, repo `CLAUDE.md`.
 
 ## Why (evidence, 2026-07-19)
 
-The 2D-projection geometry family is exhausted (stop rule 3/3): `scalar-radial` (B2 31%), `face-local-vector-v1` (B3 0.88 — nose-anchor depth artifact), `face-local-vector-v2` (B3 0.09–0.69 — perspective residual). All preserved in `tests/analysis/rejected/`.
+The 2D-projection geometry family is exhausted (stop rule 3/3): `scalar-radial` (B2 31%), `face-local-vector-v1` (B3 0.88: nose-anchor depth artifact), `face-local-vector-v2` (B3 0.09–0.69: perspective residual). All preserved in `tests/analysis/rejected/`.
 
 Blendshape probes on the same 12 fixtures (`tests/analysis/blendshape-probe.mjs`, `blendshape_probe_S01.json`, `blendshape-smirk-probe.mjs`):
 
-- SI := min/max of `mouthSmileLeft/Right` scores. B1a analog 0.0000; B1b 0.0007/0.0013; **B3 0.006/0.010/0.007 with one cell 0.051**; B2 dim 0.048/0.030 pass; B2 2m fails only on the known-bad trial-1 clip (smile intensity repro — human).
-- **Sensitivity (clinical must-have):** deliberate smirks read SI 0.43 and 0.72 vs 0.99 symmetric — the model separates sides, graded, correct dominant side. No symmetrization.
+- SI := min/max of `mouthSmileLeft/Right` scores. B1a analog 0.0000; B1b 0.0007/0.0013; **B3 0.006/0.010/0.007 with one cell 0.051**; B2 dim 0.048/0.030 pass; B2 2m fails only on the known-bad trial-1 clip (smile intensity repro, human).
+- **Sensitivity (clinical must-have):** deliberate smirks read SI 0.43 and 0.72 vs 0.99 symmetric; the model separates sides, graded, correct dominant side. No symmetrization.
 
-This plan promotes the modality to formal candidate `blendshape-si-v1` — new measurement family, candidate 1 (geometry stop rule does not carry over). Known documented risks: blendshape behavior on genuine palsy faces is unvalidated until V2 fixtures (MODEL_AND_DATA §4); coefficients are model-inferred, less interpretable than geometry.
+This plan promotes the modality to formal candidate `blendshape-si-v1`, new measurement family, candidate 1 (geometry stop rule does not carry over). Known documented risks: blendshape behavior on genuine palsy faces is unvalidated until V2 fixtures (MODEL_AND_DATA §4); coefficients are model-inferred, less interpretable than geometry.
 
 ## Design decisions (fixed for this plan)
 
-1. **Additive, not destructive.** Blendshapes flow through the pipeline alongside the existing geometry path. Geometry kernel, NormalizationLayer, and their tests stay untouched and green. Removal/consolidation is a separate plan AFTER the candidate is accepted — never rip out the validated fallback first.
+1. **Additive, not destructive.** Blendshapes flow through the pipeline alongside the existing geometry path. Geometry kernel, NormalizationLayer, and their tests stay untouched and green. Removal/consolidation is a separate plan AFTER the candidate is accepted; never rip out the validated fallback first.
 2. **SI** (per exercise with a per-side pair): `L = blendshapes[pair.left]`, `R = blendshapes[pair.right]`; `act = max(L,R)`; if `act < thresholds.blendshapes.activationFloor` → SI `null`; else `SI = min(L,R)/max(L,R)`. Trailing 5-frame median smoothing and `gapResetMs` semantics identical to today (reuse the existing window code in `metrics.ts`).
-3. **effortIndex** = `act / comfortableMax[exerciseId]`, where `comfortableMax` is redefined as the median per-rep peak **activation** (0..1 score units, was IOD units). Pre-release reset applies (DG-5): schema v1 amended in place, dev DBs reseeded. RepDetector thresholds are ratios of effortIndex — unchanged.
+3. **effortIndex** = `act / comfortableMax[exerciseId]`, where `comfortableMax` is redefined as the median per-rep peak **activation** (0..1 score units, was IOD units). Pre-release reset applies (DG-5): schema v1 amended in place, dev DBs reseeded. RepDetector thresholds are ratios of effortIndex, unchanged.
 4. **Exercise → blendshape pairs** (`src/config/exercises.ts`, new field `blendshapePair`):
    - `EX_SMILE`: `mouthSmileLeft` / `mouthSmileRight` (probe-validated)
-   - `EX_BROW_RAISE`: `browOuterUpLeft` / `browOuterUpRight` (provisional — validated only at V2)
+   - `EX_BROW_RAISE`: `browOuterUpLeft` / `browOuterUpRight` (provisional, validated only at V2)
    - `EX_EYE_CLOSURE`: `eyeBlinkLeft` / `eyeBlinkRight` (provisional)
-   - `EX_PUCKER`: **OPEN DECISION — do not invent.** `mouthPucker` has no per-side pair. Options (mentor/user must pick before any Task 9+ work uses EX_PUCKER): (a) `mouthStretchLeft/Right` proxy, (b) keep geometry-SI for this exercise only, (c) drop EX_PUCKER from v1 scope. Until decided, `blendshapePair` for EX_PUCKER is absent and `MetricEngine` must throw `VALIDATION_FAILED` for it — a loud stop, not a silent fallback.
+   - `EX_PUCKER`: **OPEN DECISION; do not invent.** `mouthPucker` has no per-side pair. Options (mentor/user must pick before any Task 9+ work uses EX_PUCKER): (a) `mouthStretchLeft/Right` proxy, (b) keep geometry-SI for this exercise only, (c) drop EX_PUCKER from v1 scope. Until decided, `blendshapePair` for EX_PUCKER is absent and `MetricEngine` must throw `VALIDATION_FAILED` for it; a loud stop, not a silent fallback.
 5. **V1 acceptance requires EX_SMILE only** (the protocol is smile-based). Bars keep their numeric values; B1a's displacement measure for this candidate is activation std in score units (predeclared here, before the formal run).
 
 ## Task D0: commit probe evidence
@@ -60,14 +60,14 @@ This plan promotes the modality to formal candidate `blendshape-si-v1` — new m
 ## Task D5: gate wiring for the candidate
 
 **Files:** `scripts/run-v1.mjs` (derive path), `scripts/v1-protocol.mjs` (only if candidate id plumbing requires), sampler already emits blendshapes
-- [ ] `deriveTrialFrames` gains a blendshape mode (used when `--candidate blendshape-si-v1`): `maxDisp := act`, `symmetryIndex := floor/ratio + trailing median` per Design 2 — no neutral baseline needed (activation is absolute). Neutral phase frames still feed B1a (std of act).
+- [ ] `deriveTrialFrames` gains a blendshape mode (used when `--candidate blendshape-si-v1`): `maxDisp := act`, `symmetryIndex := floor/ratio + trailing median` per Design 2: no neutral baseline needed (activation is absolute). Neutral phase frames still feed B1a (std of act).
 - [ ] Dry-check on existing fixtures: `rtk node scripts/run-v1.mjs --subject S01 --candidate blendshape-si-v1 --sample` runs end-to-end and reproduces the probe numbers (B3 cells ≈ 0.006–0.051). Report file `v1_S01_blendshape-si-v1_report.json`; never overwrites other candidates. Commit.
 
 ## Task D6: formal protocol run (user in the loop)
 
 - [ ] User re-records the weak trial-1 smile-family clips with the harness (displacement/SI readout open, matching smile intensity): `fixture_S01_smile_1.webm`, `fixture_S01_low_light_1.webm`, `fixture_S01_distance_2m_1.webm`. Neutral + yaw clips are kept.
 - [ ] `bash scripts/convert-fixtures.sh` → `rtk node scripts/run-v1.mjs --subject S01 --candidate blendshape-si-v1 --sample`.
-- [ ] **PASS:** IMPLEMENTATION.md ledger Task 6 → ACCEPTED (evidence: the v2 report + smirk sensitivity probe); Tasks 7–8 rerun their suites and drop PROVISIONAL. Commit `docs: Task 6 accepted — blendshape-si-v1 passes V1`.
+- [ ] **PASS:** IMPLEMENTATION.md ledger Task 6 → ACCEPTED (evidence: the v2 report + smirk sensitivity probe); Tasks 7–8 rerun their suites and drop PROVISIONAL. Commit `docs: Task 6 accepted, blendshape-si-v1 passes V1`.
 - [ ] **FAIL:** preserve to `rejected/`, report to user, stop (family slot 2 requires a new explicit decision).
 - [ ] **PROTOCOL_LIMITED:** one more smile-family re-record attempt, then stop and report.
 

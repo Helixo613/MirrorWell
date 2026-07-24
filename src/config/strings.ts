@@ -1,15 +1,15 @@
 /**
  * Every user-facing string in MirrorWell lives here (English-only; audited per
- * docs/SAFETY_AND_COMPLIANCE.md §8). Populated task by task — never inline UI copy.
+ * docs/SAFETY_AND_COMPLIANCE.md §8). Populated task by task; never inline UI copy.
  */
 export const strings = Object.freeze({
   // ExportService (docs/API.md §13). Exact wording verified against SAFETY_AND_COMPLIANCE.md
   // §8 (approved register only: symmetry/movement/calibration; no diagnosis, severity grade,
-  // or recovery prediction) — copied verbatim from API.md §13's full example payload.
+  // or recovery prediction), copied verbatim from API.md §13's full example payload.
   exportSummary: Object.freeze({
     nonDiagnosticNotice:
       "MirrorWell is an exercise-support tool. This summary describes exercise activity and movement symmetry relative to the user's own calibration. It is not a clinical assessment, score, or measure of recovery.",
-    // Printable HTML export copy (export.ts renderHtml) — relocated verbatim, §8-audited.
+    // Printable HTML export copy (export.ts renderHtml), relocated verbatim, §8-audited.
     htmlTitle: 'MirrorWell summary',
     rangeLabel: 'Range:',
     affectedSideLabel: 'Affected side:',
@@ -61,13 +61,13 @@ export const strings = Object.freeze({
     siLabel: 'SI',
     displacementLabel: 'Mouth max |Δ|',
     livePoseLabel: 'Live pose (deg)',
-    phaseStatusSetup: 'Setup — confirm camera and quality, then start the protocol',
-    phaseStatusPrepare: 'Prepare — read the instruction, then begin recording',
+    phaseStatusSetup: 'Setup: confirm camera and quality, then start the protocol',
+    phaseStatusPrepare: 'Prepare: read the instruction, then begin recording',
     phaseStatusRecording: 'Recording samples for this phase',
-    phaseStatusReview: 'Review — accept this phase or retry it',
-    phaseStatusReport: 'Report — protocol complete; export results',
+    phaseStatusReview: 'Review: accept this phase or retry it',
+    phaseStatusReport: 'Report: protocol complete; export results',
     captureValid: 'Capture valid',
-    captureInvalid: 'Capture invalid — retry this phase',
+    captureInvalid: 'Capture invalid, retry this phase',
     invalidLowOkPct: 'Too few QUALITY_OK frames (need ≥70%)',
     invalidYawBand: 'Measured mean |yaw| outside 7–13° band',
     measurementFail: 'Measurement bar failed (see report)',
@@ -77,9 +77,9 @@ export const strings = Object.freeze({
     reportTrialHeading: 'Trial summary',
     exportStarted: 'Export download started.',
     clipAutoSaveNote:
-      'Accepting downloads this phase’s master clip — move it into tests/fixtures/masters/.',
+      'Accepting downloads this phase’s master clip, move it into tests/fixtures/masters/.',
     clipUnavailable:
-      'Video recording is unavailable in this browser — record master clips externally.',
+      'Video recording is unavailable in this browser, record master clips externally.',
     errorPrefix: 'Error',
     qualityFixLowLight: 'Add light',
     qualityFixTooFar: 'Come closer',
@@ -87,22 +87,22 @@ export const strings = Object.freeze({
     qualityFixFaceLost: 'Center your face',
     qualityFixLowConfidence: 'Hold still',
     qualityOk: 'OK',
-    phaseNeutralTitle: '1 — Neutral',
+    phaseNeutralTitle: '1. Neutral',
     phaseNeutralInstruction:
       'Face the camera. Relax completely. Good light. About arm’s length. Hold still.',
-    phaseFrontalSmileTitle: '2 — Frontal gentle smile',
+    phaseFrontalSmileTitle: '2. Frontal gentle smile',
     phaseFrontalSmileInstruction:
       'Make a small half-smile and freeze it. Same light and distance as neutral. Do not talk.',
-    phaseLeftYawTitle: '3 — Smile, left yaw ~10°',
+    phaseLeftYawTitle: '3. Smile, left yaw ~10°',
     phaseLeftYawInstruction:
       'Keep the same frozen half-smile. Turn head left about 10° (not more). Stay QUALITY_OK.',
-    phaseRightYawTitle: '4 — Smile, right yaw ~10°',
+    phaseRightYawTitle: '4. Smile, right yaw ~10°',
     phaseRightYawInstruction:
       'Keep the same frozen half-smile. Turn head right about 10° (not more). Stay QUALITY_OK.',
-    phaseDimLightTitle: '5 — Same smile, dim light',
+    phaseDimLightTitle: '5. Same smile, dim light',
     phaseDimLightInstruction:
       'Keep the exact same half-smile frozen. Dim the room carefully so quality can stay OK.',
-    phaseDistance2mTitle: '6 — Same smile, ~2 m',
+    phaseDistance2mTitle: '6. Same smile, ~2 m',
     phaseDistance2mInstruction:
       'Restore light. Step back about 2 m. Keep the same frozen half-smile, face the camera.',
     durationLabel: 'Duration',
@@ -122,8 +122,8 @@ export const strings = Object.freeze({
       'A live readout of movement symmetry for the gentle smile. Nothing is recorded or saved. Quick setup measures your own neutral and one gentle hold first.',
     startCamera: 'Start camera',
     stopCamera: 'Stop camera',
-    captureNeutral: 'Step 1 — capture neutral',
-    captureHold: 'Step 2 — capture gentle hold',
+    captureNeutral: 'Step 1: capture neutral',
+    captureHold: 'Step 2: capture gentle hold',
     restartSetup: 'Redo quick setup',
     neutralInstruction: 'Face the camera and relax completely. Hold still.',
     holdInstruction: 'Let a small, gentle smile come and hold it steady.',
@@ -144,7 +144,7 @@ export const strings = Object.freeze({
     stateNoReading: 'No reading',
     glyphSymmetric: '=',
     glyphAsymmetric: '≠',
-    glyphNoReading: '—',
+    glyphNoReading: '·',
     noReading: 'no reading',
     errorPrefix: 'Error',
   }),
@@ -178,13 +178,13 @@ export const strings = Object.freeze({
     motivation: {
       label: '2. What makes this worth it for you?',
       placeholder: 'e.g. Feeling more like myself again',
-      hint: 'Optional. Your “why” — shown on Home and between exercises. Never exported.',
+      hint: 'Optional. Your “why”, shown on Home and between exercises. Never exported.',
     },
     steps: {
       aboutYou: {
         title: 'A little about you',
         subtitle:
-          'Two optional questions — scroll if you need to. Skip anytime with Continue.',
+          'Two optional questions, scroll if you need to. Skip anytime with Continue.',
       },
       intendedUse: {
         title: 'Exercise support for facial retraining',
@@ -195,7 +195,7 @@ export const strings = Object.freeze({
           'If the app and your clinician ever disagree, your clinician wins.',
         ],
         limitations: [
-          'Camera measurement is approximate — lighting, distance, and glasses affect it.',
+          'Camera measurement is approximate, lighting, distance, and glasses affect it.',
           'It measures visible movement only, relative to your own calibration.',
           'It may say it cannot measure right now rather than guess.',
         ],
@@ -203,10 +203,10 @@ export const strings = Object.freeze({
       redFlag: {
         title: 'Know when to seek care',
         emergency:
-          'New or sudden facial droop can be a sign of a stroke or other emergency. If it is new, call your local emergency number immediately — do not use this app to check it.',
+          'New or sudden facial droop can be a sign of a stroke or other emergency. If it is new, call your local emergency number immediately; do not use this app to check it.',
         body: [
           'Stop and contact your clinician if you have new or worsening weakness, pain, twitching, or spasms.',
-          'Do not use this app for undiagnosed facial weakness — see a doctor first.',
+          'Do not use this app for undiagnosed facial weakness; see a doctor first.',
         ],
         continueLabel: 'I understand',
       },
@@ -215,7 +215,7 @@ export const strings = Object.freeze({
         body: [
           'While you use MirrorWell, your camera images are processed in memory on this device only. They are never stored or sent anywhere.',
           'Only derived numbers about movement are saved locally, on this device only.',
-          'Nothing is uploaded, shared, or sold — there is no server.',
+          'Nothing is uploaded, shared, or sold; there is no server.',
         ],
       },
       attestation: {
@@ -281,13 +281,13 @@ export const strings = Object.freeze({
   quality: {
     QUALITY_OK: '',
     LOW_LIGHT: 'More light needed',
-    FACE_LOST: "I can't see you — adjust the camera",
+    FACE_LOST: "I can't see you, adjust the camera",
     TOO_FAR: 'Come a little closer',
     POSE_OUT_OF_RANGE: 'Face the camera straight on',
     LOW_CONFIDENCE: 'Hold steady for a moment',
   },
   calibration: {
-    loading: 'Warming up the camera — about 3 seconds',
+    loading: 'Warming up the camera, about 3 seconds',
     journey: {
       progressLabel: 'Calibration progress',
       labels: ['Relax your face', 'Gentle movements', 'Quiet moment'] as const,
@@ -303,7 +303,7 @@ export const strings = Object.freeze({
     },
     helpers: {
       captureRemaining: (seconds: number) =>
-        `${seconds} seconds remaining — hold still`,
+        `${seconds} seconds remaining, hold still`,
       qualityNotReady: 'Adjust your position until the banner clears, then tap Capture.',
       capturing: 'Capturing…',
     },
@@ -318,7 +318,7 @@ export const strings = Object.freeze({
     },
     comfortableMax: {
       instruction:
-        'Gentle — do not strain. Make a small, slow movement, then relax.',
+        'Gentle; do not strain. Make a small, slow movement, then relax.',
       captureLabel: 'Capture rep',
       redoLabel: 'Redo this rep',
       repProgress: (current: number, total: number) =>
@@ -360,14 +360,14 @@ export const strings = Object.freeze({
     lastSession: {
       label: 'Last session',
       allExercisesDone: (weekday: string) =>
-        `${weekday} — all exercises done`,
-      sessionCompleted: (weekday: string) => `${weekday} — session completed`,
+        `${weekday}; all exercises done`,
+      sessionCompleted: (weekday: string) => `${weekday}, session completed`,
       stoppedEarly: (weekday: string) =>
-        `${weekday} — you stopped when you needed to`,
+        `${weekday}; you stopped when you needed to`,
       stoppedForSafety: (weekday: string) =>
-        `${weekday} — session ended for your safety`,
+        `${weekday}, session ended for your safety`,
       qualityEnded: (weekday: string) =>
-        `${weekday} — session paused when conditions were difficult`,
+        `${weekday}, session paused when conditions were difficult`,
     },
     recalibration: {
       title: 'Time for a quick refresh',
@@ -420,21 +420,21 @@ export const strings = Object.freeze({
     },
   },
   session: {
-    loading: 'Warming up the camera — about 3 seconds',
+    loading: 'Warming up the camera, about 3 seconds',
     screenTitle: 'Exercise session',
-    demoWatermark: 'DEMO — not for exercise use',
+    demoWatermark: 'DEMO; not for exercise use',
     quickSetup: {
       title: 'Quick setup',
       body: 'Relax your face for a few seconds, then one gentle smile. This stays on your device only.',
       action: 'Start quick setup',
       running: 'Setting up…',
-      // Live phase prompts shown WHILE capturing (preview stays visible) — the user cannot time
+      // Live phase prompts shown WHILE capturing (preview stays visible); the user cannot time
       // the gentle rep without being told when the second window starts (FRONTEND §2.4).
       phaseNeutral: 'Relax your face and look at the camera…',
-      phaseGentle: 'Now — one gentle smile, about half of what feels possible.',
+      phaseGentle: 'Now; one gentle smile, about half of what feels possible.',
     },
     // Arrival moment (real sessions only, FRONTEND §2.4): shown once start() resolves and before
-    // the first exercise, camera already live behind it — never auto-dismisses (FRONTEND §4 no
+    // the first exercise, camera already live behind it; never auto-dismisses (FRONTEND §4 no
     // time pressure), user taps Begin when ready.
     arrival: {
       message: "Take a slow breath… we'll begin when you're ready.",
@@ -443,7 +443,7 @@ export const strings = Object.freeze({
       stop: 'Stop',
       stopAriaLabel: 'Stop and leave this session',
       // Caregiver encouragement note (SAFETY §5 narrow carve-out): display-only, dismiss deletes
-      // it from storage. Never auto-dismisses — the patient chooses when it's gone.
+      // it from storage. Never auto-dismisses; the patient chooses when it's gone.
       note: {
         heading: 'A note for you',
         dismiss: 'Dismiss',
@@ -456,14 +456,14 @@ export const strings = Object.freeze({
     },
     repCounter: (done: number, total: number) => `${done} of ${total}`,
     repCounterLabel: 'Rep progress',
-    easeOff: 'Ease off — stay gentle',
+    easeOff: 'Ease off, stay gentle',
     // Live coaching line over the preview, driven by the SAME smoothed effortIndex the rep
-    // counter runs on (sessionHelpers.coachPhaseFor) — the meter shows where you are, this
+    // counter runs on (sessionHelpers.coachPhaseFor); the meter shows where you are, this
     // says what to do. Suppressed while quality/ease-off messages own the screen (FRONTEND §2.4).
     coach: {
       raise: 'Raise gently into the green band',
-      hold: 'Lovely — hold it gently',
-      easeBack: 'A little less — settle back toward the band',
+      hold: 'Lovely, hold it gently',
+      easeBack: 'A little less, settle back toward the band',
       legend: 'The green band is your gentle target: rise into it, hold, then relax to count a rep.',
     },
     voice: {
@@ -497,7 +497,7 @@ export const strings = Object.freeze({
       title: 'Pause and check in',
       body: [
         'Stop your exercises for now and contact your clinician to describe what happened.',
-        'If you have severe or sudden symptoms — including new facial droop — seek urgent care.',
+        'If you have severe or sudden symptoms, including new facial droop, seek urgent care.',
       ],
       done: 'Done',
       doneAriaLabel: 'Return to home',
@@ -508,7 +508,7 @@ export const strings = Object.freeze({
       continue: 'Keep going',
       end: 'End session',
     },
-    repDiscarded: "That one didn't count — the light dipped. No worries.",
+    repDiscarded: "That one didn't count; the light dipped. No worries.",
     paused: {
       title: 'Paused',
       body: 'Ready to continue when you are.',
@@ -523,7 +523,7 @@ export const strings = Object.freeze({
     a11y: {
       repCompleted: (done: number, total: number) =>
         `Rep ${done} of ${total} complete`,
-      easeOffActive: 'Ease off — stay gentle',
+      easeOffActive: 'Ease off, stay gentle',
     },
     errors: {
       // noBaseline removed: strings.errors.NO_BASELINE (added with the shared error copy) is what
@@ -542,13 +542,13 @@ export const strings = Object.freeze({
       label: 'Gentle practice',
       allGentle: 'Every single rep gentle. Perfect restraint.',
       someGentle: (gentle: number, total: number) =>
-        `You kept it gentle ${gentle} of ${total} times — that's exactly the skill.`,
+        `You kept it gentle ${gentle} of ${total} times; that's exactly the skill.`,
     },
     milestones: {
       label: 'Practice milestones',
     },
     qualityNote: 'This is a single-session snapshot of movement.',
-    demoWatermark: 'DEMO — not for exercise use',
+    demoWatermark: 'DEMO; not for exercise use',
     symmetry: {
       label: 'Movement symmetry',
       noMovement: 'Minimal movement recorded',
@@ -585,7 +585,7 @@ export const strings = Object.freeze({
     steadyPill: 'Steady',
     steadyPillForPeriod: (period: string) => `${period}: steady`,
     // Recent-direction words for the printable export's enriched trend rows (export.ts
-    // renderHtml). Rendered conditionally, so — unlike the exportSummary column headers — they
+    // renderHtml). Rendered conditionally, so; unlike the exportSummary column headers; they
     // need not appear in every export; sub-noise-floor reads "Steady" (never up/down).
     direction: {
       steady: 'Steady',
@@ -598,7 +598,7 @@ export const strings = Object.freeze({
       gettingMoreEven: (exercise: string, rangeLabel: string) =>
         `Your ${exercise} has been getting more even over ${rangeLabel}.`,
       stillCollecting: (exercise: string) =>
-        `Your ${exercise} practice is still building — check back after a few more sessions.`,
+        `Your ${exercise} practice is still building; check back after a few more sessions.`,
     },
     rangeLabel: {
       twoMonths: 'the last two months',
@@ -690,11 +690,11 @@ export const strings = Object.freeze({
     },
     advisory: 'Share this file only with your care team.',
     filename: (dateYmd: string) => `mirrorwell-summary-${dateYmd}`,
-    // Weekly progressCard (V3 Task 6) — local PNG download only; derived aggregates only.
+    // Weekly progressCard (V3 Task 6), local PNG download only; derived aggregates only.
     card: {
       title: 'Weekly progress card',
       description:
-        'A calm image of this week’s practice — session count, gentle reps, and garden growth. Saves only to this device.',
+        'A calm image of this week’s practice, session count, gentle reps, and garden growth. Saves only to this device.',
       download: 'Download weekly card',
       downloadAriaLabel: 'Download this week’s progress card as an image',
       generating: 'Drawing your week…',
@@ -704,7 +704,7 @@ export const strings = Object.freeze({
       sessionsLabel: (count: number) =>
         count === 1 ? 'session of showing up' : 'sessions of showing up',
       gentlenessLabel: (gentle: number, total: number) =>
-        `Gentle ${gentle} of ${total} reps — control practice`,
+        `Gentle ${gentle} of ${total} reps, control practice`,
       gentlenessEmpty: 'Gentle practice begins when you do',
       gardenLabel: 'Garden this week',
       plantStageLabel: (stage: 0 | 1 | 2 | 3) =>
@@ -720,7 +720,7 @@ export const strings = Object.freeze({
   caregiver: {
     title: 'Your practice summary',
     subtitle: 'A read-only view for someone who supports your practice',
-    banner: 'Read-only view — your practice stays on this device',
+    banner: 'Read-only view, your practice stays on this device',
     loading: 'Gathering your practice summary…',
     empty: {
       title: 'Your practice will appear here',
@@ -853,7 +853,7 @@ export const strings = Object.freeze({
       caregiver: {
         label: 'Caregiver view',
         description:
-          'Lets a trusted person see practice summaries on this device and leave you one short encouragement note — read only otherwise, nothing is shared online',
+          'Lets a trusted person see practice summaries on this device and leave you one short encouragement note; read only otherwise, nothing is shared online',
       },
     },
     calibration: {

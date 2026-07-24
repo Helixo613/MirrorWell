@@ -11,7 +11,7 @@ export interface ArrivalOverlayProps {
   onBegin: () => void;
   onStop: () => void;
   className?: string;
-  /** Caregiver encouragement note (SAFETY §5 narrow carve-out) — display-only text, never parsed;
+  /** Caregiver encouragement note (SAFETY §5 narrow carve-out), display-only text, never parsed;
    *  null when none exists or it has been dismissed. */
   note?: string | null;
   noteHeading?: string;
@@ -52,7 +52,7 @@ export function ArrivalOverlay({
       aria-modal="true"
       aria-labelledby="arrival-message"
     >
-      {/* Soft top-to-bottom veil — face stays readable for warm-up, not a flat grey slab. */}
+      {/* Soft top-to-bottom veil, face stays readable for warm-up, not a flat grey slab. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/25 via-background/40 to-background/85"
@@ -82,7 +82,7 @@ export function ArrivalOverlay({
           </div>
         ) : null}
 
-        {/* Ring (not a filled blob) — clearer “breathe with this” cue. */}
+        {/* Ring (not a filled blob), clearer “breathe with this” cue. */}
         <div
           aria-hidden="true"
           className="relative flex h-20 w-20 items-center justify-center motion-safe:animate-breathe motion-reduce:scale-100"

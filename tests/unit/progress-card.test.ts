@@ -106,8 +106,8 @@ describe('aggregateWeek', () => {
     const sessions = [
       makeSession(localNoonIso(2026, 7, 21), [rep(0, 0), rep(1, 0)], 1), // Tue in-week
       makeSession(localNoonIso(2026, 7, 23), [rep(0, 1)], 2), // Thu in-week
-      makeSession(localNoonIso(2026, 7, 13), [rep(0, 0), rep(1, 0)], 3), // prior week — exclude
-      makeSession(localNoonIso(2026, 7, 28), [rep(0, 0)], 4), // next week — exclude
+      makeSession(localNoonIso(2026, 7, 13), [rep(0, 0), rep(1, 0)], 3), // prior week; exclude
+      makeSession(localNoonIso(2026, 7, 28), [rep(0, 0)], 4), // next week; exclude
     ];
     const data = aggregateWeek(sessions, now);
     expect(data.sessionCount).toBe(2);

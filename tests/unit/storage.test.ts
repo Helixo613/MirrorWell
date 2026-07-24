@@ -84,7 +84,7 @@ beforeEach(async () => {
   vi.restoreAllMocks();
 });
 
-describe('StorageService — round-trip', () => {
+describe('StorageService, round-trip', () => {
   it('round-trips user_profile', async () => {
     await StorageService.saveProfile(makeProfile());
     expect(await StorageService.getProfile()).toEqual(makeProfile());
@@ -106,7 +106,7 @@ describe('StorageService — round-trip', () => {
     expect(sessions[0].results[0].reps[0].repId).toBe('a1a1a1a1-0000-4000-8000-000000000003');
   });
 
-  it('round-trips app_settings (no noiseFloorSymmetry — lives on calibration_baseline)', async () => {
+  it('round-trips app_settings (no noiseFloorSymmetry, lives on calibration_baseline)', async () => {
     const row = {
       settingsId: 'singleton' as const,
       highContrast: false,
@@ -265,7 +265,7 @@ describe('StorageService.saveBaseline', () => {
   });
 });
 
-describe('StorageService.saveSession — atomicity', () => {
+describe('StorageService.saveSession, atomicity', () => {
   it('a forced mid-transaction failure leaves zero rows', async () => {
     await StorageService.saveProfile(makeProfile());
     await StorageService.saveBaseline(makeBaseline());

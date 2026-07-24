@@ -310,6 +310,6 @@
         "classification": "intensity-linked"
       }
     ],
-    "summary": "The intensity hypothesis is PARTIAL / DOES NOT FULLY HOLD: 6 breach(es) were intensity-linked, but 2 breach(es) CONTRADICT it — the bar failed while smile activation was matched to frontal (activationRatioVsFrontal ≥ 0.85), indicating genuine pose/lighting sensitivity of the metric: run1-t1/yaw_right (B3=0.051, ratio=0.8891); run2-t2/yaw_left (B3=0.0673, ratio=0.9565)."
+    "summary": "The intensity hypothesis is PARTIAL / DOES NOT FULLY HOLD: 6 breach(es) were intensity-linked, but 2 breach(es) CONTRADICT it; the bar failed while smile activation was matched to frontal (activationRatioVsFrontal ≥ 0.85), indicating genuine pose/lighting sensitivity of the metric: run1-t1/yaw_right (B3=0.051, ratio=0.8891); run2-t2/yaw_left (B3=0.0673, ratio=0.9565)."
   }
 }

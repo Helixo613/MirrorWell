@@ -4,7 +4,7 @@ import { readCounts, seedDatabase } from './helpers/seed';
 
 /**
  * CaregiverScreen (FRONTEND §2.7): a READ-ONLY trusted-person view, gated by caregiverViewEnabled.
- * Non-negotiable: mutation is confined to the ONE narrow SAFETY §5 carve-out — the encouragement
+ * Non-negotiable: mutation is confined to the ONE narrow SAFETY §5 carve-out; the encouragement
  * note compose box. Every other interactive element must stay non-mutating (TESTS.md §4 audits
  * every control).
  */
@@ -31,7 +31,7 @@ test.describe('caregiver screen', () => {
   test('renders the read-only summary when enabled', async ({ page }) => {
     await seedCaregiverEnabled(page);
     await expect(
-      page.getByText('Read-only view — your practice stays on this device'),
+      page.getByText('Read-only view, your practice stays on this device'),
     ).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Your steady practice' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Your practice over time' })).toBeVisible();
@@ -62,13 +62,13 @@ test.describe('caregiver screen', () => {
     for (const role of ['checkbox', 'switch', 'slider', 'combobox'] as const) {
       expect(await page.getByRole(role).count(), `caregiver must expose no ${role}`).toBe(0);
     }
-    // Exactly one textbox (the note) and exactly one button (its Save) — no other hidden
+    // Exactly one textbox (the note) and exactly one button (its Save); no other hidden
     // mutating control exists alongside the carve-out.
     expect(await page.getByRole('textbox').count(), 'exactly the note textbox').toBe(1);
     expect(await page.getByRole('button').count(), 'exactly the note Save button').toBe(1);
 
     // Belt-and-suspenders: every non-note, non-navigation control still leaves storage untouched.
-    // (Links are excluded here — a real click would navigate away; their href targets are
+    // (Links are excluded here; a real click would navigate away; their href targets are
     // asserted in the "renders the read-only summary" test above instead.)
     const before = await readCounts(page);
     const nonNoteMutators = page.locator('input, select, [role="switch"]').filter({
@@ -87,7 +87,7 @@ test.describe('caregiver screen', () => {
     await seedCaregiverEnabled(page);
     const before = await readCounts(page);
 
-    await page.locator('#caregiver-note-input').fill('You are doing wonderfully — keep it up.');
+    await page.locator('#caregiver-note-input').fill('You are doing wonderfully; keep it up.');
     await page.getByRole('button', { name: 'Save encouragement note' }).click();
     await expect(page.getByText('Note saved')).toBeVisible();
 

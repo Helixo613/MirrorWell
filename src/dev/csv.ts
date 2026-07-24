@@ -1,5 +1,5 @@
-// src/dev/csv.ts — DebugHud CSV export (docs/IMPLEMENTATION.md Task 8). Pure formatting, no
-// DOM — the column set is canonical: docs/ARCHITECTURE.md §12 ("DebugHud CSV columns").
+// src/dev/csv.ts, DebugHud CSV export (docs/IMPLEMENTATION.md Task 8). Pure formatting, no
+// DOM; the column set is canonical: docs/ARCHITECTURE.md §12 ("DebugHud CSV columns").
 export const DEBUG_HUD_CSV_COLUMNS = [
   'timestampMs',
   'exerciseId',

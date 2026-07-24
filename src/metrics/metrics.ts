@@ -1,18 +1,18 @@
-// src/metrics/metrics.ts — the clinical-core math (docs/BACKEND.md §1.5). Contracts:
+// src/metrics/metrics.ts; the clinical-core math (docs/BACKEND.md §1.5). Contracts:
 // docs/API.md §8. Canonical math: docs/ARCHITECTURE.md §7.
 //
 // DOCS-CHANGE (Task 7, 2026-07-10): API.md §8 / BACKEND.md §1.5 amended to add setBaseline,
 // isEaseOffActive, and reset. compute()'s effortIndex denominator (comfortableMax[exerciseId])
 // requires held baseline state that this module cannot fetch itself (BACKEND §1.5 forbids
 // storage access), and ARCHITECTURE §7 assigns 5-frame smoothing and the sustained ease-off
-// condition to MetricEngine — cross-frame state a single compute(nf, exerciseId) call cannot
+// condition to MetricEngine, cross-frame state a single compute(nf, exerciseId) call cannot
 // hold on its own. Mirrors NormalizationLayer's existing setBaseline/module-singleton pattern
-// (src/metrics/normalize.ts) — no new identifiers invented.
+// (src/metrics/normalize.ts); no new identifiers invented.
 //
-// DOCS-CHANGE (Task B4): API.md §15 — metrics.gapResetMs added; trailing median; gap >
+// DOCS-CHANGE (Task B4): API.md §15: metrics.gapResetMs added; trailing median; gap >
 // gapResetMs resets smoothing + ease-off.
 //
-// DOCS-CHANGE (blendshape-si-v1, 2026-07-19): BACKEND §1.5 / MODEL_AND_DATA §7 — SI/effort
+// DOCS-CHANGE (blendshape-si-v1, 2026-07-19): BACKEND §1.5 / MODEL_AND_DATA §7. SI/effort
 // source is the exercise's per-side blendshape pair (geometry family rejected at V1 B3;
 // evidence tests/analysis/rejected/). Smoothing/gap/ease-off semantics unchanged.
 import type { NormalizedFrame } from './normalize.ts';
@@ -29,7 +29,7 @@ export interface MetricSample {
 
 // DOCS-CHANGE (Task 8, 2026-07-10): API.md §8 amended to add getLastRaw(). ARCHITECTURE §12's
 // canonical DebugHud CSV columns include symmetryIndexRaw/effortIndexRaw alongside the smoothed
-// pair, and API.md §8 itself already stated "DebugHud shows both" — but MetricSample (consumed
+// pair, and API.md §8 itself already stated "DebugHud shows both"; but MetricSample (consumed
 // by RepDetector/SessionController/storage) is deliberately smoothed-only, so raw values need a
 // separate dev-only accessor rather than widening the per-frame contract everything else relies
 // on. Captured as a side-value inside compute() itself (never a second compute() call, which
@@ -95,7 +95,7 @@ function smoothedSymmetry(window: (number | null)[]): number | null {
 }
 
 /**
- * Blendshape SI (candidate blendshape-si-v1 — BACKEND §1.5 / MODEL_AND_DATA §7):
+ * Blendshape SI (candidate blendshape-si-v1. BACKEND §1.5 / MODEL_AND_DATA §7):
  *   L/R = per-side blendshape scores; act = max(L,R)
  *   if act < blendshapes.activationFloor → null
  *   else SI = min(L,R)/max(L,R). Unilateral → 0; symmetric → 1.
@@ -103,7 +103,7 @@ function smoothedSymmetry(window: (number | null)[]): number | null {
  *
  * The neutral rebase (ARCHITECTURE §7): MediaPipe reports nonzero RESTING activation for some
  * pairs (browOuterUp, eyeBlink commonly read 0.1–0.3 on a neutral face). Raw act/comfortableMax
- * therefore held resting effort above repStartThreshold/repEndThreshold for those exercises —
+ * therefore held resting effort above repStartThreshold/repEndThreshold for those exercises
  * a "rep" opened by itself at rest and could only close when the user drove the signal to zero
  * with the OPPOSITE movement (furrowing for brow raise, eyes wide open for eye closure), while
  * the actual movement pinned effort over the ease-off ceiling. SI stays on the raw per-side
@@ -137,19 +137,19 @@ function compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample {
   // loud stop, never a silent fallback to another measurement source. This guard is an
   // intentional invariant, NOT dead code (A-REQ-1): EX_PUCKER stays a valid ExerciseId but is
   // not assignable in v1, so this is the last line of defence for a caller that bypasses the
-  // assignable filter. Removing it — or replacing it with a fallback — is a defect
+  // assignable filter. Removing it, or replacing it with a fallback, is a defect
   // (CLAUDE.md "loud stop, never a silent fallback"); covered by metrics.test.ts.
   const pair = config.blendshapePair;
   if (!pair) {
     throw new MirrorWellError('VALIDATION_FAILED', `no blendshapePair for ${exerciseId}`);
   }
   const comfortableMax = activeBaseline.comfortableMax[exerciseId];
-  // A missing comfortableMax must never silently produce effortIndex 0 — that would disable
+  // A missing comfortableMax must never silently produce effortIndex 0: that would disable
   // the ease-off safety cue for the whole exercise. Uncalibrated exercise → NO_BASELINE.
   if (comfortableMax === undefined || !Number.isFinite(comfortableMax) || comfortableMax <= 0) {
     throw new MirrorWellError('NO_BASELINE', `comfortableMax missing or invalid for ${exerciseId}`);
   }
-  // Pre-field baselines (no neutralActivation) behave as neutral = 0 — the exact old formula.
+  // Pre-field baselines (no neutralActivation) behave as neutral = 0: the exact old formula.
   // StorageService enforces neutral < comfortableMax at write time; re-check here so a corrupt
   // span can never flip effort's sign or divide by zero (this drives the ease-off SAFETY cue).
   const neutral = activeBaseline.neutralActivation?.[exerciseId] ?? 0;

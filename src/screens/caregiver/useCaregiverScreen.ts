@@ -39,7 +39,7 @@ export interface UseCaregiverScreenResult {
   noteSaving: boolean;
   noteSaveFeedback: string | null;
   noteErrorMessage: string | null;
-  /** Sole mutating action on this screen (SAFETY §5 narrow carve-out) — saves/replaces the
+  /** Sole mutating action on this screen (SAFETY §5 narrow carve-out), saves/replaces the
    *  singleton encouragement note. Trims and no-ops on empty text rather than throwing. */
   saveNote: () => Promise<void>;
 }

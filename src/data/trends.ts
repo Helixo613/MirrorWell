@@ -1,6 +1,6 @@
-// src/data/trends.ts — TrendsService (docs/API.md §12, ARCHITECTURE.md §13, BACKEND.md §1.10).
+// src/data/trends.ts, TrendsService (docs/API.md §12, ARCHITECTURE.md §13, BACKEND.md §1.10).
 // Aggregates session_record/exercise_result rows into per-exercise trend series and adherence
-// stats. Data access is via StorageService only — no Dexie/db imports here. TrendSeries and
+// stats. Data access is via StorageService only; no Dexie/db imports here. TrendSeries and
 // Adherence are not row types (those are owned by DATABASE.md §2 / schema.ts); as non-row
 // canonical types they are defined here, their owning service file.
 import type { ExerciseId } from './schema.ts';
@@ -28,10 +28,10 @@ export type Adherence = {
 const EXERCISE_IDS = Object.keys(exercises) as ExerciseId[];
 
 // Sessions excluded from all trend aggregation (BACKEND §1.10 / API §12 Rules). Adherence has
-// no such exclusion — completionRate counts every session in range, completed or not.
+// no such exclusion, completionRate counts every session in range, completed or not.
 const TREND_EXCLUDED_END_REASONS = new Set(['quality_abandoned', 'red_flag_stopped']);
 
-// getTrend takes no range param (BACKEND §1.10) — pull full history and let baseline scoping
+// getTrend takes no range param (BACKEND §1.10), pull full history and let baseline scoping
 // narrow it. Epoch-to-now is a fixed sentinel bound, not a tunable (thresholds.ts owns tunables).
 const EPOCH_ISO = '1970-01-01T00:00:00.000Z';
 
@@ -40,11 +40,11 @@ function pad2(n: number): string {
 }
 
 // periodStart buckets are local-time calendar dates (ARCHITECTURE §13). Weekly buckets are
-// Monday-start calendar weeks — a documented choice, not specified verbatim by the docs.
+// Monday-start calendar weeks; a documented choice, not specified verbatim by the docs.
 //
 // Returns a Date, not a string: getAdherence's bucket loop needs to walk period boundaries
 // with .getTime()/.setDate(), and re-parsing a formatted "YYYY-MM-DD" key with `new Date(key)`
-// reads as UTC midnight (ES2015+ date-only parsing), not local midnight — silently shifting
+// reads as UTC midnight (ES2015+ date-only parsing), not local midnight; silently shifting
 // every bucket by the local UTC offset in any negative-offset timezone. Callers that need the
 // string key call formatDateKey() on the Date this returns instead of reparsing.
 function periodStartDate(iso: string, granularity: 'weekly' | 'monthly'): Date {
@@ -103,7 +103,7 @@ async function getTrend(exerciseId: ExerciseId, granularity: 'weekly' | 'monthly
     // comparison is against the magnitude of the change, not its sign (API §12). Equality
     // (delta === noiseFloorSymmetry) is NOT sub-noise-floor: spec says false only when change
     // is strictly < the floor, so >= reads as above. Note: `previousMean` is the last bucket
-    // that had a sample, not necessarily the immediately preceding calendar period — an empty
+    // that had a sample, not necessarily the immediately preceding calendar period; an empty
     // middle bucket (no qualifying session that period) is skipped entirely rather than
     // inserted as a zero, so the comparison deliberately spans across the gap to the nearest
     // non-empty period on either side.
@@ -120,12 +120,12 @@ async function getTrend(exerciseId: ExerciseId, granularity: 'weekly' | 'monthly
 
 async function getAdherence(range: { from: string; to: string }): Promise<Adherence> {
   // getSessions validates the range (malformed dates, from > to) and throws VALIDATION_FAILED /
-  // DB_UNAVAILABLE — let it propagate untouched, before any date math runs on a bad range.
+  // DB_UNAVAILABLE; let it propagate untouched, before any date math runs on a bad range.
   const sessions = await StorageService.getSessions(range);
 
   const total = sessions.length;
   const completed = sessions.filter((s) => s.endReason === 'completed').length;
-  // No sessions in range: report 0 rather than NaN (0/0) — an empty range has no adherence to
+  // No sessions in range: report 0 rather than NaN (0/0); an empty range has no adherence to
   // measure, and a UI-bound percentage should never render NaN.
   const completionRate = total === 0 ? 0 : completed / total;
 

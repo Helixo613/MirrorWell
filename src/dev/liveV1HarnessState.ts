@@ -1,4 +1,4 @@
-// src/dev/liveV1HarnessState.ts — pure state machine for the Live V1 protocol harness.
+// src/dev/liveV1HarnessState.ts, pure state machine for the Live V1 protocol harness.
 // Dev-only. Tested without React. Protocol order: MODEL_AND_DATA.md §7.
 import { thresholds } from '../config/thresholds.ts';
 

@@ -150,7 +150,7 @@ describe('TrendsService.getTrend', () => {
       makeSession({ baselineId: BASELINE_ID_NEW, startedAt: '2026-03-06T12:00:00.000Z', meanSymmetryIndex: 0.7 }), // delta 0.08 >= 0.05
     );
     await StorageService.saveSession(
-      // delta -0.07 (a real decline whose magnitude clears the noise floor) — must read as
+      // delta -0.07 (a real decline whose magnitude clears the noise floor), must read as
       // aboveNoiseFloor: true, not "steady". A signed (rather than absolute) comparison would
       // wrongly mark a decline of this size as sub-noise-floor.
       makeSession({ baselineId: BASELINE_ID_NEW, startedAt: '2026-04-06T12:00:00.000Z', meanSymmetryIndex: 0.63 }),
@@ -197,7 +197,7 @@ describe('TrendsService.getTrend', () => {
 
   it('reads the noise floor from calibration_baseline, never app_settings (which has no such field)', async () => {
     await StorageService.saveProfile(makeProfile());
-    // AppSettings structurally has no noiseFloorSymmetry field (DATABASE.md §2) — seed it anyway
+    // AppSettings structurally has no noiseFloorSymmetry field (DATABASE.md §2), seed it anyway
     // to prove the computation below cannot be coming from here.
     await db.app_settings.put({
       settingsId: 'singleton',
@@ -298,7 +298,7 @@ describe('TrendsService.getAdherence', () => {
       }),
     );
 
-    // Midday UTC, matching makeSession's convention above — dodges the TZ boundary flip that a
+    // Midday UTC, matching makeSession's convention above; dodges the TZ boundary flip that a
     // midnight-literal range would hit (a UTC-midnight instant is still the previous local
     // calendar day in any negative-offset timezone, e.g. US zones, shifting which Monday-start
     // week the range boundary falls into).

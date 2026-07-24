@@ -13,7 +13,7 @@ export type ErrorCode =
   | 'CAMERA_DENIED'
   | 'CAMERA_UNAVAILABLE';
 
-// docs/API.md §1: "only MODEL_LOAD_FAILED and DB_UNAVAILABLE are ever false" — fixed by
+// docs/API.md §1: "only MODEL_LOAD_FAILED and DB_UNAVAILABLE are ever false", fixed by
 // code, not a per-throw-site choice, so callers cannot accidentally mis-flag one.
 const NON_RECOVERABLE: ReadonlySet<ErrorCode> = new Set(['MODEL_LOAD_FAILED', 'DB_UNAVAILABLE']);
 

@@ -1,6 +1,6 @@
-# MirrorWell — API Reference (Internal Module Contracts)
+# MirrorWell: API Reference (Internal Module Contracts)
 
-> **For AI coding agents:** MirrorWell has **no HTTP API, no base URL, no auth tokens** — there is no server. This document specifies the internal module contracts at the same rigor an HTTP API doc would: exact signatures, full example inputs/outputs (shown as JSON), every error case, and inline non-negotiable rules. These contracts are what the **frontend track** and **ML track** build against; the **backend track** implements them (internals: `BACKEND.md`).
+> **For AI coding agents:** MirrorWell has **no HTTP API, no base URL, no auth tokens**; there is no server. This document specifies the internal module contracts at the same rigor an HTTP API doc would: exact signatures, full example inputs/outputs (shown as JSON), every error case, and inline non-negotiable rules. These contracts are what the **frontend track** and **ML track** build against; the **backend track** implements them (internals: `BACKEND.md`).
 >
 > Equivalents map for anyone expecting an HTTP doc:
 > - **Base URL** → ES module imports from `src/sensing/`, `src/metrics/`, `src/session/`, `src/data/`.
@@ -8,7 +8,7 @@
 > - **Dev mode** → `VITE_ENABLE_DEBUG_HUD=true` + `npm run seed:dev` (deterministic dataset, DATABASE.md §6). Demo Mode (`SafetyGate.enterDemoMode`) is a *product* feature, not a dev bypass.
 > - **Test credentials** → none exist; the seeded profile from `seed:dev` is the test identity.
 >
-> **Rules that apply to every contract below:** all timestamps UTC ISO 8601; all IDs uuid v4; every thrown error is a `MirrorWellError` (§1); no method performs a network call; no method accepts or returns image/video/landmark data except where explicitly typed (`LandmarkEngine`, `QualityMonitor`, `NormalizationLayer` — hot path only, never persisted).
+> **Rules that apply to every contract below:** all timestamps UTC ISO 8601; all IDs uuid v4; every thrown error is a `MirrorWellError` (§1); no method performs a network call; no method accepts or returns image/video/landmark data except where explicitly typed (`LandmarkEngine`, `QualityMonitor`, `NormalizationLayer`; hot path only, never persisted).
 
 ## Table of Contents
 
@@ -47,14 +47,14 @@ Every error thrown by any service:
 ```
 
 - `code`: one of the canonical codes (§16). Screens branch on `code` only.
-- `message`: developer-facing, console-only. **Never shown to users** — user copy comes from `src/config/strings.ts` keyed by `code`.
+- `message`: developer-facing, console-only. **Never shown to users**, user copy comes from `src/config/strings.ts` keyed by `code`.
 - `recoverable`: `true` → the UI offers retry/fix guidance; `false` → blocking screen (only `MODEL_LOAD_FAILED` and `DB_UNAVAILABLE` are ever `false`).
 
 ---
 
 ## 2. Gate model (SafetyGate)
 
-`src/session/safety.ts`. The app's "auth": three mutually exclusive states — **UNATTESTED** (fresh install / consent version bumped), **ATTESTED** (onboarding completed at current `VITE_CONSENT_VERSION`), **DEMO** (in-memory, ARCHITECTURE §11).
+`src/session/safety.ts`. The app's "auth": three mutually exclusive states, **UNATTESTED** (fresh install / consent version bumped), **ATTESTED** (onboarding completed at current `VITE_CONSENT_VERSION`), **DEMO** (in-memory, ARCHITECTURE §11).
 
 ### `SafetyGate.isAttested(): Promise<boolean>`
 
@@ -62,7 +62,7 @@ Returns `true` iff `user_profile.attestedAt != null && user_profile.consentVersi
 
 ### `SafetyGate.recordAttestation(consentVersion: string): Promise<void>`
 
-Persists attestation onto the **existing** profile row. `StorageService.saveProfile` (with the user's selected `assignedExercises`) must be called first — throws `VALIDATION_FAILED` if no valid profile exists. `OnboardingScreen` therefore saves in this order on its final step: profile first, attestation second (FRONTEND §2.1).
+Persists attestation onto the **existing** profile row. `StorageService.saveProfile` (with the user's selected `assignedExercises`) must be called first, throws `VALIDATION_FAILED` if no valid profile exists. `OnboardingScreen` therefore saves in this order on its final step: profile first, attestation second (FRONTEND §2.1).
 
 **Input example:** `"1"` · **Output:** resolves void · **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (version ≠ current env value)
 
@@ -70,13 +70,13 @@ Persists attestation onto the **existing** profile row. `StorageService.saveProf
 
 ### `SafetyGate.enterDemoMode(): void` / `SafetyGate.isDemoMode(): boolean` / `SafetyGate.exitDemoMode(): void`
 
-Enters/leaves DEMO (in-memory flag). Full rule set in ARCHITECTURE §11 — watermark, no persistence, blocked screens, reload exits.
+Enters/leaves DEMO (in-memory flag). Full rule set in ARCHITECTURE §11: watermark, no persistence, blocked screens, reload exits.
 
 `exitDemoMode()` clears the flag and touches nothing else (no storage read or write, so it is callable from inside demo, where every write is refused). Its one caller is `OnboardingScreen` on mount: reaching that screen **is** the documented demo close-out (§17 lists `OnboardingScreen` as ✅ *"exits demo"* in DEMO; FRONTEND §2.5 "ends at `OnboardingScreen`"), and the screen re-derives the gate from `isAttested()` afterwards rather than assuming UNATTESTED.
 
-> **DOCS-CHANGE (Reconvergence, 2026-07-23):** `exitDemoMode` is new. `recordAttestation` was the only documented exit and it *writes* — impossible from DEMO — so demo was a one-way door until a page reload, and the `SummaryScreen` → `OnboardingScreen` close-out silently landed elsewhere. ARCHITECTURE §11 makes the exit a safety property, so it needed a real one. Named to match the existing `enterDemoMode`/`isDemoMode` pair; no new canonical identifier (ARCHITECTURE §12 tracks services, screens, tables, fields, events, error codes and types — not method names).
+> **DOCS-CHANGE (Reconvergence, 2026-07-23):** `exitDemoMode` is new. `recordAttestation` was the only documented exit and it *writes*, impossible from DEMO, so demo was a one-way door until a page reload, and the `SummaryScreen` → `OnboardingScreen` close-out silently landed elsewhere. ARCHITECTURE §11 makes the exit a safety property, so it needed a real one. Named to match the existing `enterDemoMode`/`isDemoMode` pair; no new canonical identifier (ARCHITECTURE §12 tracks services, screens, tables, fields, events, error codes and types; not method names).
 
-> **Rule:** while `isDemoMode()` is true, **every `StorageService` write throws** `VALIDATION_FAILED` with message `"demo mode is read-only"`. This is a backstop — correctly written callers never reach it.
+> **Rule:** while `isDemoMode()` is true, **every `StorageService` write throws** `VALIDATION_FAILED` with message `"demo mode is read-only"`. This is a backstop, correctly written callers never reach it.
 
 ---
 
@@ -136,7 +136,7 @@ Persists a new calibration and atomically deactivates the previous active baseli
 }
 ```
 **Response:** `"0b7e4d2a-1c3f-4a8b-b6d9-5e2f8a7c4d10"`
-**Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (missing region keys, non-finite vector components, missing noise fields, `comfortableMax` keys ⊄ `assignedExercises`; `neutralActivation` — optional field, DATABASE §3 — keys ⊄ `assignedExercises`, values outside `[0, 1)`, or value ≥ `comfortableMax[key]`); `QUALITY_TOO_LOW` (`qualityScore < 0.7` — distinct code so `CalibrationScreen` can show capture coaching, not a generic error)
+**Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (missing region keys, non-finite vector components, missing noise fields, `comfortableMax` keys ⊄ `assignedExercises`; `neutralActivation`, optional field, DATABASE §3: keys ⊄ `assignedExercises`, values outside `[0, 1)`, or value ≥ `comfortableMax[key]`); `QUALITY_TOO_LOW` (`qualityScore < 0.7`, distinct code so `CalibrationScreen` can show capture coaching, not a generic error)
 
 > **Rule:** the isActive flip (old → 0, new → 1) happens inside the same Dexie transaction as the insert. Two active baselines must be impossible at any observable instant.
 
@@ -179,7 +179,7 @@ One transaction: `session_record` + all `exercise_result` rows + all `rep_metric
 **Errors:** `DB_UNAVAILABLE`; `VALIDATION_FAILED` (any DATABASE §3 rule; unknown `baselineId`/`profileId`; demo mode)
 
 > **Rule:** a thrown error anywhere in the transaction leaves **zero** rows. TESTS.md includes a forced mid-transaction failure test.
-> **Type-conversion note:** `RepEvent.easeOffTriggered` is `boolean` on the event surface; `SessionController` converts it to `0 | 1` during session assembly (IndexedDB indexability, DATABASE.md §1). Likewise `RepEvent.durationMs` is a raw difference of frame timestamps (fractional performance-clock ms); `SessionController` rounds it to the integer `rep_metric.durationMs` (DATABASE §3: "integer > 0") during the same assembly — an unrounded value would make `saveSession` reject the whole completed session.
+> **Type-conversion note:** `RepEvent.easeOffTriggered` is `boolean` on the event surface; `SessionController` converts it to `0 | 1` during session assembly (IndexedDB indexability, DATABASE.md §1). Likewise `RepEvent.durationMs` is a raw difference of frame timestamps (fractional performance-clock ms); `SessionController` rounds it to the integer `rep_metric.durationMs` (DATABASE §3: "integer > 0") during the same assembly; an unrounded value would make `saveSession` reject the whole completed session.
 
 ### `getSessions(range: {from: string; to: string}): Promise<SessionRecordFull[]>`
 
@@ -199,11 +199,11 @@ Clears all six tables in one transaction. **Errors:** `DB_UNAVAILABLE`
 
 | Method | Input | Output | Errors |
 |---|---|---|---|
-| `start(constraints?)` | optional `MediaTrackConstraints` | `Promise<void>` | `CAMERA_DENIED` (user refused — recoverable, show permission guidance), `CAMERA_UNAVAILABLE` (no device / in use — recoverable, show device guidance) |
-| `stop()` | — | `void` (camera light must go off) | — |
-| `onFrame(cb)` | `(video: HTMLVideoElement, timestampMs: number) => void` | `() => void` unsubscribe | — |
-| `onStop(cb)` | `() => void` | `() => void` unsubscribe | — |
-| `isRunning()` | — | `boolean` | — |
+| `start(constraints?)` | optional `MediaTrackConstraints` | `Promise<void>` | `CAMERA_DENIED` (user refused, recoverable, show permission guidance), `CAMERA_UNAVAILABLE` (no device / in use; recoverable, show device guidance) |
+| `stop()` |, | `void` (camera light must go off) |, |
+| `onFrame(cb)` | `(video: HTMLVideoElement, timestampMs: number) => void` | `() => void` unsubscribe |, |
+| `onStop(cb)` | `() => void` | `() => void` unsubscribe |, |
+| `isRunning()` |, | `boolean` |, |
 
 > **DOCS-CHANGE (Reconvergence, 2026-07-23):** `onStop` is new. `stop()` announces itself to these listeners **after** the tracks are released; `stop()` does **not** clear `onFrame` subscribers, because `SessionScreen`'s pause → resume stops and restarts the camera on the *same* subscription. The one consumer that cannot survive a stop is a capture window that closes only on an arriving frame: it hung forever and orphaned its subscriber for the page lifetime, so the next session ran two `LandmarkEngine.detect()` per frame on one timestamp. `openFrameSource` (`src/session/frames.ts`) takes an optional `onCameraStopped` and does the subscribing; no other caller needs `onStop` directly.
 
@@ -219,11 +219,11 @@ Clears all six tables in one transaction. **Errors:** `DB_UNAVAILABLE`
 
 ### `init(): Promise<void>`
 
-Loads the bundled WASM runtime from `/wasm/` (via `FilesetResolver.forVisionTasks('/wasm')` — never a CDN) and `/models/face_landmarker.task` (both hash-verified at postinstall; BACKEND §1.2). **Errors:** `MODEL_LOAD_FAILED` (`recoverable: false` → blocking retry screen; covers both runtime and model load failures)
+Loads the bundled WASM runtime from `/wasm/` (via `FilesetResolver.forVisionTasks('/wasm')`; never a CDN) and `/models/face_landmarker.task` (both hash-verified at postinstall; BACKEND §1.2). **Errors:** `MODEL_LOAD_FAILED` (`recoverable: false` → blocking retry screen; covers both runtime and model load failures)
 
 ### `detect(video: HTMLVideoElement, timestampMs: number): LandmarkFrame`
 
-Passes the playing video element straight to FaceLandmarker's `detectForVideo` — no `VideoFrame`/WebCodecs construction (avoids a Firefox compatibility risk entirely).
+Passes the playing video element straight to FaceLandmarker's `detectForVideo`; no `VideoFrame`/WebCodecs construction (avoids a Firefox compatibility risk entirely).
 
 **Response example (truncated array):**
 ```json
@@ -241,7 +241,7 @@ Passes the playing video element straight to FaceLandmarker's `detectForVideo` �
 
 Returns `true` after a successful `init()`.
 
-**Errors (detect):** `NOT_INITIALIZED` (call `init()` first), `INFERENCE_FAILED` (orchestrator converts to `FACE_LOST` **before** `QualityMonitor.evaluate` by passing `null` — never crashes a session)
+**Errors (detect):** `NOT_INITIALIZED` (call `init()` first), `INFERENCE_FAILED` (orchestrator converts to `FACE_LOST` **before** `QualityMonitor.evaluate` by passing `null`; never crashes a session)
 
 > **Rule:** MediaPipe types never escape this module; downstream consumes `LandmarkFrame` only. The former "never blendshapes downstream" rule is REVERSED 2026-07-19 (blendshape-si-v1): after the geometry family exhausted its stop rule on V1 B3 (three rejected candidates, `tests/analysis/rejected/`), blendshape probes on the same fixtures showed B3 0.006–0.051 and demonstrated unilateral sensitivity (smirk SI 0.43/0.72 vs 0.99 symmetric). Blendshapes are now the primary SI/effort source; the atypical-face concern stands as a documented risk gated at V2 palsy-fixture validation, and geometry modules are retained as cross-check (MODEL_AND_DATA §2/§7).
 
@@ -255,14 +255,14 @@ Returns `true` after a successful `init()`.
 
 Returns a discriminated `QualityResult` (exact shape: ARCHITECTURE §13):
 
-- `{ state: 'QUALITY_OK', frame: ApprovedFrame }` — only branch that carries a frame
-- `{ state: <non-OK QualityState> }` — **no** `frame` key
+- `{ state: 'QUALITY_OK', frame: ApprovedFrame }`, only branch that carries a frame
+- `{ state: <non-OK QualityState> }`; **no** `frame` key
 
 `QualityState` values: `"QUALITY_OK" | "LOW_LIGHT" | "FACE_LOST" | "TOO_FAR" | "POSE_OUT_OF_RANGE" | "LOW_CONFIDENCE"`. Gate order and initial thresholds: BACKEND §1.3 / ARCHITECTURE §7.
 
 `INFERENCE_FAILED` is **not** observed inside `evaluate`. The orchestrator (`SessionController` or a `src/dev/` harness) catches it from `LandmarkEngine.detect` and calls `evaluate(video, null)`, which yields `{ state: 'FACE_LOST' }`.
 
-> **Rule (structural fail-safe / type barrier):** `ApprovedFrame` is constructible only inside `quality.ts`; `normalize` / geometry (`measureAbsolute`) accept only `ApprovedFrame` — bad-frame metrics are a **compile error**, not a runtime policy.
+> **Rule (structural fail-safe / type barrier):** `ApprovedFrame` is constructible only inside `quality.ts`; `normalize` / geometry (`measureAbsolute`) accept only `ApprovedFrame`, bad-frame metrics are a **compile error**, not a runtime policy.
 
 ---
 
@@ -276,7 +276,7 @@ Returns a discriminated `QualityResult` (exact shape: ARCHITECTURE §13):
 measureAbsolute(af: ApprovedFrame): AbsoluteFeatures
 ```
 
-`AbsoluteFeatures` = face-local vector features per region/side in IOD units (ARCHITECTURE §13). Used by calibration bootstrap (`CalibrationFlow.captureNeutral`) and as the inner step of `normalize`. **Baseline-free by design (DG-2):** this is the only path that may produce geometry without a stored baseline. **Zero baselines, identity defaults, and ephemeral fake baselines are explicitly forbidden** — if no real baseline exists yet, call `measureAbsolute`, never invent neutral zeros.
+`AbsoluteFeatures` = face-local vector features per region/side in IOD units (ARCHITECTURE §13). Used by calibration bootstrap (`CalibrationFlow.captureNeutral`) and as the inner step of `normalize`. **Baseline-free by design (DG-2):** this is the only path that may produce geometry without a stored baseline. **Zero baselines, identity defaults, and ephemeral fake baselines are explicitly forbidden**; if no real baseline exists yet, call `measureAbsolute`, never invent neutral zeros.
 
 ### `setBaseline(b: CalibrationBaseline): void` · `clearBaseline(): void`
 
@@ -298,19 +298,19 @@ Accepts **only** `ApprovedFrame` (ARCHITECTURE §13). Pipeline: `measureAbsolute
   "timestampMs": 187423.6
 }
 ```
-Values are vector displacements from `neutralStats`, in inter-ocular-distance units. **Errors:** `NO_BASELINE` only. `POSE_OUT_OF_RANGE` is **not** thrown here — pose is gated inside `QualityMonitor` before an `ApprovedFrame` can exist, so that error is unreachable behind the type barrier (removed from this contract).
+Values are vector displacements from `neutralStats`, in inter-ocular-distance units. **Errors:** `NO_BASELINE` only. `POSE_OUT_OF_RANGE` is **not** thrown here, pose is gated inside `QualityMonitor` before an `ApprovedFrame` can exist, so that error is unreachable behind the type barrier (removed from this contract).
 
 ---
 
 ## 8. MetricEngine
 
-`src/metrics/metrics.ts`. Deterministic module-singleton (same held-state pattern as `NormalizationLayer` §7) — not React state, not storage, not DOM.
+`src/metrics/metrics.ts`. Deterministic module-singleton (same held-state pattern as `NormalizationLayer` §7); not React state, not storage, not DOM.
 
-> **DOCS-CHANGE (Task 7, 2026-07-10):** `compute()`'s `effortIndex` denominator is `comfortableMax[exerciseId]` (ARCHITECTURE §7), which lives on `CalibrationBaseline` — a value `MetricEngine` cannot fetch itself (BACKEND §1.5 forbids storage access) and that a per-frame `NormalizedFrame` has no business carrying (it's a per-session constant, not a per-frame value). ARCHITECTURE §7 also assigns 5-frame smoothing and the ease-off sustained-duration condition to `MetricEngine`, both of which are cross-frame state that a single `compute(nf, exerciseId)` call cannot hold. Three methods are added below, mirroring `NormalizationLayer`'s existing `setBaseline`/state pattern — no new identifiers invented, only the already-canonical `setBaseline`/`reset` shapes extended to this module.
+> **DOCS-CHANGE (Task 7, 2026-07-10):** `compute()`'s `effortIndex` denominator is `comfortableMax[exerciseId]` (ARCHITECTURE §7), which lives on `CalibrationBaseline`; a value `MetricEngine` cannot fetch itself (BACKEND §1.5 forbids storage access) and that a per-frame `NormalizedFrame` has no business carrying (it's a per-session constant, not a per-frame value). ARCHITECTURE §7 also assigns 5-frame smoothing and the ease-off sustained-duration condition to `MetricEngine`, both of which are cross-frame state that a single `compute(nf, exerciseId)` call cannot hold. Three methods are added below, mirroring `NormalizationLayer`'s existing `setBaseline`/state pattern; no new identifiers invented, only the already-canonical `setBaseline`/`reset` shapes extended to this module.
 
 ### `setBaseline(b: CalibrationBaseline): void`
 
-Called once by `SessionController.start` (alongside `NormalizationLayer.setBaseline`), and again by `CalibrationFlow`/tests as needed. **Errors:** `NO_BASELINE` (invalid/missing baseline object — same rule as §7).
+Called once by `SessionController.start` (alongside `NormalizationLayer.setBaseline`), and again by `CalibrationFlow`/tests as needed. **Errors:** `NO_BASELINE` (invalid/missing baseline object, same rule as §7).
 
 ### `compute(nf: NormalizedFrame, exerciseId: ExerciseId): MetricSample`
 
@@ -318,7 +318,7 @@ Called once by `SessionController.start` (alongside `NormalizationLayer.setBasel
 ```json
 { "symmetryIndex": 0.68, "effortIndex": 0.44, "timestampMs": 187423.6 }
 ```
-**Response example (below movementFloor — no movement, no score):**
+**Response example (below movementFloor; no movement, no score):**
 ```json
 { "symmetryIndex": null, "effortIndex": 0.02, "timestampMs": 187423.6 }
 ```
@@ -332,11 +332,11 @@ Called once by `SessionController.start` (alongside `NormalizationLayer.setBasel
 
 ### `getLastRaw(): { symmetryIndex: number | null; effortIndex: number } | null`
 
-> **DOCS-CHANGE (Task 8, 2026-07-10):** the canonical `DebugHud` CSV columns (ARCHITECTURE §12) include `symmetryIndexRaw`/`effortIndexRaw` alongside the smoothed pair, and this section already stated "DebugHud shows both" — but `MetricSample` (consumed by `RepDetector`/`SessionController`/`StorageService`) is deliberately smoothed-only and stays that way. `getLastRaw()` is a dev-only accessor returning the most recent pre-smoothing values, captured as a side-value inside `compute()` itself. `null` before the first `compute()` call or immediately after `reset()`.
+> **DOCS-CHANGE (Task 8, 2026-07-10):** the canonical `DebugHud` CSV columns (ARCHITECTURE §12) include `symmetryIndexRaw`/`effortIndexRaw` alongside the smoothed pair, and this section already stated "DebugHud shows both"; but `MetricSample` (consumed by `RepDetector`/`SessionController`/`StorageService`) is deliberately smoothed-only and stays that way. `getLastRaw()` is a dev-only accessor returning the most recent pre-smoothing values, captured as a side-value inside `compute()` itself. `null` before the first `compute()` call or immediately after `reset()`.
 
 ### `reset(): void`
 
-Clears the smoothing window, the ease-off sustain timer, and `getLastRaw()`'s cached value. `SessionController` calls this on every exercise transition (same rule as `RepDetector.reset()` below) — a unit test asserts no state leakage between exercises.
+Clears the smoothing window, the ease-off sustain timer, and `getLastRaw()`'s cached value. `SessionController` calls this on every exercise transition (same rule as `RepDetector.reset()` below); a unit test asserts no state leakage between exercises.
 
 ---
 
@@ -362,7 +362,7 @@ Thresholds (`repStartThreshold` 0.15, `repMinDurationMs` 800, `repEndThreshold` 
 
 ### `getState(): 'idle' | 'active'`
 
-> **DOCS-CHANGE (Task 8, 2026-07-10):** the canonical `DebugHud` CSV columns (ARCHITECTURE §12) include `repState`, and `feed()`/`reset()` alone give no way to observe whether a rep is currently in progress. `'idle' | 'active'` is not defined elsewhere in the docs — it is the simplest honest exposure of the state `feed()` already tracks internally, named to match the `isReady()`/`isRunning()`/`isDemoMode()` boolean-query convention used elsewhere in this codebase.
+> **DOCS-CHANGE (Task 8, 2026-07-10):** the canonical `DebugHud` CSV columns (ARCHITECTURE §12) include `repState`, and `feed()`/`reset()` alone give no way to observe whether a rep is currently in progress. `'idle' | 'active'` is not defined elsewhere in the docs; it is the simplest honest exposure of the state `feed()` already tracks internally, named to match the `isReady()`/`isRunning()`/`isDemoMode()` boolean-query convention used elsewhere in this codebase.
 
 ---
 
@@ -378,7 +378,7 @@ Preconditions checked in order: gate (ATTESTED or DEMO) → active baseline exis
 
 ### `advance(): void` · `extendRest(seconds: number): void`
 
-`advance` moves DEMO→REPS or ends REST early. `extendRest` adds time — **shortening does not exist** (accessibility no-time-pressure rule, FRONTEND §4).
+`advance` moves DEMO→REPS or ends REST early. `extendRest` adds time, **shortening does not exist** (accessibility no-time-pressure rule, FRONTEND §4).
 
 ### `stop(reason: EndReason): Promise<SessionRecordFull>`
 
@@ -386,9 +386,9 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 
 **Response:** the saved `SessionRecordFull` (exact shape: ARCHITECTURE §13; nested results + reps as in §3 `saveSession` request).
 
-**Errors:** `VALIDATION_FAILED` (no active session — `stop()` called before any `start()`; the rejection is not cached, so a subsequent real session still resolves normally). `stop()` is otherwise idempotent: repeated calls within one session return the same settled promise.
+**Errors:** `VALIDATION_FAILED` (no active session; `stop()` called before any `start()`; the rejection is not cached, so a subsequent real session still resolves normally). `stop()` is otherwise idempotent: repeated calls within one session return the same settled promise.
 
-### `on(event, cb): () => void` — the event surface (complete)
+### `on(event, cb): () => void`: the event surface (complete)
 
 | Event | Payload example |
 |---|---|
@@ -410,9 +410,9 @@ Always persists the partial/full session (except DEMO, where it returns the reco
 
 | Method | Signature / output | Errors |
 |---|---|---|
-| `captureNeutral()` | `Promise<NeutralCaptureResult>` — `{ neutralStats, qualityScore }` (exact shape: ARCHITECTURE §13). Example: `{"neutralStats": {"REGION_BROW": {"left": {"u": 0.0, "v": 0.418}, "right": {"u": 0.0, "v": 0.421}}, "…": "…"}, "qualityScore": 0.91}` | `QUALITY_TOO_LOW` (coaching UI, retry), `CAMERA_*`, `NOT_ATTESTED` |
-| `captureComfortableMax("EX_SMILE")` | `Promise<number>` — e.g. `0.62` (0..1 blendshape-activation units, DATABASE §2) | same |
-| `runNoiseFloorSelfTest()` | `Promise<number>` — e.g. `0.041` (persisted with the active baseline; field ownership: ARCHITECTURE §12) | same + `DB_UNAVAILABLE` |
+| `captureNeutral()` | `Promise<NeutralCaptureResult>`, `{ neutralStats, qualityScore }` (exact shape: ARCHITECTURE §13). Example: `{"neutralStats": {"REGION_BROW": {"left": {"u": 0.0, "v": 0.418}, "right": {"u": 0.0, "v": 0.421}}, "…": "…"}, "qualityScore": 0.91}` | `QUALITY_TOO_LOW` (coaching UI, retry), `CAMERA_*`, `NOT_ATTESTED` |
+| `captureComfortableMax("EX_SMILE")` | `Promise<number>`, e.g. `0.62` (0..1 blendshape-activation units, DATABASE §2) | same |
+| `runNoiseFloorSelfTest()` | `Promise<number>`, e.g. `0.041` (persisted with the active baseline; field ownership: ARCHITECTURE §12) | same + `DB_UNAVAILABLE` |
 | `checkBaselineDrift()` | `Promise<'ok' \| 'recalibrate'>` | `NO_BASELINE`, `CAMERA_*` |
 
 > **Rule:** `comfortableMax` = **median** of 3 gentle reps, never max (resists the straining outlier). Copy for these captures must include the word "gentle" (SAFETY §8 audit checks this).
@@ -442,7 +442,7 @@ Exact shape: ARCHITECTURE §13.
 ```
 **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (unknown exercise)
 
-> **Rules:** one series = one `baselineId` (the active one); `aboveNoiseFloor: false` when period-over-period change < the **active baseline's** `noiseFloorSymmetry` (read from `calibration_baseline`, never `app_settings`; ARCHITECTURE §4 / §12) — UI renders those as "steady", never up/down; `quality_abandoned` and `red_flag_stopped` sessions are excluded from aggregation.
+> **Rules:** one series = one `baselineId` (the active one); `aboveNoiseFloor: false` when period-over-period change < the **active baseline's** `noiseFloorSymmetry` (read from `calibration_baseline`, never `app_settings`; ARCHITECTURE §4 / §12), UI renders those as "steady", never up/down; `quality_abandoned` and `red_flag_stopped` sessions are excluded from aggregation.
 
 ### `getAdherence(range): Promise<Adherence>`
 
@@ -479,9 +479,9 @@ JSON validates against `tests/schemas/export.schema.json`. **Full example:**
 }
 ```
 
-`noiseFloorSymmetry` in the export is sourced from the **active `calibration_baseline`** row (not `app_settings`). The HTML blob is a printable one-page A4 summary carrying the same non-diagnostic header and the same underlying data (trend series, adherence, sessions); it may present that data more compactly than the JSON to stay one page. **Errors:** `NOT_ATTESTED` (unattested **or** in Demo Mode — an attested user can `enterDemoMode()`, and export is ❌ in DEMO per §17), `NO_BASELINE` (attested but never calibrated — reachable, since §17 gates `ExportScreen` on attestation alone), `DB_UNAVAILABLE`, `VALIDATION_FAILED` (bad range, or no profile row)
+`noiseFloorSymmetry` in the export is sourced from the **active `calibration_baseline`** row (not `app_settings`). The HTML blob is a printable one-page A4 summary carrying the same non-diagnostic header and the same underlying data (trend series, adherence, sessions); it may present that data more compactly than the JSON to stay one page. **Errors:** `NOT_ATTESTED` (unattested **or** in Demo Mode; an attested user can `enterDemoMode()`, and export is ❌ in DEMO per §17), `NO_BASELINE` (attested but never calibrated; reachable, since §17 gates `ExportScreen` on attestation alone), `DB_UNAVAILABLE`, `VALIDATION_FAILED` (bad range, or no profile row)
 
-> **Rules:** download only — no Web Share API, no clipboard auto-copy; no fields beyond the schema; `nonDiagnosticNotice` is mandatory and its text lives in `strings.ts` (audited, SAFETY §8).
+> **Rules:** download only; no Web Share API, no clipboard auto-copy; no fields beyond the schema; `nonDiagnosticNotice` is mandatory and its text lives in `strings.ts` (audited, SAFETY §8).
 ---
 
 ## 14. SettingsService
@@ -492,7 +492,7 @@ JSON validates against `tests/schemas/export.schema.json`. **Full example:**
 
 **`update` request example:** `{ "caregiverViewEnabled": true }` → **response:** the full updated `AppSettings` (shape: DATABASE §2). **Errors:** `DB_UNAVAILABLE`, `VALIDATION_FAILED` (e.g. `textScale` outside `[1.0..2.0]`)
 
-> **Rule:** `caregiverViewEnabled` may only be toggled from `SettingsScreen` (it is the patient's consent act for `CaregiverScreen`). Noise floors (`noiseFloorSymmetry`, `noiseFloorDisplacement`) live on `calibration_baseline` and are written only via `CalibrationFlow` → `StorageService.saveBaseline` — not through `SettingsService`.
+> **Rule:** `caregiverViewEnabled` may only be toggled from `SettingsScreen` (it is the patient's consent act for `CaregiverScreen`). Noise floors (`noiseFloorSymmetry`, `noiseFloorDisplacement`) live on `calibration_baseline` and are written only via `CalibrationFlow` → `StorageService.saveBaseline`; not through `SettingsService`.
 
 ---
 
@@ -506,9 +506,9 @@ JSON validates against `tests/schemas/export.schema.json`. **Full example:**
     "exerciseId": "EX_SMILE",
     "regionId": "REGION_MOUTH_CORNER",
     "landmarkIndices": { "left": ["<mesh point ids, fixed in IMPLEMENTATION Task 6>"], "right": ["…"] },
-    "blendshapePair": { "left": "mouthSmileLeft", "right": "mouthSmileRight" },  // absent for EX_PUCKER (open decision — no per-side pucker blendshape; MetricEngine throws VALIDATION_FAILED)
+    "blendshapePair": { "left": "mouthSmileLeft", "right": "mouthSmileRight" },  // absent for EX_PUCKER (open decision; no per-side pucker blendshape; MetricEngine throws VALIDATION_FAILED)
     "displayName": "Gentle smile",
-    "instruction": "Let a small, slow smile come — about half of what feels possible. Gentle is the goal.",
+    "instruction": "Let a small, slow smile come; about half of what feels possible. Gentle is the goal.",
     "demoAssetPath": "/demo-assets/EX_SMILE.webm",
     "repsPerSet": 10, "sets": 1, "restSeconds": 20
   }
@@ -518,9 +518,9 @@ All four `EX_*` entries follow this shape; `EX_EYE_CLOSURE.repsPerSet = 5` (eye-
 
 ### `src/config/thresholds.ts`
 
-Every tunable, exported as a single frozen object, each with a comment naming its owning doc section: `landmarker {minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5}` (FaceLandmarker option thresholds — the only confidence controls that exist), `qualityGates {lumaMin: 60, interOcularMinFrac: 0.09, poseMaxDeg: 22, jitterMaxPct: 0.012}` (`interOcularMinFrac` replaces the retired `interOcularMinPx` — distance gate is a fraction of video width so the same face scale passes at 640×480 and 1280×720; `lumaMin` is face-region mean luma on the 64×64 downsample; `jitterMaxPct` is RMS second-difference / IOD), `metrics {movementFloorPct: 0.012, effortTargetZone: [0.30, 0.50], easeOffThreshold: 0.60, easeOffSustainMs: 300, smoothingWindow: 5, gapResetMs: 250}`, `blendshapes {activationFloor: 0.05}` (SI undefined below this max per-side blendshape score — candidate blendshape-si-v1, probe-derived initial value), `reps {startThreshold: 0.18, endThreshold: 0.12, minDurationMs: 800, minQualityFramePct: 0.60}`, `calibration {minQualityScore: 0.7, neutralCaptures: 3, captureSeconds: 3, driftMaxPct: 0.08, staleDays: 14}`, `session {qualityProblemOfferStopMs: 30000, metricEventMinIntervalMs: 66, restExtendSeconds: 30}` (`metricEventMinIntervalMs` throttles `SessionController`'s `metricUpdate` event to the ~15 Hz text-update rate `ARCHITECTURE.md` §3 specifies for `FeedbackRenderer`; the rep-close OK-frame fraction reuses `reps.minQualityFramePct` rather than a second `session`-scoped copy; `restExtendSeconds` is the seconds added per `SessionScreen` "+30 s" rest extension — the amount the screen passes to `SessionController.extendRest`, extend-only per FRONTEND §4), `feedback {voiceMinGapMs: 2500}` (minimum interval between accepted local `VoiceCoach` utterances; FRONTEND §2.4), `v1Protocol {neutralMs: 10000, smileHoldMs: 8000, prepMs: 3000, yawTargetMinDeg: 7, yawTargetMaxDeg: 13, trials: 2, minOkFramePct: 0.7, qualityOkRecentMs: 2000}` (dev-only live capture harness for the `MODEL_AND_DATA.md` §7 V1 statistical protocol — phase durations, trial count, yaw target band, and per-phase OK-frame bar for the B1a/B1b/B2/B3 kill-gate run; `qualityOkRecentMs` is the start-protocol enable window: last `QUALITY_OK` frame must be within this many ms), `liveDemo {symmetryBoundary: 0.85}` (dev-only live demo readout band — the symmetry index at or above which the demo reads "even on both sides"; sits in the gap the demo arc names, a real symmetric smile ≈ 0.98 versus one side deliberately restrained ≈ 0.4–0.7. Consumed only by `src/dev/liveDemoState.ts`, which is excluded from the production bundle; tune on real hardware).
+Every tunable, exported as a single frozen object, each with a comment naming its owning doc section: `landmarker {minFaceDetectionConfidence: 0.5, minFacePresenceConfidence: 0.5, minTrackingConfidence: 0.5}` (FaceLandmarker option thresholds; the only confidence controls that exist), `qualityGates {lumaMin: 60, interOcularMinFrac: 0.09, poseMaxDeg: 22, jitterMaxPct: 0.012}` (`interOcularMinFrac` replaces the retired `interOcularMinPx`, distance gate is a fraction of video width so the same face scale passes at 640×480 and 1280×720; `lumaMin` is face-region mean luma on the 64×64 downsample; `jitterMaxPct` is RMS second-difference / IOD), `metrics {movementFloorPct: 0.012, effortTargetZone: [0.30, 0.50], easeOffThreshold: 0.60, easeOffSustainMs: 300, smoothingWindow: 5, gapResetMs: 250}`, `blendshapes {activationFloor: 0.05}` (SI undefined below this max per-side blendshape score, candidate blendshape-si-v1, probe-derived initial value), `reps {startThreshold: 0.18, endThreshold: 0.12, minDurationMs: 800, minQualityFramePct: 0.60}`, `calibration {minQualityScore: 0.7, neutralCaptures: 3, captureSeconds: 3, driftMaxPct: 0.08, staleDays: 14}`, `session {qualityProblemOfferStopMs: 30000, metricEventMinIntervalMs: 66, restExtendSeconds: 30}` (`metricEventMinIntervalMs` throttles `SessionController`'s `metricUpdate` event to the ~15 Hz text-update rate `ARCHITECTURE.md` §3 specifies for `FeedbackRenderer`; the rep-close OK-frame fraction reuses `reps.minQualityFramePct` rather than a second `session`-scoped copy; `restExtendSeconds` is the seconds added per `SessionScreen` "+30 s" rest extension; the amount the screen passes to `SessionController.extendRest`, extend-only per FRONTEND §4), `feedback {voiceMinGapMs: 2500}` (minimum interval between accepted local `VoiceCoach` utterances; FRONTEND §2.4), `v1Protocol {neutralMs: 10000, smileHoldMs: 8000, prepMs: 3000, yawTargetMinDeg: 7, yawTargetMaxDeg: 13, trials: 2, minOkFramePct: 0.7, qualityOkRecentMs: 2000}` (dev-only live capture harness for the `MODEL_AND_DATA.md` §7 V1 statistical protocol, phase durations, trial count, yaw target band, and per-phase OK-frame bar for the B1a/B1b/B2/B3 kill-gate run; `qualityOkRecentMs` is the start-protocol enable window: last `QUALITY_OK` frame must be within this many ms), `liveDemo {symmetryBoundary: 0.85}` (dev-only live demo readout band; the symmetry index at or above which the demo reads "even on both sides"; sits in the gap the demo arc names, a real symmetric smile ≈ 0.98 versus one side deliberately restrained ≈ 0.4–0.7. Consumed only by `src/dev/liveDemoState.ts`, which is excluded from the production bundle; tune on real hardware).
 
-**Local profile and UI presentation tunables:** `profile {nicknameMaxLength: 30, motivationMaxLength: 120}` (DATABASE §3 — optional local-only profile text limits); `home {sessionLookbackDays: 7, morningStartHour: 12, eveningStartHour: 18, gardenWeeks: 8, gardenBloomSessions: 3, daysPerWeek: 7, sessions10: 10, sessions25: 25, practiceWeeks4Days: 28, gentleReps100: 100}` (FRONTEND §2.3/§2.5 — local-date garden buckets and derived practice milestones); `summary {symmetryMostlyEvenMin: 0.85, symmetryFairlyEvenMin: 0.7, symmetrySomeDifferenceMin: 0.55}` (FRONTEND §2.5 — plain-language symmetry buckets; no numeric grades shown), `trends {minPeriodsForChart: 2}` (FRONTEND §2.6 — minimum periods before a trend chart renders), `export {defaultRangeWeeks: 8}` (FRONTEND §2.8 — default export date window), `settings {textScaleMin: 1.0, textScaleMax: 2.0, textScaleStep: 0.1, saveFeedbackDismissMs: 2500}` (FRONTEND §2.9/§4 — text-size control bounds + save-confirmation dismiss delay), `caregiver {noteMaxLength: 200}` (DATABASE §3 — SAFETY §5 encouragement-note length limit).
+**Local profile and UI presentation tunables:** `profile {nicknameMaxLength: 30, motivationMaxLength: 120}` (DATABASE §3: optional local-only profile text limits); `home {sessionLookbackDays: 7, morningStartHour: 12, eveningStartHour: 18, gardenWeeks: 8, gardenBloomSessions: 3, daysPerWeek: 7, sessions10: 10, sessions25: 25, practiceWeeks4Days: 28, gentleReps100: 100}` (FRONTEND §2.3/§2.5: local-date garden buckets and derived practice milestones); `summary {symmetryMostlyEvenMin: 0.85, symmetryFairlyEvenMin: 0.7, symmetrySomeDifferenceMin: 0.55}` (FRONTEND §2.5: plain-language symmetry buckets; no numeric grades shown), `trends {minPeriodsForChart: 2}` (FRONTEND §2.6: minimum periods before a trend chart renders), `export {defaultRangeWeeks: 8}` (FRONTEND §2.8: default export date window), `settings {textScaleMin: 1.0, textScaleMax: 2.0, textScaleStep: 0.1, saveFeedbackDismissMs: 2500}` (FRONTEND §2.9/§4: text-size control bounds + save-confirmation dismiss delay), `caregiver {noteMaxLength: 200}` (DATABASE §3. SAFETY §5 encouragement-note length limit).
 
 > **Rule:** a numeric literal used by any service that does not come from this file is a review-blocking defect.
 
@@ -552,7 +552,7 @@ Operation × gate state. ✅ allowed · ❌ blocked (error in parentheses) · �
 | Operation | UNATTESTED | ATTESTED | DEMO |
 |---|---|---|---|
 | `OnboardingScreen` / `recordAttestation` | ✅ | ✅ (re-consent) | ✅ (exits demo) |
-| `enterDemoMode` | ✅ | ✅ | — |
+| `enterDemoMode` | ✅ | ✅ |, |
 | `CalibrationFlow.*` | ❌ (`NOT_ATTESTED`) | ✅ | ◐ in-memory quick-calibration only |
 | `SessionController.start/advance/stop` | ❌ (`NOT_ATTESTED`) | ✅ | ◐ no persistence on `stop` |
 | `StorageService` reads | ✅ (gate needs profile) | ✅ | ❌ except non-sensitive static config (implementation deferred; documented intent) |
@@ -573,7 +573,7 @@ Operation × gate state. ✅ allowed · ❌ blocked (error in parentheses) · �
 
 **Inputs consumed (nothing else):** smoothed `MetricSample`s (via `SessionController` `metricUpdate`), `QualityState` (via `qualityUpdate`), `easeOff {active}`, `repCompleted`, `stateChanged`, plus `AppSettings` display fields (`reducedFacePreview`, `showAffectedSideMarker`, `highContrast`, `audioCuesEnabled`, `hapticsEnabled`) and `user_profile.affectedSide` for the focus-side dot.
 
-**Responsibility split:** **canvas layer** (redrawn at full fps): symmetry bar, **effort meter** (vertical gauge of the smoothed `effortIndex` — the value `RepDetector` counts on — with the `effortTargetZone` band drawn as a fixed landmark; fill clamped to [0..1], frozen/dimmed on non-`QUALITY_OK` exactly like the bar), guide arc, focus-side dot, camera-preview dimming. **DOM layer** (updated ≤ 15 Hz, `aria-live` where FRONTEND §4 requires): quality banners, ease-off chip, rep counter, rest timer, DEMO watermark. Audio cues via Web Audio; haptics via the Vibration API (Android only; never the sole channel).
+**Responsibility split:** **canvas layer** (redrawn at full fps): symmetry bar, **effort meter** (vertical gauge of the smoothed `effortIndex`; the value `RepDetector` counts on; with the `effortTargetZone` band drawn as a fixed landmark; fill clamped to [0..1], frozen/dimmed on non-`QUALITY_OK` exactly like the bar), guide arc, focus-side dot, camera-preview dimming. **DOM layer** (updated ≤ 15 Hz, `aria-live` where FRONTEND §4 requires): quality banners, ease-off chip, rep counter, rest timer, DEMO watermark. Audio cues via Web Audio; haptics via the Vibration API (Android only; never the sole channel).
 
 **Public interface:**
 
@@ -588,4 +588,4 @@ setWatermark(on: boolean): void                  // DEMO mode strip
 applySettings(s: AppSettings, affectedSide: UserProfile['affectedSide']): void
 ```
 
-> **Rules:** during any non-`QUALITY_OK` state the bar is frozen and visibly labeled — a moving bar on a bad frame is a critical defect (TESTS.md §3.3 pixel-diff test). No user-facing text is composed here; all strings come from `strings.ts` keyed by state.
+> **Rules:** during any non-`QUALITY_OK` state the bar is frozen and visibly labeled; a moving bar on a bad frame is a critical defect (TESTS.md §3.3 pixel-diff test). No user-facing text is composed here; all strings come from `strings.ts` keyed by state.

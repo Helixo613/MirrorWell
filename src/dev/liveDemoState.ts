@@ -1,4 +1,4 @@
-// src/dev/liveDemoState.ts — pure display logic for the dev-only live demo view.
+// src/dev/liveDemoState.ts, pure display logic for the dev-only live demo view.
 // Dev-only, React-free, tested directly (same pattern as liveV1HarnessState.ts).
 //
 // The symmetric/asymmetric boundary is an explicit tunable, `thresholds.liveDemo.symmetryBoundary`.
@@ -7,8 +7,8 @@
 // genuinely symmetric smile as "Uneven". The tunable sits in the gap the demo arc names (symmetric
 // ≈ 0.98; one side restrained ≈ 0.4–0.7) and is tuned on real hardware.
 //
-// The measured noise floor is still computed (`stdDev`) — it is a field of the ephemeral baseline
-// and is shown in the readout — but it no longer moves the boundary. `isNoiseFloorUsable` survives
+// The measured noise floor is still computed (`stdDev`); it is a field of the ephemeral baseline
+// and is shown in the readout, but it no longer moves the boundary. `isNoiseFloorUsable` survives
 // as the quick-setup validity gate only (see its doc comment).
 import { strings } from '../config/strings.ts';
 import { thresholds } from '../config/thresholds.ts';
@@ -27,7 +27,7 @@ export interface DemoDisplay {
   borderStyle: 'solid' | 'dashed' | 'dotted';
   /** Channel 4: bar fill position, 0..100. 0 when there is no reading. */
   barPct: number;
-  /** SI as text, or the explicit "no reading" copy — never "0" for a null SI. */
+  /** SI as text, or the explicit "no reading" copy; never "0" for a null SI. */
   siText: string;
 }
 
@@ -40,7 +40,7 @@ export function stdDev(xs: readonly number[]): number {
 
 /**
  * Quick-setup validity gate (no longer a boundary input). A noise floor of exactly 0 over a
- * hold window that produced samples means the raw SI never varied by a single ulp — a frozen
+ * hold window that produced samples means the raw SI never varied by a single ulp; a frozen
  * or degenerate capture, not a steady human hold. That is a "redo the quick setup" condition,
  * never something to paper over with a constant.
  */
@@ -87,7 +87,7 @@ export type CaptureDecision = 'keep_waiting' | 'finalize' | 'error';
  * Deadline decision for one quick-setup capture window.
  *
  * Deliberately independent of the current frame's quality state: making `finalize` conditional
- * on a QUALITY_OK frame is precisely the bug this replaces — a window that collected enough
+ * on a QUALITY_OK frame is precisely the bug this replaces; a window that collected enough
  * samples and then degraded at the deadline would hang in "Capturing…" forever waiting for an
  * OK frame that may never return. The "evaluated on every frame regardless of quality or
  * inference success" requirement is met by the caller invoking this unconditionally, outside

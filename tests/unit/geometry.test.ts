@@ -7,7 +7,7 @@ import type { RegionId } from '../../src/data/schema.ts';
 
 /**
  * Property tests for the face-local geometry kernel (Task B2).
- * Synthetic — prove aspect / scale / roll invariance and sign conventions.
+ * Synthetic, prove aspect / scale / roll invariance and sign conventions.
  * Not a V1 fixture kill-gate (needs consented human recordings).
  */
 
@@ -146,7 +146,7 @@ function setSide(f: AbsoluteFeatures, region: RegionId, side: 'left' | 'right', 
   return out;
 }
 
-describe('geometry kernel — measureAbsolute / aggregateNeutral', () => {
+describe('geometry kernel, measureAbsolute / aggregateNeutral', () => {
   it('(1) aspect: same physical landmarks at 4:3 vs 16:9 → identical features (1e-6)', async () => {
     const { measureAbsolute } = await import('../../src/metrics/geometry.ts');
 
@@ -315,7 +315,7 @@ describe('geometry kernel — measureAbsolute / aggregateNeutral', () => {
     }
   });
 
-  it('(8) unilateral mouth-corner motion yields SI 0 — guards against common-mode subtraction', async () => {
+  it('(8) unilateral mouth-corner motion yields SI 0: guards against common-mode subtraction', async () => {
     // The clinical target: one-sided motion must never look symmetric. This pins the SI
     // formula (ARCHITECTURE §7) against "fixes" that subtract the u common-mode, which
     // would map unilateral motion to SI ≈ 1.

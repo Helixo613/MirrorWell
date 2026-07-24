@@ -6,7 +6,7 @@ import type {
 
 // AppSettings is owned by src/data/schema.ts (DATABASE.md §2). Re-exported here so screens
 // keep importing it from '@/types/app' alongside the UI-only shell types below. Note:
-// noiseFloorSymmetry lives on calibration_baseline, NOT app_settings (ARCH §12, DG-4) —
+// noiseFloorSymmetry lives on calibration_baseline, NOT app_settings (ARCH §12, DG-4)
 // the salvage's stale copy carried it on settings; the canonical schema does not.
 export type { AppSettings };
 
@@ -25,7 +25,7 @@ export interface AppStateContextValue {
 }
 
 // UI default before hydration completes; mirrors DEFAULT_SETTINGS in src/data/settings.ts
-// (backend-owned, not exported). No noiseFloorSymmetry — it is not an app_settings field.
+// (backend-owned, not exported). No noiseFloorSymmetry; it is not an app_settings field.
 export const DEFAULT_SETTINGS: AppSettings = {
   settingsId: 'singleton',
   highContrast: false,

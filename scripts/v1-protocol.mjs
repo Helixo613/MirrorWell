@@ -1,5 +1,5 @@
 /**
- * V1 statistical protocol (docs/MODEL_AND_DATA.md §7) — pure evaluation.
+ * V1 statistical protocol (docs/MODEL_AND_DATA.md §7), pure evaluation.
  *
  * Exact predeclared formulas for B1a / B1b / B2 / B3.
  * No fallback statistics: missing or invalid cells are the string "INVALID".
@@ -108,12 +108,12 @@ export function discoverFixtures(mastersDir, subjectId, io = {}) {
   const legacyNotes = {
     [`fixture_${subjectId}_neutral`]: 'missing trial suffix; insufficient for 2-trial protocol',
     [`fixture_${subjectId}_EX_SMILE`]:
-      'legacy smile name; protocol condition is "smile" with trial suffix — insufficient',
+      'legacy smile name; protocol condition is "smile" with trial suffix, insufficient',
     [`fixture_${subjectId}_smile`]: 'missing trial suffix; insufficient for 2-trial protocol',
     [`fixture_${subjectId}_low_light`]: 'missing trial suffix; insufficient for 2-trial protocol',
     [`fixture_${subjectId}_distance_2m`]: 'missing trial suffix; insufficient for 2-trial protocol',
     [`fixture_${subjectId}_yaw_15`]:
-      'legacy single yaw master; protocol requires yaw_left and yaw_right with measured |yaw| ∈ [7°,13°] and trial suffix — insufficient',
+      'legacy single yaw master; protocol requires yaw_left and yaw_right with measured |yaw| ∈ [7°,13°] and trial suffix, insufficient',
     [`fixture_${subjectId}_yaw_left`]: 'missing trial suffix; insufficient for 2-trial protocol',
     [`fixture_${subjectId}_yaw_right`]: 'missing trial suffix; insufficient for 2-trial protocol',
   };
@@ -606,7 +606,7 @@ export function buildV1Report({
       },
       rules: [
         'Per-trial evaluation; PASS only if every trial passes every bar',
-        'Missing/invalid cells are the string INVALID — no fallback statistics',
+        'Missing/invalid cells are the string INVALID; no fallback statistics',
         'Yaw validity requires measured mean |yaw| ∈ [7°, 13°] from headPose',
         'Phase valid only if ≥70% frames QUALITY_OK',
       ],

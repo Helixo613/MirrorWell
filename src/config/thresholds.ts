@@ -3,7 +3,7 @@
  * service that does not come from this file is a review-blocking defect.
  */
 export const thresholds = Object.freeze({
-  // FaceLandmarker option thresholds — the only confidence controls that exist.
+  // FaceLandmarker option thresholds; the only confidence controls that exist.
   // MediaPipe FaceLandmarkerResult has NO per-frame confidence field (AGENTS.md
   // verified fact #1). Owning section: docs/API.md §15.
   landmarker: Object.freeze({
@@ -13,10 +13,10 @@ export const thresholds = Object.freeze({
   }),
 
   // QualityMonitor gate boundaries. Owning section: docs/API.md §15 / docs/BACKEND.md §1.3.
-  // interOcularMinFrac replaces retired interOcularMinPx — distance is a fraction of video
+  // interOcularMinFrac replaces retired interOcularMinPx, distance is a fraction of video
   // width so the same face scale passes at 640×480 and 1280×720.
   // jitterMaxPct is in RMS second-difference / IOD units (motion-compensated).
-  // Movement tolerance (DOCS-CHANGE: API §15) — poseMaxDeg 15→22 and jitterMaxPct 0.005→0.012.
+  // Movement tolerance (DOCS-CHANGE: API §15), poseMaxDeg 15→22 and jitterMaxPct 0.005→0.012.
   // The prior pair rejected frames on ordinary sitting movement: a natural head turn toward the
   // screen edge cleared 15°, and normal postural sway cleared the 0.005 jitter ceiling, so
   // sessions spent long stretches in non-OK states with no metrics. Widened to tolerate ordinary
@@ -28,7 +28,7 @@ export const thresholds = Object.freeze({
     jitterMaxPct: 0.012,
   }),
 
-  // Blendshape SI tunables (candidate blendshape-si-v1) — docs/API.md §15 / MODEL_AND_DATA §7.
+  // Blendshape SI tunables (candidate blendshape-si-v1), docs/API.md §15 / MODEL_AND_DATA §7.
   // SI is undefined (null) when max per-side blendshape score < activationFloor.
   blendshapes: Object.freeze({
     activationFloor: 0.05,
@@ -78,9 +78,9 @@ export const thresholds = Object.freeze({
   session: Object.freeze({
     qualityProblemOfferStopMs: 30000,
     metricEventMinIntervalMs: 66,
-    // Seconds added per "+30 s" rest extension (FRONTEND §2.4/§4 — extend only, never shorten;
+    // Seconds added per "+30 s" rest extension (FRONTEND §2.4/§4: extend only, never shorten;
     // the caller of SessionController.extendRest supplies this amount). DOCS-CHANGE (S1 Task 11):
-    // API §15 amended to add session.restExtendSeconds — the pre-remediation frontend read this
+    // API §15 amended to add session.restExtendSeconds; the pre-remediation frontend read this
     // from thresholds and remediation dropped it, leaving SessionScreen with a bare literal.
     restExtendSeconds: 30,
   }),
@@ -124,7 +124,7 @@ export const thresholds = Object.freeze({
 
   // --- UI presentation tunables (frontend salvage, Gate 0). API §15 documentation is a
   // Reconvergence task; these are display-only and never touch the metric pipeline. ---
-  /** FRONTEND §2.3 — how far back HomeScreen looks for the "last session" line. */
+  /** FRONTEND §2.3: how far back HomeScreen looks for the "last session" line. */
   home: Object.freeze({
     sessionLookbackDays: 7,
     afternoonStartHour: 12,
@@ -139,21 +139,21 @@ export const thresholds = Object.freeze({
     /** Minimum consecutive practice days before the rhythm badge is drawn (SAFETY §8 carve-out). */
     rhythmMinDays: 2,
   }),
-  /** FRONTEND §2.5 — plain-language symmetry buckets (no numeric grades). */
+  /** FRONTEND §2.5: plain-language symmetry buckets (no numeric grades). */
   summary: Object.freeze({
     symmetryMostlyEvenMin: 0.85,
     symmetryFairlyEvenMin: 0.7,
     symmetrySomeDifferenceMin: 0.55,
   }),
-  /** FRONTEND §2.6 — minimum periods before showing a trend chart. */
+  /** FRONTEND §2.6: minimum periods before showing a trend chart. */
   trends: Object.freeze({
     minPeriodsForChart: 2,
   }),
-  /** FRONTEND §2.8 — default export date window. */
+  /** FRONTEND §2.8: default export date window. */
   export: Object.freeze({
     defaultRangeWeeks: 8,
   }),
-  /** FRONTEND §2.9 / §4 — text size control bounds. */
+  /** FRONTEND §2.9 / §4: text size control bounds. */
   settings: Object.freeze({
     textScaleMin: 1.0,
     textScaleMax: 2.0,

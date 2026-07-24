@@ -1,4 +1,4 @@
-// src/data/storage.ts — sole owner of mirrorwell_db (docs/DATABASE.md §2).
+// src/data/storage.ts, sole owner of mirrorwell_db (docs/DATABASE.md §2).
 // Every read/write goes through StorageService; no other component touches Dexie directly
 // (AGENTS.md non-negotiable). Contracts: docs/API.md §3. Validation matrix: DATABASE.md §3.
 // Explicit .ts extensions: these files also run under plain Node (scripts/seed-dev.ts,
@@ -260,7 +260,7 @@ export const StorageService = {
     });
   },
 
-  // SAFETY §5 narrow carve-out: the sole mutating control on CaregiverScreen. Singleton — the
+  // SAFETY §5 narrow carve-out: the sole mutating control on CaregiverScreen. Singleton; the
   // transaction clears any existing row before inserting the new one, so at most one row ever
   // exists. Text is validated for length only; it is never parsed and never referenced by any
   // gating/pacing logic, so no amount of malformed content can alter exercise behavior.
@@ -296,7 +296,7 @@ export const StorageService = {
     });
   },
 
-  // Reachable from SessionScreen's arrival surface — the patient's dismiss control (SAFETY §5:
+  // Reachable from SessionScreen's arrival surface; the patient's dismiss control (SAFETY §5:
   // "deletable by the user"). Idempotent: clearing an already-empty table is a no-op.
   async deleteEncouragementNote(): Promise<void> {
     return withDbErrors(async () => {
@@ -443,7 +443,7 @@ export const StorageService = {
   async deleteAllData(): Promise<void> {
     return withDbErrors(async () => {
       assertDemoWritable();
-      // Dexie's typed transaction() overloads cap out below 6 explicit tables — pass
+      // Dexie's typed transaction() overloads cap out below 6 explicit tables; pass
       // db.tables (all seven) directly instead.
       await db.transaction('rw', db.tables, async () => {
         await Promise.all(db.tables.map((t) => t.clear()));

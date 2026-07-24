@@ -1,8 +1,8 @@
-// src/metrics/normalize.ts — makes geometry comparable across pose, distance, lighting, and
+// src/metrics/normalize.ts, makes geometry comparable across pose, distance, lighting, and
 // sessions (docs/BACKEND.md §1.4). Contracts: docs/API.md §7.
 //
 // Pipeline: measureAbsolute(af) → subtract stored vector neutralStats component-wise →
-// vector regionDisplacements. Calibration bootstrap uses measureAbsolute directly — zero /
+// vector regionDisplacements. Calibration bootstrap uses measureAbsolute directly, zero /
 // default / ephemeral baselines are forbidden (DG-2).
 import type { ApprovedFrame } from '../sensing/quality.ts';
 import type { CalibrationBaseline, RegionId } from '../data/schema.ts';

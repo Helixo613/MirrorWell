@@ -11,7 +11,7 @@ export interface SessionRestPanelProps {
   skipAriaLabel?: string;
   onExtend?: () => void;
   onSkip?: () => void;
-  /** When true, only title and countdown render — actions live in a sticky footer. */
+  /** When true, only title and countdown render; actions live in a sticky footer. */
   contentOnly?: boolean;
   className?: string;
 }

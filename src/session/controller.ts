@@ -1,6 +1,6 @@
-// src/session/controller.ts — the session state machine, event surface, and session
+// src/session/controller.ts; the session state machine, event surface, and session
 // assembly (docs/BACKEND.md §1.6). Contracts: docs/API.md §10. The frontend's primary
-// integration surface; event shapes are the closed table in ARCHITECTURE §12 — no others.
+// integration surface; event shapes are the closed table in ARCHITECTURE §12: no others.
 import type { EndReason, ExerciseId } from '../data/schema.ts';
 import { MirrorWellError } from '../data/errors.ts';
 import { StorageService, type ExerciseResultInput, type RepMetricInput, type SessionRecordFull, type SessionRecordInput } from '../data/storage.ts';
@@ -37,7 +37,7 @@ let index = 0;
 let state: State | null = null;
 let stopping = false;
 // Set by the first call to stop() (public or auto-triggered) and never cleared until the
-// next start() — every subsequent call (concurrent or after completion) returns this SAME
+// next start(); every subsequent call (concurrent or after completion) returns this SAME
 // promise instead of re-running assembly/persistence (idempotent stop()).
 let stopPromise: Promise<SessionRecordFull> | null = null;
 let stopFrameSource: (() => void) | null = null;
@@ -171,13 +171,13 @@ function handleRepsFrame(quality: QualityResult, timestampMs: number): void {
   const isRepActiveNow = RepDetector.getState() === 'active';
 
   if (!wasRepActive && isRepActiveNow) {
-    // Rep just started on this (OK) frame — this frame wasn't tallied above (wasRepActive
+    // Rep just started on this (OK) frame; this frame wasn't tallied above (wasRepActive
     // was false), so it seeds the new span's counters.
     repFrameTotal = 1;
     repFrameOk = 1;
   } else if (wasRepActive && !isRepActiveNow) {
     // Rep span just closed (event emitted, or silently discarded inside RepDetector for
-    // being too short / a gap-abort with no restart — either way nothing to count).
+    // being too short / a gap-abort with no restart, either way nothing to count).
     const okFraction = repFrameTotal === 0 ? 1 : repFrameOk / repFrameTotal;
     if (event && okFraction >= thresholds.reps.minQualityFramePct) {
       currentReps.push({
@@ -186,11 +186,11 @@ function handleRepsFrame(quality: QualityResult, timestampMs: number): void {
         peakSymmetryIndex: event.peakSymmetryIndex,
         peakEffortIndex: event.peakEffortIndex,
         // Same assembly-time conversion rule as easeOffTriggered below (ARCH §12): the event
-        // surface carries the raw difference of frame timestamps — FRACTIONAL performance-clock
-        // ms — while rep_metric.durationMs is "integer > 0" (DATABASE §
+        // surface carries the raw difference of frame timestamps, FRACTIONAL performance-clock
+        // ms, while rep_metric.durationMs is "integer > 0" (DATABASE §
         // rep_metric). Unrounded, saveSession rejects the whole record at session end
         // (VALIDATION_FAILED), sessionEnded never fires, and the idempotent-stop guard then
-        // swallows every later advance/stop click — a dead REST screen.
+        // swallows every later advance/stop click; a dead REST screen.
         durationMs: Math.round(event.durationMs),
         easeOffTriggered: event.easeOffTriggered ? 1 : 0,
       });
@@ -247,7 +247,7 @@ function handleFrame(video: HTMLVideoElement, timestampMs: number, lf: LandmarkF
 }
 
 // SessionRecordInput (write shape) omits the parent keys StorageService assigns while
-// persisting (ExerciseResult.sessionId, RepMetric.resultId — see saveSession in
+// persisting (ExerciseResult.sessionId, RepMetric.resultId; see saveSession in
 // src/data/storage.ts). stop() must resolve a SessionRecordFull (docs/API.md §10: "the saved
 // SessionRecordFull"), so mirror that assignment here rather than returning the write shape.
 function toFull(record: SessionRecordInput): SessionRecordFull {
@@ -303,7 +303,7 @@ export const SessionController = {
     if (SafetyGate.isDemoMode()) {
       // Demo's ephemeral quick-calibration (ARCHITECTURE §11) runs as an inline overlay in
       // SessionScreen (a later plan) and calls NormalizationLayer/MetricEngine.setBaseline
-      // directly before start() — there is no persisted baseline to fetch, and no active-
+      // directly before start(); there is no persisted baseline to fetch, and no active-
       // baseline check applies. profileId/baselineId here are session-local placeholders:
       // the record is returned/emitted only, never persisted (assertDemoWritable backstop),
       // so no canonical identifier or storage row is invented.
@@ -316,7 +316,7 @@ export const SessionController = {
       // running on it reproduces the inverted-rep defect the rebase fixed (rep closes only on
       // the OPPOSITE movement for pairs with nonzero resting reads). MetricEngine's `?? 0`
       // fallback exists so old ROWS stay readable, but a session must not silently run the
-      // pre-rebase formula — same recovery route as drift: RECALIBRATION_REQUIRED, which the
+      // pre-rebase formula, same recovery route as drift: RECALIBRATION_REQUIRED, which the
       // session screen turns into a "recalibrate" exit.
       if (baseline.neutralActivation === undefined) {
         throw new MirrorWellError('RECALIBRATION_REQUIRED', 'baseline predates the neutral rebase');
@@ -372,11 +372,11 @@ export const SessionController = {
     if (stopPromise) return stopPromise;
     if (!state) {
       // No session has ever started (state and stopPromise both still at their initial
-      // values — a legitimately-ended session always leaves stopPromise set, caught above).
+      // values; a legitimately-ended session always leaves stopPromise set, caught above).
       // Session-scope state (sessionId, profileId, baselineId, startedAt) is still empty;
       // running assembly/persistence against it is the M1 bug (a rejected saveSession got
       // cached in stopPromise and poisoned every later stop()). docs/API.md §10 documents
-      // stop()'s response as "the saved SessionRecordFull" for a session that actually ran —
+      // stop()'s response as "the saved SessionRecordFull" for a session that actually ran
       // there is none here, so there is nothing to save or return. VALIDATION_FAILED is
       // already documented (API §16) as thrown by SessionController to mean "caller bug, not
       // a user problem", which is exactly this case. Deliberately NOT cached in stopPromise:

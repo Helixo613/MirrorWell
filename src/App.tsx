@@ -25,7 +25,7 @@ const TrendsScreen = lazy(() =>
 
 // Hub shell layout route: wraps only the hub screens (Home/Trends/Export/Settings/
 // Caregiver) in the sidebar/tab-bar shell. Calibration stays a sibling route under the
-// same ATTESTED guard but outside the shell — its camera-top layout owns the viewport.
+// same ATTESTED guard but outside the shell, its camera-top layout owns the viewport.
 function HubShellLayout() {
   return (
     <AppShell>
@@ -53,7 +53,7 @@ function TrendsRouteFallback() {
 // here at Gate 0; the screen bodies are filled in by the S1/S2/S3 streams.
 //
 // Guard rules (FRONTEND §3, ARCH §12): every blocked route redirects to "/" and lets
-// RootRedirect send the user to the correct home for their gate — UNATTESTED →
+// RootRedirect send the user to the correct home for their gate, UNATTESTED →
 // /onboarding, ATTESTED → /home or /calibration, DEMO → /session. Redirecting through
 // root (rather than a fixed screen) is what keeps DEMO out of everything but
 // Session/Summary without a redirect loop. Caregiver additionally requires the
@@ -159,7 +159,7 @@ export function App() {
 
   return (
     <div>
-      MirrorWell — dev harness
+      MirrorWell, dev harness
       {liveDemo ? (
         <DevOnly
           loader={() => import('./dev/LiveDemoView').then((m) => ({ default: m.LiveDemoView }))}

@@ -1,4 +1,4 @@
-# MirrorWell — Full-App Completion Plan (backend ✅ → frontend → wired, shippable app)
+# MirrorWell: Full-App Completion Plan (backend ✅ → frontend → wired, shippable app)
 
 > **SUPERSEDED (2026-07-21)** by `2026-07-21-full-app-completion-parallel.md`, which re-casts this
 > same scope as **three parallel, subagent-driven streams** behind a blocking foundation bootstrap.
@@ -10,7 +10,7 @@
 > **re-bases** `2026-07-20-frontend-integration.md` (still the detailed UI salvage procedure; its
 > Task 4 stub is now obsolete because the real backend exists). Read both before executing.
 
-## Context — where the project actually is
+## Context: where the project actually is
 
 **Backend: done and merged.** Gate 0 plus Streams A/B/C/D all landed on `main`. The suite is 255
 tests, order-randomised (`sequence: { shuffle: true }`), 100% branch on `metrics.ts`/`reps.ts`,
@@ -39,8 +39,8 @@ not**, and nothing in this plan may claim otherwise.
 implementation of config/data/metrics/session written against contracts that remediation replaced.
 Take screens, components, hooks, context, router, presentation utils, CSS. Discard every duplicated
 backend module and re-point imports at `main`. Screens touch the backend **only** through the
-documented surface — `SessionController` events, `StorageService`, `TrendsService`,
-`ExportService`, `SettingsService`, `SafetyGate` — which barely changed. This is rewiring, not
+documented surface, `SessionController` events, `StorageService`, `TrendsService`,
+`ExportService`, `SettingsService`, `SafetyGate`; which barely changed. This is rewiring, not
 rewrite.
 
 ---
@@ -52,7 +52,7 @@ filter). These are **new** since it was written and are binding:
 
 | Surface | Current truth on `main` | Screen impact |
 |---|---|---|
-| `SessionController` events | **7**, incl. `qualityOfferStop {visible}` — live in code, API §10 and ARCH §12 | Wire the offer-stop UI; never "correct" back to 6 |
+| `SessionController` events | **7**, incl. `qualityOfferStop {visible}`, live in code, API §10 and ARCH §12 | Wire the offer-stop UI; never "correct" back to 6 |
 | Assignable exercises | `assignableExercises` = exercises **with** a `blendshapePair`; `EX_PUCKER` kept in config but **not assignable** | Session/onboarding pick from the derived set, never `Object.keys(exercises)` |
 | Demo Mode reads | `getProfile` / `getActiveBaseline` / `getSessions` **throw** in demo; `getSettings` is the documented non-sensitive carve-out | Demo screens must not fetch history; accessibility settings still load |
 | Profiles | `saveProfile` **rejects** a second, different `profileId` (`VALIDATION_FAILED`) | Onboarding must not create a second profile; surface the error honestly |
@@ -67,22 +67,22 @@ filter). These are **new** since it was written and are binding:
 
 Sequential. Each phase ends green on the full gate set and is merged before the next starts.
 
-### Phase 0 — Reconcile and re-derive (blocking, small)
+### Phase 0: Reconcile and re-derive (blocking, small)
 
 Re-verify the salvage inventory against **current** `main`, not the old plan's snapshot.
 
 - Re-run `2026-07-20-frontend-integration.md`'s "Contract delta" and "Source branch inventory"
   against `main` at HEAD; fold in the deltas table above; correct anything stale in that plan
-  (it is the working procedure — keep it accurate rather than forking a second copy).
+  (it is the working procedure; keep it accurate rather than forking a second copy).
 - **Delete its Task 4 (SessionApi stub) outright.** The stub existed only until the backend landed.
-  Screens wire to the real `SessionController`. Anything named `sessionApiStub` must not survive —
+  Screens wire to the real `SessionController`. Anything named `sessionApiStub` must not survive
   the release check greps `dist/` for it.
 - Confirm the demo quick-setup contract: demo `start()` skips baseline load, so quick-setup must
   call `NormalizationLayer.setBaseline` **and** `MetricEngine.setBaseline` with a baseline carrying
   `comfortableMax` for the demo exercise, or `compute()` throws `NO_BASELINE` and the frame loop
-  reports `FACE_LOST` — a demo that appears to run while detecting nothing.
+  reports `FACE_LOST`; a demo that appears to run while detecting nothing.
 
-### Phase 1 — Dependencies + docs amendment (blocking, docs-first)
+### Phase 1: Dependencies + docs amendment (blocking, docs-first)
 
 Per the deviation protocol, docs change **before** code.
 
@@ -91,29 +91,29 @@ Per the deviation protocol, docs change **before** code.
   `class-variance-authority`, `tailwind-merge`, `tailwindcss-animate`). **Exact versions, no `^`.**
   Carry a `DOCS-CHANGE` line.
 - **Reject anything not actually used** by the salvaged UI, and any state library (Redux/Zustand
-  remain forbidden — context + hooks only).
-- Tailwind is build-time only. **No web fonts, no CDN, no `@import url(...)`** — the no-network gate
+  remain forbidden, context + hooks only).
+- Tailwind is build-time only. **No web fonts, no CDN, no `@import url(...)`**; the no-network gate
   is not negotiable.
 - `npm ci` + postinstall (`copy-wasm` → `verify-model` hash check) must stay green.
 
-### Phase 2 — Import the UI salvage (no wiring yet)
+### Phase 2: Import the UI salvage (no wiring yet)
 
 - Bring over `src/components/`, `src/screens/`, `src/hooks/`, `src/context/`, `src/router/`,
   `src/lib/`, UI-only `src/types/`, `src/index.css`, `tailwind.config.js`.
 - **Discard every duplicated backend module** from the branch. If a file imports Dexie, computes a
-  metric, or defines a schema, it dies — `main` owns those.
+  metric, or defines a schema, it dies; `main` owns those.
 - Merge branch strings into `src/config/strings.ts` (append-only, audited per SAFETY §8). Every
-  user-facing string lives there; **no inline copy** — and note nothing automated enforces this,
+  user-facing string lives there; **no inline copy**, and note nothing automated enforces this,
   so it is a review obligation.
 - Expect this phase to be red on typecheck. That is fine; Phase 3 is compile-driven.
 
-### Phase 3 — Compile-driven rewiring to the real backend
+### Phase 3: Compile-driven rewiring to the real backend
 
 Let `npm run typecheck` (`tsc -b`) drive it: every error is a screen reaching for a contract that
 moved. Fix by re-pointing at `main`'s modules, never by loosening a type.
 
 - Screens consume the 7-event surface, `StorageService`, `TrendsService`, `ExportService`,
-  `SettingsService`, `SafetyGate` — nothing deeper. No screen imports `NormalizedFrame`,
+  `SettingsService`, `SafetyGate`; nothing deeper. No screen imports `NormalizedFrame`,
   `NeutralStats`, or geometry.
 - Replace `src/App.tsx`'s placeholder with the real router, **preserving the dev-only mounts and
   their mutual exclusion** (product screens own the camera; harnesses stay dev-gated and
@@ -121,7 +121,7 @@ moved. Fix by re-pointing at `main`'s modules, never by loosening a type.
 - **Camera rule (hard):** the stream may be open only while `CalibrationScreen` or `SessionScreen`
   is mounted. Never on `HomeScreen` or anywhere else.
 
-### Phase 4 — Screen-by-screen acceptance (maps to IMPLEMENTATION Tasks 9–15)
+### Phase 4: Screen-by-screen acceptance (maps to IMPLEMENTATION Tasks 9–15)
 
 In dependency order; each screen green before the next.
 
@@ -137,18 +137,18 @@ In dependency order; each screen green before the next.
 
 Each screen carries its `docs/TESTS.md` §2–§4 rows. A feature without its tests is not done.
 
-### Phase 5 — Accessibility + full E2E (Task 16)
+### Phase 5: Accessibility + full E2E (Task 16)
 
 - WCAG 2.1 AA per FRONTEND §4: keyboard paths, focus management, contrast, `textScale` 1.0–2.0,
   reduced-motion. **Never colour-only** for state.
-- Playwright journeys against a fake camera (`.y4m`/`.mjpeg` only — never `.webm`/`.mp4`), with
+- Playwright journeys against a fake camera (`.y4m`/`.mjpeg` only; never `.webm`/`.mp4`), with
   DB-level assertions.
 - No-network gate green on the built app; `grep -r "LiveDemoView\|LiveV1Harness\|sessionApiStub" dist/`
   returns nothing.
 
-### Phase 6 — Real-hardware gates + demo hardening (Tasks 17–18 partial)
+### Phase 6: Real-hardware gates + demo hardening (Tasks 17–18 partial)
 
-- Device matrix per V3: mid-range Windows laptop (Chromium **and Firefox** — Firefox stays a hard
+- Device matrix per V3: mid-range Windows laptop (Chromium **and Firefox**, Firefox stays a hard
   gate), mid-range Android Chrome; glasses on/off, lamp vs daylight, 0.5 m vs 1 m.
 - Performance and the fail-safe rule: a persistently failing cell must produce the correct
   `QualityState` (honest refusal), never metrics.
@@ -159,7 +159,7 @@ Each screen carries its `docs/TESTS.md` §2–§4 rows. A feature without its te
 
 ## Ownership & agents
 
-Frontend is one coherent surface — parallel file-partitioning buys little and costs coordination.
+Frontend is one coherent surface, parallel file-partitioning buys little and costs coordination.
 **Run phases sequentially, one owner at a time.** Reserve the strongest model for Phase 3
 (compile-driven rewiring, where a wrong "fix" silently loosens a contract) and Phase 4 screens 1–3
 (attestation, camera lifecycle, session events). Phases 1–2 and 5 are mechanical enough for a
@@ -170,10 +170,10 @@ every approved task so a usage cap is a pause, not lost work.
 
 ## Gate set (every task)
 
-`npm run typecheck` (**never** `npx tsc --noEmit`) · `npx vitest run` (shuffled — do not remove
+`npm run typecheck` (**never** `npx tsc --noEmit`) · `npx vitest run` (shuffled; do not remove
 `sequence: { shuffle: true }`) · `npm run test:coverage` if `src/metrics/**` is touched (100% branch)
 · `npm run build` · `node scripts/check-docs.mjs` · `npm run build` → `npx playwright test`.
-Any contract change carries `DOCS-CHANGE: <doc> §<n> — <what and why>`.
+Any contract change carries `DOCS-CHANGE: <doc> §<n>, <what and why>`.
 
 ## Definition of done
 
@@ -189,9 +189,9 @@ clinical or regulatory review; efficacy claims; model training; further operator
 
 ## Known risks
 
-1. **Silent contract loosening in Phase 3** — a `as any` or widened type to make `tsc` pass. Reviewer
+1. **Silent contract loosening in Phase 3**; a `as any` or widened type to make `tsc` pass. Reviewer
    must diff for type escapes, not just green builds.
-2. **Dependency creep** — the branch carries more than the UI needs. Phase 1 admits only what is used.
-3. **Camera lifecycle leaks** — every harness re-parents one `<video>`. Unmount must release.
-4. **Copy drift** — SAFETY §8 language rules have no automated gate; adherence/summary copy needs a
+2. **Dependency creep**; the branch carries more than the UI needs. Phase 1 admits only what is used.
+3. **Camera lifecycle leaks**; every harness re-parents one `<video>`. Unmount must release.
+4. **Copy drift**, SAFETY §8 language rules have no automated gate; adherence/summary copy needs a
    human read for guilt/pressure framing.

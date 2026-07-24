@@ -97,7 +97,7 @@ export function SessionScreen() {
 
         <div className="relative overflow-hidden rounded-2xl">
           <CameraPreview ref={s.previewRef} dimmed={s.reducedFacePreview} />
-          {/* Keep canvas mounted (renderer needs a stable surface) but hide gauges during arrival —
+          {/* Keep canvas mounted (renderer needs a stable surface) but hide gauges during arrival
               the green effort meter peeking through the scrim looked broken/crooked. */}
           <div
             className={s.phase === 'arrival' ? 'pointer-events-none invisible' : undefined}

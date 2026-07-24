@@ -1,11 +1,11 @@
-// tests/analysis/v1-intensity-analysis.mjs — EXPLORATORY ANALYSIS (NOT gate evidence).
+// tests/analysis/v1-intensity-analysis.mjs, EXPLORATORY ANALYSIS (NOT gate evidence).
 //
 // Question: do the V1 B2 (low_light / distance_2m activation displacement) and
 // B3 (yaw SI delta) bar failures track a DROP in smile activation (intensity)
 // across phases, rather than a genuine pose/lighting sensitivity of the metric?
 //
-// Method: pool all FOUR V1 trials of S01 — run-1 (retired sitting) + run-2
-// (current sitting), trials 1 & 2 each — sample every phase with the same
+// Method: pool all FOUR V1 trials of S01: run-1 (retired sitting) + run-2
+// (current sitting), trials 1 & 2 each; sample every phase with the same
 // headless MediaPipe sampler used by blendshape-probe.mjs, and compare each
 // phase's smile-activation to its own trial's frontal `smile` reference.
 //
@@ -40,7 +40,7 @@ const B2_BAR = 0.05;
 const B3_BAR = 0.05;
 // Classification rule for the intensity hypothesis. B2 IS the activation-deviation
 // bar (|meanActivation − smileMeanAct| / smileMeanAct), so a B2 breach is BY DEFINITION
-// an intensity change (drop OR increase) — it is ALWAYS intensity-linked and can never
+// an intensity change (drop OR increase); it is ALWAYS intensity-linked and can never
 // contradict the intensity story. Only B3 (an SI delta, independent of activation
 // magnitude) can contradict: when a B3 bar breaches while smile activation is matched
 // to frontal (activationRatioVsFrontal ≥ 0.85, i.e. < 15% deviation), the SI shift is
@@ -259,7 +259,7 @@ async function main() {
     const list = contradictions.map((c) => `${c.trial}/${c.phase} (${c.bar}=${c.value}, ratio=${c.activationRatioVsFrontal})`).join('; ');
     summary =
       `The intensity hypothesis is PARTIAL / DOES NOT FULLY HOLD: ${intensityLinked.length} breach(es) were intensity-linked, but ` +
-      `${contradictions.length} breach(es) CONTRADICT it — the bar failed while smile activation was matched to frontal ` +
+      `${contradictions.length} breach(es) CONTRADICT it; the bar failed while smile activation was matched to frontal ` +
       `(activationRatioVsFrontal ≥ ${INTENSITY_RATIO_THRESHOLD}), indicating genuine pose/lighting sensitivity of the metric: ${list}.`;
   }
 
@@ -269,7 +269,7 @@ async function main() {
   console.log('\n=== VERDICT ===');
   console.log(`intensityExplanationHolds: ${intensityExplanationHolds}`);
   if (contradictions.length) {
-    console.log(`\nCONTRADICTIONS (${contradictions.length}) — bar breached while activation matched to frontal:`);
+    console.log(`\nCONTRADICTIONS (${contradictions.length}), bar breached while activation matched to frontal:`);
     for (const c of contradictions) {
       console.log(`  ${c.trial}/${c.phase}: ${c.bar}=${c.value} but activationRatio=${c.activationRatioVsFrontal} (drop=${c.activationDrop})`);
     }

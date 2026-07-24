@@ -1,4 +1,4 @@
-// src/sensing/capture.ts — owns the camera lifecycle and frame loop; nothing else
+// src/sensing/capture.ts, owns the camera lifecycle and frame loop; nothing else
 // (docs/BACKEND.md §1.1). Contracts: docs/API.md §4.
 import { MirrorWellError } from '../data/errors.ts';
 import { log } from '../log.ts';
@@ -6,7 +6,7 @@ import { log } from '../log.ts';
 type FrameCallback = (video: HTMLVideoElement, timestampMs: number) => void;
 
 // lib.dom.d.ts declares requestVideoFrameCallback/cancelVideoFrameCallback as always-present
-// on HTMLVideoElement, but real-world support varies (Firefox lacked it for years) — the
+// on HTMLVideoElement, but real-world support varies (Firefox lacked it for years); the
 // runtime `typeof` checks below are the actual feature detection; the type is a formality.
 let stream: MediaStream | null = null;
 let videoEl: HTMLVideoElement | null = null;
@@ -15,7 +15,7 @@ const subscribers = new Set<FrameCallback>();
 // stop(): SessionScreen pauses by stopping the camera and resuming it later WITHOUT
 // re-subscribing (useSessionScreen), so clearing the set here would silently kill the session
 // on resume. Instead stop() announces itself, and the one kind of consumer that cannot survive
-// it — a capture window that only ever closes on an arriving frame — unsubscribes itself.
+// it; a capture window that only ever closes on an arriving frame, unsubscribes itself.
 const stopSubscribers = new Set<() => void>();
 let running = false;
 let processingFrame = false;
@@ -28,7 +28,7 @@ function mapGetUserMediaError(err: unknown): MirrorWellError {
   const message = err instanceof Error ? err.message : String(err);
   // NotAllowedError/SecurityError/PermissionDeniedError = user refused. Everything else
   // (NotFoundError, NotReadableError, OverconstrainedError, AbortError, ...) = no usable
-  // device right now — docs/API.md §4 only distinguishes these two buckets.
+  // device right now, docs/API.md §4 only distinguishes these two buckets.
   if (name === 'NotAllowedError' || name === 'SecurityError' || name === 'PermissionDeniedError') {
     return new MirrorWellError('CAMERA_DENIED', message);
   }
@@ -48,7 +48,7 @@ function scheduleNext(video: HTMLVideoElement): void {
     // `now` (performance-clock), NEVER metadata.mediaTime: mediaTime restarts near 0 with every
     // new MediaStream, and LandmarkEngine's FaceLandmarker is a singleton that outlives camera
     // restarts. detectForVideo requires monotonically increasing timestamps for the lifetime of
-    // the landmarker — one backwards timestamp poisons the MediaPipe graph unrecoverably
+    // the landmarker; one backwards timestamp poisons the MediaPipe graph unrecoverably
     // ("Packet timestamp mismatch", google-ai-edge/mediapipe#5743), turning every later frame
     // into FACE_LOST until page reload. performance.now() is monotonic across restarts, same
     // clock as the requestAnimationFrame fallback below (docs/BACKEND.md §1.1).
@@ -62,7 +62,7 @@ function tick(video: HTMLVideoElement, timestampMs: number): void {
   if (!running) return;
   if (processingFrame) {
     // Latest-frame-wins: drop this tick's callback fan-out but keep the loop alive
-    // (docs/BACKEND.md §1.1 — never queue frames).
+    // (docs/BACKEND.md §1.1: never queue frames).
     scheduleNext(video);
     return;
   }
@@ -110,7 +110,7 @@ function stop(): void {
     }
     scheduledHandle = null;
   }
-  // Release every track — this is what actually turns the camera light off.
+  // Release every track; this is what actually turns the camera light off.
   stream?.getTracks().forEach((track) => track.stop());
   stream = null;
   videoEl = null;

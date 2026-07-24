@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-docs.mjs — lightweight doc integrity gate (Task A4).
+ * check-docs.mjs, lightweight doc integrity gate (Task A4).
  *
  * Fails if:
  *  (1) A PascalCase type in ARCHITECTURE.md §12 "Metrics & types" glossary
@@ -9,7 +9,7 @@
  *  (2) An obvious `§n` cross-reference in docs/*.md targets a missing section
  *      in the resolved doc file.
  *
- * Not perfect NLP — catches the common breakage modes.
+ * Not perfect NLP, catches the common breakage modes.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -89,7 +89,7 @@ function extractSections(md) {
 
 function sectionExists(sections, ref) {
   if (sections.has(ref)) return true;
-  // Bare §4.6 often means "section 4, step 6" not a subsection header —
+  // Bare §4.6 often means "section 4, step 6" not a subsection header
   // accept if the top-level section exists.
   const top = ref.split('.')[0];
   if (sections.has(top)) return true;
@@ -132,7 +132,7 @@ if (sec12 && sec13) {
     const types = [...metricsRow.matchAll(/`([A-Z][A-Za-z0-9]+)`/g)].map((m) => m[1]);
     const unique = [...new Set(types)];
 
-    // Row types owned by DATABASE.md §2 — §13 states they are not duplicated.
+    // Row types owned by DATABASE.md §2. §13 states they are not duplicated.
     // MirrorWellError is the API §1 error envelope (name field), not a §13 pipeline type.
     const DATABASE_OWNED = new Set([
       'UserProfile',
@@ -178,7 +178,7 @@ if (sec12 && sec13) {
   }
 
   // Reverse direction: every type/interface declared in §13 must appear in the
-  // §12 glossary — a §13-only type is an invented identifier.
+  // §12 glossary; a §13-only type is an invented identifier.
   const declared = [...sec13.matchAll(/^\s*(?:export\s+)?(?:type|interface)\s+([A-Z][A-Za-z0-9]+)\b/gm)].map(
     (m) => m[1],
   );
@@ -226,7 +226,7 @@ const BARE_SEC_RE = /(?<![\w.])§\s*(\d+(?:\.\d+)*)\b/g;
 
 for (const filePath of listDocFiles()) {
   const base = path.basename(filePath);
-  // Skip long historical plans under docs/superpowers and handoffs — not canonical
+  // Skip long historical plans under docs/superpowers and handoffs; not canonical
   if (filePath.includes(`${path.sep}superpowers${path.sep}`)) continue;
   if (filePath.includes(`${path.sep}handoffs${path.sep}`)) continue;
 
@@ -255,7 +255,7 @@ for (const filePath of listDocFiles()) {
     }
   }
 
-  // Bare §n — resolve against the current file only
+  // Bare §n, resolve against the current file only
   // Avoid double-counting positions already covered by DOC_REF_RE by
   // blanking those spans first.
   let bareSource = stripped;
@@ -276,14 +276,14 @@ for (const filePath of listDocFiles()) {
       // only when current file has no such section.
       const archSecs = sectionsFor('ARCHITECTURE.md');
       if (archSecs && sectionExists(archSecs, num) && currentName !== 'ARCHITECTURE.md') {
-        // Ambiguous but resolvable — warn only (many prose refs omit the doc name)
+        // Ambiguous but resolvable, warn only (many prose refs omit the doc name)
         warnings.push(
           `${base}: bare "§${num}" not in this file; exists in ARCHITECTURE.md (allowed)`,
         );
         continue;
       }
       errors.push(
-        `${base}: bare ref "§${num}" — no matching section in ${currentName}` +
+        `${base}: bare ref "§${num}"; no matching section in ${currentName}` +
           (archSecs && sectionExists(archSecs, num) ? '' : ' or ARCHITECTURE.md'),
       );
     }

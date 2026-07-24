@@ -24,7 +24,7 @@ const STAGGER_MS = 60;
  * CaregiverScreen (FRONTEND §2.7): a READ-ONLY trusted-person view, with exactly one narrow
  * exception (SAFETY §5): the encouragement-note compose box. The route is already gated by
  * CaregiverRoute (redirects to /home when caregiverViewEnabled is false). No other interactive
- * element on this screen may mutate anything — the rest are navigation links (to /export and
+ * element on this screen may mutate anything; the rest are navigation links (to /export and
  * /home).
  */
 export function CaregiverScreen() {
@@ -178,7 +178,7 @@ export function CaregiverScreen() {
                     </h3>
                     {/* Visual chart for sighted users; the SVG carries no data a screen
                         reader can read, so it is hidden and the same series is exposed as an
-                        sr-only data table (FRONTEND §4 — trend data must be AT-reachable). */}
+                        sr-only data table (FRONTEND §4: trend data must be AT-reachable). */}
                     <div aria-hidden="true">
                       <TrendsChart
                         exerciseName={exercises[trend.exerciseId].displayName}

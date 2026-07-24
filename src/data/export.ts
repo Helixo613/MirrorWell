@@ -1,5 +1,5 @@
-// src/data/export.ts — ExportService (docs/API.md §13, ARCHITECTURE.md §13, SAFETY §8).
-// Assembles a printable/exportable summary from TrendsService + StorageService only — no
+// src/data/export.ts, ExportService (docs/API.md §13, ARCHITECTURE.md §13, SAFETY §8).
+// Assembles a printable/exportable summary from TrendsService + StorageService only; no
 // Dexie import here. ATTESTED-gated AND demo-blocked: an already-attested user can call
 // enterDemoMode(), so both SafetyGate.isDemoMode() and SafetyGate.isAttested() are checked
 // (API §17 gate matrix; rationale at the check itself in generateSummary).
@@ -15,7 +15,7 @@ import { exportTrendDirection, exportTrendLatestLabel } from '../lib/exportTrend
 
 const SCHEMA_VERSION = 1 as const;
 
-// Export range is a calendar date (YYYY-MM-DD), not a full timestamp — API.md §13's example
+// Export range is a calendar date (YYYY-MM-DD), not a full timestamp; API.md §13's example
 // echoes the input range verbatim in the output ("range": {"from": "2026-05-01", ...}), and
 // the frontend contract (tests/schemas/export.schema.json) requires this exact pattern.
 const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -60,7 +60,7 @@ function assertValidRange(range: { from: string; to: string }): void {
 }
 
 // Export range is a calendar date, but StorageService.getSessions / TrendsService.getAdherence
-// require full UTC ISO 8601 timestamps (isValidIsoUtc in storage.ts) — widen to the full day,
+// require full UTC ISO 8601 timestamps (isValidIsoUtc in storage.ts), widen to the full day,
 // in UTC: `${from}T00:00:00.000Z` … `${to}T23:59:59.999Z`.
 //
 // This IS a local-timezone boundary, unlike the comment this replaces claimed: ARCHITECTURE
@@ -68,14 +68,14 @@ function assertValidRange(range: { from: string; to: string }): void {
 // TrendsService buckets every session it sees in the reader's local time (src/data/trends.ts
 // bucketStart, deliberately not touched by this file). Because the range here is widened in
 // UTC, not local time, a session near midnight UTC can be included by a UTC day boundary yet
-// bucket into a different local day/week than that UTC day would suggest — e.g. a session at
+// bucket into a different local day/week than that UTC day would suggest, e.g. a session at
 // 23:50 UTC on a UTC Sunday can be past local midnight already, landing in the following
 // Monday-start week's bucket. That is a real mismatch between "which day the range widening
 // thinks a session belongs to" and "which local bucket TrendsService puts it in."
 //
 // Accepted as-is, not changed here: `range.from`/`range.to` are plain YYYY-MM-DD calendar
 // dates with no timezone of their own (API.md §13's example echoes them back verbatim), so
-// there is no local offset available at this layer to widen by instead — inventing one would
+// there is no local offset available at this layer to widen by instead, inventing one would
 // mean guessing the reader's timezone for a value that must stay a portable calendar string.
 // UTC widening is therefore the only unambiguous choice for turning a bare date into a range
 // boundary; the residual mismatch is an inherent property of "export by UTC calendar date,
@@ -106,7 +106,7 @@ function mapSessions(sessions: Awaited<ReturnType<typeof StorageService.getSessi
 
 function renderHtml(summary: ExportSummary): string {
   // Printable one-page A4 summary (API.md §13). Values are enums, UUIDs, ISO dates, numbers,
-  // and config-owned exercise display names / approved copy — no untrusted free-text, so
+  // and config-owned exercise display names / approved copy; no untrusted free-text, so
   // nothing here needs HTML-escaping. Enriched trend rows (the under-informative-export
   // follow-up): each exercise's latest plain-language value + recent direction, so the printed
   // page says something a clinician can read at a glance, not just a bare point count.
@@ -151,7 +151,7 @@ function renderHtml(summary: ExportSummary): string {
 
 async function generateSummary(range: { from: string; to: string }): Promise<{ json: Blob; html: Blob }> {
   // Gate quick-reference matrix (API.md §17): ExportService is ❌ in DEMO, regardless of
-  // attestation history — an already-attested user can enterDemoMode() (ARCHITECTURE §11:
+  // attestation history; an already-attested user can enterDemoMode() (ARCHITECTURE §11:
   // "enterDemoMode" is ✅ from both UNATTESTED and ATTESTED), so isAttested() alone is not
   // sufficient; demo is checked first so it can never fall through on a persisted profile.
   if (SafetyGate.isDemoMode() || !(await SafetyGate.isAttested())) {
@@ -179,7 +179,7 @@ async function generateSummary(range: { from: string; to: string }): Promise<{ j
     StorageService.getSessions(storageRange),
   ]);
 
-  // Fixed 'monthly' granularity (matches API.md §13's full example and AppSettings' default) —
+  // Fixed 'monthly' granularity (matches API.md §13's full example and AppSettings' default)
   // deliberately not read from SettingsService, which the brief's data-source list omits.
   const trends = await Promise.all(
     profile.assignedExercises.map((exerciseId) => TrendsService.getTrend(exerciseId, 'monthly')),
@@ -197,7 +197,7 @@ async function generateSummary(range: { from: string; to: string }): Promise<{ j
     sessions: mapSessions(sessions),
   };
 
-  // Download only — no Web Share API, no clipboard auto-copy, no network (API.md §13 Rules).
+  // Download only; no Web Share API, no clipboard auto-copy, no network (API.md §13 Rules).
   const json = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
   const html = new Blob([renderHtml(summary)], { type: 'text/html' });
 

@@ -1,6 +1,6 @@
-// src/data/progressCard.ts — weekly progressCard (V3 Task 6).
+// src/data/progressCard.ts, weekly progressCard (V3 Task 6).
 // Offscreen canvas PNG (1080×1350): week range, session count, gentlenessStat, garden plant
-// stage. Download only via downloadBlob — same local channel as ExportService (no share API).
+// stage. Download only via downloadBlob, same local channel as ExportService (no share API).
 // Unit tests cover week aggregation only; pixel output is not asserted.
 import { strings } from '../config/strings.ts';
 import { gentlenessStat } from '../lib/summaryMetrics.ts';
@@ -9,14 +9,14 @@ import type { SessionRecordFull } from './storage.ts';
 import { StorageService } from './storage.ts';
 import { SafetyGate } from '../session/safety.ts';
 
-/** Canvas size — calm share-card portrait (1080×1350). */
+/** Canvas size, calm share-card portrait (1080×1350). */
 export const PROGRESS_CARD_WIDTH = 1080;
 export const PROGRESS_CARD_HEIGHT = 1350;
 
 /** Garden plant stage for the week: seed → sprout → leaf → bloom (min(3, sessions)). */
 export type PlantStage = 0 | 1 | 2 | 3;
 
-/** Derived aggregates for one Monday-start local week — no raw metrics tables. */
+/** Derived aggregates for one Monday-start local week; no raw metrics tables. */
 export type ProgressCardData = {
   weekStart: string; // YYYY-MM-DD (Monday, local)
   weekEnd: string; // YYYY-MM-DD (Sunday, local)
@@ -53,7 +53,7 @@ export function weekEndSunday(weekStartYmd: string): string {
   return formatYmd(sunday);
 }
 
-/** Plant stage from session count — growth only, never decay (SAFETY garden rule). */
+/** Plant stage from session count, growth only, never decay (SAFETY garden rule). */
 export function plantStageForSessions(sessionCount: number): PlantStage {
   const n = Math.max(0, Math.floor(sessionCount));
   return Math.min(3, n) as PlantStage;
@@ -114,7 +114,7 @@ function drawRoundedRect(
   ctx.closePath();
 }
 
-/** Simple plant glyph for the garden row — stage 0 seed … 3 bloom. */
+/** Simple plant glyph for the garden row, stage 0 seed … 3 bloom. */
 function drawPlant(ctx: CanvasRenderingContext2D, cx: number, baseY: number, stage: PlantStage): void {
   // Soil mound
   ctx.fillStyle = COLORS.soil;
@@ -179,7 +179,7 @@ function drawPlant(ctx: CanvasRenderingContext2D, cx: number, baseY: number, sta
 
 /**
  * Compose the progress card onto an offscreen canvas and return a PNG Blob.
- * Not unit-tested for pixels — only the data path is.
+ * Not unit-tested for pixels, only the data path is.
  */
 export function composeProgressCardPng(data: ProgressCardData): Promise<Blob> {
   const copy = strings.export.card;
@@ -227,7 +227,7 @@ export function composeProgressCardPng(data: ProgressCardData): Promise<Blob> {
   ctx.font = '500 36px system-ui, sans-serif';
   ctx.fillText(copy.sessionsLabel(data.sessionCount), PROGRESS_CARD_WIDTH / 2, 480);
 
-  // Gentleness (reuse framing from summary — no raw tables)
+  // Gentleness (reuse framing from summary; no raw tables)
   ctx.fillStyle = COLORS.ink;
   ctx.font = '500 40px system-ui, sans-serif';
   const gentlenessLine =
@@ -245,7 +245,7 @@ export function composeProgressCardPng(data: ProgressCardData): Promise<Blob> {
   ctx.font = '400 32px system-ui, sans-serif';
   ctx.fillText(copy.plantStageLabel(data.plantStage), PROGRESS_CARD_WIDTH / 2, 1000);
 
-  // Footer — same data class notice as export (non-diagnostic, local only)
+  // Footer, same data class notice as export (non-diagnostic, local only)
   ctx.fillStyle = COLORS.muted;
   ctx.font = '400 26px system-ui, sans-serif';
   const footer = copy.footer;
@@ -265,7 +265,7 @@ export function composeProgressCardPng(data: ProgressCardData): Promise<Blob> {
 
 /**
  * Load this week's sessions, aggregate, compose PNG.
- * Gated: ATTESTED and not demo — same class as ExportService (API §17).
+ * Gated: ATTESTED and not demo, same class as ExportService (API §17).
  */
 export async function generateWeeklyProgressCard(
   now: Date = new Date(),

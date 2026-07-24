@@ -41,7 +41,7 @@ const INITIAL_STEP: CalibrationStep = { phase: 'neutral', exerciseIndex: 0 };
 
 // Memoizes an in-flight CaptureService.start(). capture.ts only flips `running` after
 // getUserMedia resolves, so two overlapping starts each acquire a MediaStream and the second
-// overwrites the first — leaking its tracks and leaving the camera light on after stop().
+// overwrites the first, leaking its tracks and leaving the camera light on after stop().
 // React 18 StrictMode double-invokes the mount effect in dev, which is exactly that race.
 // Same guard src/session/frames.ts uses; CaptureService exposes no memo of its own.
 let startInFlight: Promise<void> | null = null;
@@ -79,7 +79,7 @@ export function CalibrationScreen() {
   const capturingRef = useRef(false);
   // Set when the tab is hidden mid-capture; the stop is deferred until the capture settles.
   const pendingHideRef = useRef(false);
-  // True while a resume's getUserMedia is in flight — the window in which `paused` is still true
+  // True while a resume's getUserMedia is in flight; the window in which `paused` is still true
   // so the hide branch cannot see an 'active' screen to stop.
   const resumingRef = useRef(false);
 
@@ -107,7 +107,7 @@ export function CalibrationScreen() {
   // Warm-up + camera ownership. The screen owns CaptureService: openFrameSource (used by
   // CalibrationFlow) sees isRunning() === true, so it never takes ownership and never stops
   // the stream. Releasing it on unmount is therefore this effect's job, and it is the hard
-  // camera rule (CLAUDE.md) — the stream may be open only while this screen is mounted.
+  // camera rule (CLAUDE.md); the stream may be open only while this screen is mounted.
   useEffect(() => {
     mountedRef.current = true;
     void (async () => {
@@ -118,11 +118,11 @@ export function CalibrationScreen() {
         if (!mountedRef.current) return;
         await startCamera();
         if (!mountedRef.current) {
-          // Unmounted while getUserMedia was still pending — the cleanup below already ran and
+          // Unmounted while getUserMedia was still pending; the cleanup below already ran and
           // its stop() was a no-op because no stream existed yet. This is the only place that
           // can release the stream that arrived afterwards, and leaving it is a direct breach
           // of the hard camera rule (CLAUDE.md): open only while this screen is mounted. The
-          // window is wide in practice — a first-time permission prompt sits inside it.
+          // window is wide in practice; a first-time permission prompt sits inside it.
           CaptureService.stop();
           return;
         }
@@ -139,7 +139,7 @@ export function CalibrationScreen() {
 
   // Live quality banner. Exactly ONE LandmarkEngine.detect() may run per frame
   // (detectForVideo requires strictly increasing timestamps), so this loop stands down for
-  // the whole duration of a CalibrationFlow capture — which owns inference via
+  // the whole duration of a CalibrationFlow capture, which owns inference via
   // src/session/frames.ts. Without the guard every capture would fail QUALITY_TOO_LOW.
   useEffect(() => {
     if (!ready || paused) return;
@@ -268,7 +268,7 @@ export function CalibrationScreen() {
         }
         await CalibrationFlow.captureComfortableMax(exercise.exerciseId);
       } else {
-        // runNoiseFloorSelfTest persists the baseline itself — the screen saves nothing.
+        // runNoiseFloorSelfTest persists the baseline itself; the screen saves nothing.
         await CalibrationFlow.runNoiseFloorSelfTest();
         setActiveBaseline(await StorageService.getActiveBaseline());
       }

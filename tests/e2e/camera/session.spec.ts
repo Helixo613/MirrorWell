@@ -10,7 +10,7 @@ import { readCounts } from '../helpers/seed';
 // So the honest faceless surface is: the quick-setup overlay, the frozen symmetry bar, the loud
 // NO_BASELINE failure, and camera release. Rep counting, ease-off fire, the rest timer, the
 // qualityOfferStop card, red-flag guidance and sessionEnded→summary are all 'active'-phase only
-// and require fixture replay (Reconvergence Journey 1/2) — out of this stream's scope.
+// and require fixture replay (Reconvergence Journey 1/2), out of this stream's scope.
 
 const SLOW_MS = 120_000; // model load (3.6 MB WASM + .task)
 const CAPTURE_MS = 90_000; // two ~3 s quick-setup windows + warm-up
@@ -55,7 +55,7 @@ async function enterDemoSession(page: Page): Promise<void> {
 
 /** Reads the canvas's bar band: a coarse signature (for frame-to-frame equality) and whether any
  *  pixel is actually drawn there (so the frozen-bar equality check can never pass on a blank
- *  canvas — a bar that never renders would be caught). */
+ *  canvas; a bar that never renders would be caught). */
 async function barBand(page: Page): Promise<{ signature: string; nonBlank: boolean; sized: boolean }> {
   return page.evaluate(() => {
     const canvas = document.querySelector('canvas');
@@ -81,7 +81,7 @@ async function barBand(page: Page): Promise<{ signature: string; nonBlank: boole
   });
 }
 
-test.describe('SessionScreen — Demo Mode on a faceless device', () => {
+test.describe('SessionScreen, Demo Mode on a faceless device', () => {
   test.slow();
 
   test('lands on the quick-setup overlay and keeps the symmetry bar frozen (never moves on a bad frame)', async ({
@@ -103,7 +103,7 @@ test.describe('SessionScreen — Demo Mode on a faceless device', () => {
     expect(first.nonBlank).toBe(true);
 
     // THE load-bearing assertion (TESTS.md §3.3 / FRONTEND §5): every frame is FACE_LOST, so the
-    // renderer never advances the bar or arc — successive frames are pixel-identical.
+    // renderer never advances the bar or arc, successive frames are pixel-identical.
     await page.waitForTimeout(400); // several animation frames
     const second = await barBand(page);
     expect(second.signature).toBe(first.signature);
@@ -112,7 +112,7 @@ test.describe('SessionScreen — Demo Mode on a faceless device', () => {
     expect(third.signature).toBe(first.signature);
   });
 
-  test('quick-setup on a faceless device fails loudly with NO_BASELINE — never a silent FACE_LOST session', async ({
+  test('quick-setup on a faceless device fails loudly with NO_BASELINE; never a silent FACE_LOST session', async ({
     page,
   }) => {
     await recordCameraTracks(page);
@@ -164,7 +164,7 @@ test.describe('SessionScreen — Demo Mode on a faceless device', () => {
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
 
-    // Every track ever handed to SessionScreen must be stopped — the hard camera rule (CLAUDE.md).
+    // Every track ever handed to SessionScreen must be stopped; the hard camera rule (CLAUDE.md).
     await page.waitForFunction(
       () =>
         (window.__mwTracks?.length ?? 0) > 0 &&
@@ -175,7 +175,7 @@ test.describe('SessionScreen — Demo Mode on a faceless device', () => {
   });
 });
 
-test.describe('SessionScreen — accessibility @a11y', () => {
+test.describe('SessionScreen, accessibility @a11y', () => {
   test.slow();
 
   test('zero critical or serious axe violations on the demo session', async ({ page }) => {

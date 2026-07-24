@@ -26,7 +26,7 @@ import type { SessionRecordFull } from '@/data/storage';
 // ---------------------------------------------------------------------------
 /**
  * helpers/seed.ts requires mirrorwell_db to be OPEN (with its stores) before the raw-IDB
- * write. `goto('/')` only resolves on load — hydrateAppState is still in flight, so seeding
+ * write. `goto('/')` only resolves on load, hydrateAppState is still in flight, so seeding
  * immediately races Dexie's open and intermittently lands rows in a store-less database
  * (observed: 3 of 7 specs failing at random on the first run). Waiting for the UNATTESTED
  * redirect to settle proves hydrateAppState resolved, which proves the DB is open.
@@ -120,11 +120,11 @@ test.describe('SummaryScreen', () => {
     await expect(page.getByRole('heading', { name: 'Session complete' })).toBeVisible();
     await expect(page.getByText('This is a single-session snapshot of movement.')).toBeVisible();
     await expect(page.getByLabel('Gentle practice')).toHaveText(
-      "You kept it gentle 8 of 10 times — that's exactly the skill.",
+      "You kept it gentle 8 of 10 times; that's exactly the skill.",
     );
 
     const smile = page.getByRole('article').filter({ hasText: 'Gentle smile' });
-    // repsCompleted verbatim — not reps.length (10), not rounded, not recomputed.
+    // repsCompleted verbatim; not reps.length (10), not rounded, not recomputed.
     await expect(smile.getByText('7 reps completed')).toBeVisible();
     await expect(smile.getByText('Mostly even')).toBeVisible();
 
@@ -134,7 +134,7 @@ test.describe('SummaryScreen', () => {
 
     // Non-demo close-out.
     await expect(page.getByRole('button', { name: 'Return to home' })).toBeVisible();
-    await expect(page.getByText('DEMO — not for exercise use')).toHaveCount(0);
+    await expect(page.getByText('DEMO; not for exercise use')).toHaveCount(0);
   });
 
   test('an early-ended session renders the empty-results copy, not a zeroed card', async ({
@@ -177,7 +177,7 @@ test.describe('SummaryScreen', () => {
   });
 });
 
-test.describe('SummaryScreen — DEMO variant', () => {
+test.describe('SummaryScreen, DEMO variant', () => {
   test('watermarked, offers the onboarding exit, and writes nothing to the DB', async ({
     page,
   }) => {
@@ -193,7 +193,7 @@ test.describe('SummaryScreen — DEMO variant', () => {
     await page.reload();
 
     await expect(page).toHaveURL(/\/summary$/);
-    await expect(page.getByText('DEMO — not for exercise use')).toBeVisible();
+    await expect(page.getByText('DEMO; not for exercise use')).toBeVisible();
     // The demo close-out the screen owns: different label AND different accessible name.
     await expect(page.getByRole('button', { name: 'Return to onboarding' })).toBeVisible();
     await expect(page.getByText('Back to onboarding')).toBeVisible();
@@ -202,7 +202,7 @@ test.describe('SummaryScreen — DEMO variant', () => {
     // TESTS.md §4.3: a demo pass must not change DB row counts.
     await page.getByRole('button', { name: 'Return to onboarding' }).click();
     // The destination is deliberately NOT pinned here. This spec reaches /summary by writing
-    // history state and RELOADING, which wipes SafetyGate's in-memory demoMode — the gate is
+    // history state and RELOADING, which wipes SafetyGate's in-memory demoMode; the gate is
     // ATTESTED (seeded profile), only `state.demo` makes the screen render its demo variant.
     // So handleDone's navigate('/onboarding') is correctly bounced for an attested user and
     // lands on /home. The real DEMO exit (S1-REQ-2, now fixed: /onboarding admits DEMO and
@@ -213,7 +213,7 @@ test.describe('SummaryScreen — DEMO variant', () => {
   });
 });
 
-test.describe('SummaryScreen — accessibility @a11y', () => {
+test.describe('SummaryScreen, accessibility @a11y', () => {
   test('zero critical axe violations and the symmetry value is available as text', async ({
     page,
   }) => {
@@ -223,7 +223,7 @@ test.describe('SummaryScreen — accessibility @a11y', () => {
     // Wait for StaggerFadeIn to settle before scanning. The cards mount at opacity 0 and fade
     // over 200 ms with a 60 ms per-card delay; axe samples *computed* colour, so mid-fade it
     // reads the blend toward the background (observed: #808380 for text-foreground, 3.61:1)
-    // and reports a colour-contrast violation that does not exist in the settled state — the
+    // and reports a colour-contrast violation that does not exist in the settled state; the
     // tokens are 14.13:1 (--foreground) and 5.17:1 (--muted-foreground) against --background,
     // and a prefers-reduced-motion user never sees the transitional value at all.
     // Under the full parallel suite CPU contention delayed the scan past the animation, so this

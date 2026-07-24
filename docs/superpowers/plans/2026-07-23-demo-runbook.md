@@ -30,7 +30,7 @@
 | 0:00–0:45 | Cold open | Show the seeded HomeScreen. “This is MirrorWell: a local exercise-support tool that gives visual feedback during a clinician-assigned exercise. The history stays on this device.” |
 | 0:45–1:45 | Story | “The goal is steady, gentle practice. The app measures visible movement against this person’s own calibration; it does not diagnose, grade, or predict anything.” |
 | 1:45–2:30 | Enter session | Open the calibrated exercise and briefly show the exercise name and calibration state. Keep the presenter’s Zoom camera OFF. |
-| 2:30–6:30 | Live session | Perform the exercise. “The green band is the target — up, hold, release, that’s a rep.” Let one rep trigger the ease-off cue on purpose. “That one didn’t count — the effort cue says ease off.” If the frame quality dips: “That one didn’t count — the light dipped.” |
+| 2:30–6:30 | Live session | Perform the exercise. “The green band is the target, up, hold, release, that’s a rep.” Let one rep trigger the ease-off cue on purpose. “That one didn’t count; the effort cue says ease off.” If the frame quality dips: “That one didn’t count; the light dipped.” |
 | 6:30–7:30 | Summary | Finish the session and show the SummaryScreen gentleness stat. “This is a session summary for this person’s own practice; it is not a clinical measure.” |
 | 7:30–8:45 | Trends | Show the TrendsScreen drift chart. “This chart shows stored, derived practice metrics above the device’s measured noise floor. It is not a comparison with other people.” |
 | 8:45–9:45 | Phone clip | Show the 15-second recording from V2 Task 9’s installed PWA on the phone. Keep the clip short and return to the shared browser window. |
@@ -44,7 +44,7 @@
 - [ ] If any live glitch is not recovered within 10 seconds, say: **“Let me show you this morning’s run.”**
 - [ ] Press `Ctrl+Tab`, press play, and continue the narration from the matching point.
 - [ ] Practice the switch until it takes under 5 seconds.
-- [ ] If the live camera quality drops, do not guess or describe an unverified metric; use the fallback or say: **“That one didn’t count — the light dipped.”**
+- [ ] If the live camera quality drops, do not guess or describe an unverified metric; use the fallback or say: **“That one didn’t count; the light dipped.”**
 
 ## Rehearsal gate
 

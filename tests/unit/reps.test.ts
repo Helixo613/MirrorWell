@@ -3,7 +3,7 @@ import type { MetricSample } from '../../src/metrics/metrics.ts';
 
 /**
  * docs/TESTS.md §2: MetricEngine + RepDetector require 100% branch coverage (hard
- * requirement) — every branch below is deliberate, not incidental.
+ * requirement); every branch below is deliberate, not incidental.
  * RepDetector is a stateful singleton (docs/BACKEND.md §1.5); every test calls reset()
  * first so state never leaks between unrelated test cases.
  *
@@ -28,7 +28,7 @@ function hold(effort: number, startMs: number, endMs: number, si: number | null 
   return out;
 }
 
-describe('RepDetector — idle / start threshold', () => {
+describe('RepDetector, idle / start threshold', () => {
   it('never emits while effortIndex stays at or below startThreshold', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     // Boundary read from config, not hardcoded, so the "exactly at threshold" case stays the
@@ -42,7 +42,7 @@ describe('RepDetector — idle / start threshold', () => {
   });
 });
 
-describe('RepDetector — clean rep', () => {
+describe('RepDetector, clean rep', () => {
   it('a clean rep (rise, hold, fall) is counted exactly once', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     RepDetector.reset();
@@ -65,7 +65,7 @@ describe('RepDetector — clean rep', () => {
   });
 });
 
-describe('RepDetector — twitch rejection (< 800ms)', () => {
+describe('RepDetector, twitch rejection (< 800ms)', () => {
   it('a twitch shorter than minDurationMs is rejected and does not consume a repIndex', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     RepDetector.reset();
@@ -80,16 +80,16 @@ describe('RepDetector — twitch rejection (< 800ms)', () => {
   });
 });
 
-describe('RepDetector — double-peak without full drop', () => {
-  it('a dip that stays >= endThreshold does not end the rep — counted as one rep', async () => {
+describe('RepDetector, double-peak without full drop', () => {
+  it('a dip that stays >= endThreshold does not end the rep, counted as one rep', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     RepDetector.reset();
     expect(RepDetector.feed(sample(0.3, 0))).toBeNull(); // rise
     expect(RepDetector.feed(sample(0.5, 200))).toBeNull(); // peak 1
-    expect(RepDetector.feed(sample(0.12, 400))).toBeNull(); // dip, but >= endThreshold(0.10) — stays active
+    expect(RepDetector.feed(sample(0.12, 400))).toBeNull(); // dip, but >= endThreshold(0.10); stays active
     expect(RepDetector.feed(sample(0.4, 600))).toBeNull(); // peak 2
     expect(RepDetector.feed(sample(0.4, 800))).toBeNull(); // hold past min duration
-    const event = RepDetector.feed(sample(0.05, 900)); // full drop — ends
+    const event = RepDetector.feed(sample(0.05, 900)); // full drop, ends
     expect(event).not.toBeNull();
     expect(event!.repIndex).toBe(0);
     expect(event!.durationMs).toBe(900);
@@ -113,7 +113,7 @@ describe('RepDetector — double-peak without full drop', () => {
   });
 });
 
-describe('RepDetector — ease-off within a rep (sustained > 0.60 for >= 300ms)', () => {
+describe('RepDetector, ease-off within a rep (sustained > 0.60 for >= 300ms)', () => {
   it('flags easeOffTriggered when effort is sustained above threshold long enough inside the rep', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     RepDetector.reset();
@@ -130,7 +130,7 @@ describe('RepDetector — ease-off within a rep (sustained > 0.60 for >= 300ms)'
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     RepDetector.reset();
     RepDetector.feed(sample(0.3, 0)); // starts rep, below easeOff threshold
-    RepDetector.feed(sample(0.65, 100)); // crosses threshold mid-rep — first crossing here
+    RepDetector.feed(sample(0.65, 100)); // crosses threshold mid-rep, first crossing here
     RepDetector.feed(sample(0.65, 300));
     RepDetector.feed(sample(0.65, 400)); // sustained 300ms since the mid-rep crossing
     for (const s of hold(0.65, 600, 800)) expect(RepDetector.feed(s)).toBeNull();
@@ -151,7 +151,7 @@ describe('RepDetector — ease-off within a rep (sustained > 0.60 for >= 300ms)'
   });
 });
 
-describe('RepDetector — peak tracking', () => {
+describe('RepDetector, peak tracking', () => {
   it('peakSymmetryIndex ignores null samples; peakEffortIndex tracks the true max', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     RepDetector.reset();
@@ -166,7 +166,7 @@ describe('RepDetector — peak tracking', () => {
   });
 });
 
-describe('RepDetector — getState() (DebugHud, Task 8)', () => {
+describe('RepDetector, getState() (DebugHud, Task 8)', () => {
   it('is idle after reset(), active once a rep starts, idle again once it ends', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     RepDetector.reset();
@@ -197,11 +197,11 @@ describe('RepDetector — getState() (DebugHud, Task 8)', () => {
   });
 });
 
-describe('RepDetector — reset() prevents cross-exercise leakage', () => {
+describe('RepDetector, reset() prevents cross-exercise leakage', () => {
   it('reset() mid-rep discards all in-progress state; the next exercise starts clean', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     RepDetector.reset();
-    RepDetector.feed(sample(0.5, 0)); // start a rep, never completed — exercise switches here
+    RepDetector.feed(sample(0.5, 0)); // start a rep, never completed; exercise switches here
     RepDetector.reset();
 
     // Idle frame post-reset must not resume the aborted rep.
@@ -215,7 +215,7 @@ describe('RepDetector — reset() prevents cross-exercise leakage', () => {
   });
 });
 
-describe('RepDetector — gap > gapResetMs aborts active rep without event', () => {
+describe('RepDetector, gap > gapResetMs aborts active rep without event', () => {
   it('active rep aborts on gap > 250ms with no RepEvent; repIndex not consumed', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
     RepDetector.reset();

@@ -1,9 +1,9 @@
-// src/dev/seed.ts — deterministic dev/demo seed data (docs/DATABASE.md §6). Browser-safe: no
+// src/dev/seed.ts, deterministic dev/demo seed data (docs/DATABASE.md §6). Browser-safe: no
 // fake-indexeddb import, no `process` usage. Two callers:
 //   - scripts/seed-dev.ts (Node CLI): imports 'fake-indexeddb/auto' FIRST, then this module.
 //   - src/dev/DebugHud.tsx / DebugOverlay.tsx (browser "seed" button): imports this module
 //     directly, so it writes to the REAL browser IndexedDB. This file must never import
-//     fake-indexeddb itself — doing so would clobber globalThis.indexedDB in the browser too
+//     fake-indexeddb itself, doing so would clobber globalThis.indexedDB in the browser too
 //     (docs/BACKEND.md §5).
 // RULE (non-negotiable): dev/test-only. src/dev/ is excluded from production bundles
 // (import.meta.env.DEV dead-branch elimination, same mechanism as CaptureHarness); the
@@ -20,7 +20,7 @@ import type { CalibrationBaseline, EndReason, UserProfile } from '../data/schema
 import { StorageService, type SessionRecordInput } from '../data/storage.ts';
 import { exercises, assignableExercises } from '../config/exercises.ts';
 
-/** Inline mulberry32 — no dependency. Same seed every run → identical demo charts. */
+/** Inline mulberry32: no dependency. Same seed every run → identical demo charts. */
 function mulberry32(seed: number): () => number {
   let t = seed;
   return () => {
@@ -53,7 +53,7 @@ function pickDistinctDays(rng: () => number, count: number): number[] {
 
 export async function seedDev(): Promise<void> {
   // Vite injects import.meta.env; plain `node` execution (the scripts/seed-dev.ts CLI
-  // wrapper) leaves it undefined — guard both.
+  // wrapper) leaves it undefined, guard both.
   const viteEnv = (import.meta as unknown as { env?: { PROD?: boolean } }).env;
   if (viteEnv?.PROD) {
     throw new Error('seedDev must never run in a production build');
@@ -143,7 +143,7 @@ export async function seedDev(): Promise<void> {
     for (let i = 0; i < sessionsThisWeek; i++) {
       const dayInWeek = dayOffsets[i]!;
       const daysAgo = weekAge * 7 + dayInWeek;
-      // Integer ms only — StorageService requires integer durationMs on reps; keep session
+      // Integer ms only, StorageService requires integer durationMs on reps; keep session
       // wall-clock integer too so ISO timestamps stay stable under the PRNG.
       const hourOffsetMs = Math.floor(rng() * 6 * 3_600_000);
       const startedAt = new Date(now - daysAgo * 86_400_000 - hourOffsetMs);
