@@ -76,7 +76,11 @@ export function SessionScreen() {
   // In-session scaffold, shared across quickSetup | active | paused so the FeedbackCanvas (and its
   // renderer) stays mounted across sub-state transitions. Phase-specific content is layered on top.
   return (
-    <ScreenShell textScale={s.textScale} ariaLabelledBy={HEADING_ID}>
+    <ScreenShell
+      textScale={s.textScale}
+      ariaLabelledBy={HEADING_ID}
+      className="lg:max-w-5xl"
+    >
       <div className="flex flex-1 flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
           <h1 id={HEADING_ID} className="text-lg font-medium text-foreground">
@@ -134,6 +138,11 @@ export function SessionScreen() {
             stopAriaLabel={strings.session.arrival.stopAriaLabel}
             onBegin={s.handleBeginArrival}
             onStop={s.openStopDialog}
+            note={s.encouragementNote}
+            noteHeading={strings.session.arrival.note.heading}
+            dismissNoteLabel={strings.session.arrival.note.dismiss}
+            dismissNoteAriaLabel={strings.session.arrival.note.dismissAriaLabel}
+            onDismissNote={s.handleDismissNote}
           />
         </div>
 

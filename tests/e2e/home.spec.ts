@@ -11,7 +11,9 @@ test.describe('home screen', () => {
   test.beforeEach(async ({ page }) => {
     await completeOnboarding(page);
     await page.goto('/home');
-    await expect(page.getByRole('heading', { name: 'MirrorWell' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /^Good (morning|afternoon|evening)(, .+)?$/ }),
+    ).toBeVisible();
   });
 
   test('mounts no camera element', async ({ page }) => {

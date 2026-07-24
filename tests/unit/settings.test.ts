@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   textScale: 1.0,
   hapticsEnabled: true,
   audioCuesEnabled: true,
+  voiceCoachEnabled: false,
   reducedFacePreview: false,
   trendGranularity: 'monthly',
   showAffectedSideMarker: true,
@@ -31,10 +32,34 @@ describe('SettingsService', () => {
     expect(await SettingsService.get()).toEqual(DEFAULT_SETTINGS);
   });
 
-  it('merges a partial update and persists it', async () => {
-    const updated = await SettingsService.update({ caregiverViewEnabled: true, textScale: 1.5 });
+  it('defaults voice coaching off for a legacy stored settings row', async () => {
+    const { voiceCoachEnabled: _, ...legacySettings } = {
+      ...DEFAULT_SETTINGS,
+      highContrast: true,
+    };
+    await db
+      .table<Omit<AppSettings, 'voiceCoachEnabled'>, string>('app_settings')
+      .put(legacySettings);
 
-    expect(updated).toEqual({ ...DEFAULT_SETTINGS, caregiverViewEnabled: true, textScale: 1.5 });
+    expect(await SettingsService.get()).toEqual({
+      ...DEFAULT_SETTINGS,
+      highContrast: true,
+    });
+  });
+
+  it('merges a partial update and persists it', async () => {
+    const updated = await SettingsService.update({
+      caregiverViewEnabled: true,
+      textScale: 1.5,
+      voiceCoachEnabled: true,
+    });
+
+    expect(updated).toEqual({
+      ...DEFAULT_SETTINGS,
+      caregiverViewEnabled: true,
+      textScale: 1.5,
+      voiceCoachEnabled: true,
+    });
     expect(await SettingsService.get()).toEqual(updated);
   });
 

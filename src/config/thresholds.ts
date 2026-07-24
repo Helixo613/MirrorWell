@@ -68,10 +68,20 @@ export const thresholds = Object.freeze({
     restExtendSeconds: 30,
   }),
 
+  // VoiceCoach pacing. Owning section: docs/FRONTEND.md §2.4.
+  feedback: Object.freeze({
+    voiceMinGapMs: 2500,
+  }),
+
   // Optional local-only profile text. Owning section: docs/DATABASE.md §3.
   profile: Object.freeze({
     nicknameMaxLength: 30,
     motivationMaxLength: 120,
+  }),
+
+  // Caregiver-authored text (SAFETY §5 narrow carve-out). Owning section: docs/DATABASE.md §3.
+  caregiver: Object.freeze({
+    noteMaxLength: 200,
   }),
 
   // Live V1 protocol harness (dev-only). Owning section: docs/MODEL_AND_DATA.md §7
@@ -102,6 +112,13 @@ export const thresholds = Object.freeze({
     sessionLookbackDays: 7,
     afternoonStartHour: 12,
     eveningStartHour: 18,
+    gardenWeeks: 8,
+    gardenBloomSessions: 3,
+    daysPerWeek: 7,
+    sessions10: 10,
+    sessions25: 25,
+    practiceWeeks4Days: 28,
+    gentleReps100: 100,
   }),
   /** FRONTEND §2.5 — plain-language symmetry buckets (no numeric grades). */
   summary: Object.freeze({

@@ -118,6 +118,7 @@ function buildPayload(spec: SeedSpec): SeedPayload {
     textScale: 1.0,
     hapticsEnabled: true,
     audioCuesEnabled: true,
+    voiceCoachEnabled: false,
     reducedFacePreview: false,
     trendGranularity: spec.trendGranularity ?? 'monthly',
     showAffectedSideMarker: true,
@@ -166,6 +167,7 @@ export interface DbCounts {
   results: number;
   appSettings: number;
   caregiverViewEnabled: boolean;
+  encouragementNotes: number;
 }
 
 /** Row counts across the writable stores + the settings blob, for before/after mutation audits. */
@@ -190,14 +192,16 @@ export async function readCounts(page: Page): Promise<DbCounts> {
         r.onerror = () => rej(r.error);
       });
     }
-    const [profiles, baselines, sessions, results, appSettings, s] = await Promise.all([
-      count('user_profile'),
-      count('calibration_baseline'),
-      count('session_record'),
-      count('exercise_result'),
-      count('app_settings'),
-      settings(),
-    ]);
+    const [profiles, baselines, sessions, results, appSettings, s, encouragementNotes] =
+      await Promise.all([
+        count('user_profile'),
+        count('calibration_baseline'),
+        count('session_record'),
+        count('exercise_result'),
+        count('app_settings'),
+        settings(),
+        count('encouragement_note'),
+      ]);
     db.close();
     return {
       profiles,
@@ -206,6 +210,7 @@ export async function readCounts(page: Page): Promise<DbCounts> {
       results,
       appSettings,
       caregiverViewEnabled: s.caregiverViewEnabled === true,
+      encouragementNotes,
     };
   });
 }

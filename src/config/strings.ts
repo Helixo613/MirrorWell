@@ -375,8 +375,26 @@ export const strings = Object.freeze({
       action: 'Recalibrate',
       actionAriaLabel: 'Go to calibration to refresh your baseline',
     },
+    garden: {
+      title: 'Your practice garden',
+      label: 'Your practice garden',
+      ariaLabel: (growingWeeks: number, totalWeeks: number) =>
+        `Your practice garden: ${growingWeeks} of ${totalWeeks} weeks growing`,
+      weekAriaLabel: (week: number, stage: number) =>
+        `Week ${week}: ${['seed', 'sprout', 'leaf', 'bloom'][stage]}`,
+    },
+    milestones: {
+      label: 'Practice milestones',
+      first_session: 'First session of practice',
+      sessions_10: '10 sessions of showing up',
+      sessions_25: '25 sessions of showing up',
+      weeks_4: 'Four weeks with practice',
+      gentle_100: '100 gentle reps',
+    },
     nav: {
-      label: 'More options',
+      primaryLabel: 'Primary navigation',
+      home: 'Home',
+      homeAriaLabel: 'Go to home',
       trends: 'Trends',
       trendsAriaLabel: 'View exercise trends over time',
       export: 'Export',
@@ -410,6 +428,13 @@ export const strings = Object.freeze({
       beginAriaLabel: 'Begin the exercise session',
       stop: 'Stop',
       stopAriaLabel: 'Stop and leave this session',
+      // Caregiver encouragement note (SAFETY §5 narrow carve-out): display-only, dismiss deletes
+      // it from storage. Never auto-dismisses — the patient chooses when it's gone.
+      note: {
+        heading: 'A note for you',
+        dismiss: 'Dismiss',
+        dismissAriaLabel: 'Dismiss and remove this note',
+      },
     },
     demo: {
       ready: "I'm ready",
@@ -426,6 +451,12 @@ export const strings = Object.freeze({
       hold: 'Lovely — hold it gently',
       easeBack: 'A little less — settle back toward the band',
       legend: 'The green band is your gentle target: rise into it, hold, then relax to count a rep.',
+    },
+    voice: {
+      raise: 'Gently up',
+      hold: 'Hold there',
+      easeBack: 'A little less',
+      rep: (done: number) => `That's ${done}`,
     },
     rest: {
       title: 'Rest',
@@ -498,6 +529,9 @@ export const strings = Object.freeze({
       allGentle: 'Every single rep gentle. Perfect restraint.',
       someGentle: (gentle: number, total: number) =>
         `You kept it gentle ${gentle} of ${total} times — that's exactly the skill.`,
+    },
+    milestones: {
+      label: 'Practice milestones',
     },
     qualityNote: 'This is a single-session snapshot of movement.',
     demoWatermark: 'DEMO — not for exercise use',
@@ -642,6 +676,28 @@ export const strings = Object.freeze({
     },
     advisory: 'Share this file only with your care team.',
     filename: (dateYmd: string) => `mirrorwell-summary-${dateYmd}`,
+    // Weekly progressCard (V3 Task 6) — local PNG download only; derived aggregates only.
+    card: {
+      title: 'Weekly progress card',
+      description:
+        'A calm image of this week’s practice — session count, gentle reps, and garden growth. Saves only to this device.',
+      download: 'Download weekly card',
+      downloadAriaLabel: 'Download this week’s progress card as an image',
+      generating: 'Drawing your week…',
+      filename: (weekStartYmd: string) => `mirrorwell-week-${weekStartYmd}`,
+      canvasHeading: 'This week’s practice',
+      weekRange: (from: string, to: string) => `${from} – ${to}`,
+      sessionsLabel: (count: number) =>
+        count === 1 ? 'session of showing up' : 'sessions of showing up',
+      gentlenessLabel: (gentle: number, total: number) =>
+        `Gentle ${gentle} of ${total} reps — control practice`,
+      gentlenessEmpty: 'Gentle practice begins when you do',
+      gardenLabel: 'Garden this week',
+      plantStageLabel: (stage: 0 | 1 | 2 | 3) =>
+        (['Seed', 'Sprout', 'Leaf', 'Bloom'] as const)[stage],
+      footer: 'MirrorWell · on this device only · not a clinical assessment',
+      announcementReady: 'Weekly progress card downloaded.',
+    },
     nav: {
       back: 'Back to home',
       backAriaLabel: 'Return to home',
@@ -670,6 +726,17 @@ export const strings = Object.freeze({
     },
     exportLink: 'Open the full summary',
     exportLinkAriaLabel: 'Open the full summary to share with your care team',
+    // SAFETY §5 narrow carve-out: the sole mutating control on this screen.
+    note: {
+      heading: 'Leave an encouragement note',
+      hint: "Up to 200 characters. They'll see it before their next session.",
+      label: 'Your note',
+      save: 'Save note',
+      saveAriaLabel: 'Save encouragement note',
+      saving: 'Saving…',
+      saved: 'Note saved',
+      saveFailed: 'Could not save that note. Please try again.',
+    },
     nav: {
       back: 'Back to home',
       backAriaLabel: 'Return to home',
@@ -736,6 +803,10 @@ export const strings = Object.freeze({
         label: 'Sound cues',
         description: 'Soft tones for reps and quality reminders',
       },
+      voiceCoach: {
+        label: 'Voice coach',
+        description: 'Short spoken cues during exercises',
+      },
     },
     trends: {
       granularityLabel: 'Trend time range',
@@ -748,7 +819,7 @@ export const strings = Object.freeze({
       caregiver: {
         label: 'Caregiver view',
         description:
-          'Lets a trusted person see practice summaries on this device — read only, nothing is shared online',
+          'Lets a trusted person see practice summaries on this device and leave you one short encouragement note — read only otherwise, nothing is shared online',
       },
     },
     calibration: {

@@ -218,6 +218,20 @@ describe('ExportService.generateSummary — schema validation', () => {
     expect(text).not.toContain('motivation');
   });
 
+  it('never exports the caregiver encouragement note, in JSON or HTML (SAFETY §5/§6)', async () => {
+    await seedAttestedExportFixture();
+    await StorageService.saveEncouragementNote({
+      noteId: '77777777-7777-4777-8777-777777777777',
+      text: 'UniqueEncouragementNoteExportGuard',
+      createdAt: '2026-07-10T09:00:00.000Z',
+    });
+
+    const { json, html } = await ExportService.generateSummary(RANGE);
+
+    expect(await json.text()).not.toContain('UniqueEncouragementNoteExportGuard');
+    expect(await html.text()).not.toContain('UniqueEncouragementNoteExportGuard');
+  });
+
   it('produces a JSON payload that validates against tests/schemas/export.schema.json', async () => {
     await seedAttestedExportFixture();
 

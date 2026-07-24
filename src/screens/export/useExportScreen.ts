@@ -3,6 +3,8 @@ import { strings } from '@/config/strings';
 import { thresholds } from '@/config/thresholds';
 import { MirrorWellError } from '@/data/errors';
 import { ExportService } from '@/data/export';
+import { generateWeeklyProgressCard } from '@/data/progressCard';
+import { downloadBlob } from '@/lib/downloadBlob';
 import type {
   ExportDateRange,
   ExportSummaryPreview,
@@ -11,6 +13,8 @@ import type {
 // ExportScreen status: it needs no initial fetch (the setup form shows immediately), so there is
 // no 'loading' state — generation drives 'generating' -> 'success' | 'empty' | 'error'.
 export type ExportStatus = 'ready' | 'generating' | 'success' | 'empty' | 'error';
+
+export type WeeklyCardStatus = 'idle' | 'generating' | 'error';
 
 function pad2(value: number): string {
   return String(value).padStart(2, '0');
@@ -37,11 +41,13 @@ export interface UseExportScreenResult {
   errorTitle: string | null;
   errorBody: string | null;
   liveAnnouncement: string;
+  weeklyCardStatus: WeeklyCardStatus;
   setFrom: (value: string) => void;
   setTo: (value: string) => void;
   generate: () => Promise<void>;
   downloadJson: () => void;
   downloadHtml: () => void;
+  downloadWeeklyCard: () => Promise<void>;
 }
 
 export function useExportScreen(): UseExportScreenResult {
@@ -54,6 +60,8 @@ export function useExportScreen(): UseExportScreenResult {
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [errorTitle, setErrorTitle] = useState<string | null>(null);
   const [errorBody, setErrorBody] = useState<string | null>(null);
+  const [weeklyCardStatus, setWeeklyCardStatus] = useState<WeeklyCardStatus>('idle');
+  const [cardAnnouncement, setCardAnnouncement] = useState('');
 
   const setFrom = useCallback((value: string) => {
     setRange((prev) => ({ ...prev, from: value }));
@@ -107,27 +115,38 @@ export function useExportScreen(): UseExportScreenResult {
     }
   }, [range]);
 
-  // Download only — an object-URL anchor click, no Web Share API, no clipboard (API §13 Rules).
-  const download = useCallback((blob: Blob, extension: 'json' | 'html') => {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${strings.export.filename(range.to)}.${extension}`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-  }, [range.to]);
-
+  // Download only — shared downloadBlob helper (object-URL anchor, no Web Share / clipboard).
   const downloadJson = useCallback(() => {
-    if (result) download(result.json, 'json');
-  }, [result, download]);
+    if (result) {
+      downloadBlob(result.json, `${strings.export.filename(range.to)}.json`);
+    }
+  }, [result, range.to]);
 
   const downloadHtml = useCallback(() => {
-    if (result) download(result.html, 'html');
-  }, [result, download]);
+    if (result) {
+      downloadBlob(result.html, `${strings.export.filename(range.to)}.html`);
+    }
+  }, [result, range.to]);
+
+  const downloadWeeklyCard = useCallback(async () => {
+    setWeeklyCardStatus('generating');
+    setCardAnnouncement('');
+    try {
+      const { blob, data } = await generateWeeklyProgressCard();
+      downloadBlob(blob, `${strings.export.card.filename(data.weekStart)}.png`);
+      setWeeklyCardStatus('idle');
+      setCardAnnouncement(strings.export.card.announcementReady);
+    } catch {
+      setWeeklyCardStatus('error');
+      setErrorTitle(strings.errors.VALIDATION_FAILED.title);
+      setErrorBody(strings.errors.VALIDATION_FAILED.body);
+    }
+  }, []);
 
   const liveAnnouncement = useMemo(() => {
+    if (cardAnnouncement) {
+      return cardAnnouncement;
+    }
     if (status !== 'success' || !result) {
       return '';
     }
@@ -138,7 +157,7 @@ export function useExportScreen(): UseExportScreenResult {
       preview.range.to,
       Math.round(preview.completionRate * 100),
     );
-  }, [status, result]);
+  }, [status, result, cardAnnouncement]);
 
   return {
     status,
@@ -147,10 +166,12 @@ export function useExportScreen(): UseExportScreenResult {
     errorTitle,
     errorBody,
     liveAnnouncement,
+    weeklyCardStatus,
     setFrom,
     setTo,
     generate,
     downloadJson,
     downloadHtml,
+    downloadWeeklyCard,
   };
 }

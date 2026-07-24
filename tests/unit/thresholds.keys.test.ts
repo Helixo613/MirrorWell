@@ -7,10 +7,12 @@ describe('thresholds', () => {
   it('exports the full key list from API.md §15', () => {
     expect(Object.keys(thresholds).sort()).toEqual(
       [
-        'blendshapes', 'calibration', 'landmarker', 'liveDemo', 'metrics',
+        'blendshapes', 'calibration', 'feedback', 'landmarker', 'liveDemo', 'metrics',
         'profile', 'qualityGates', 'reps', 'session', 'v1Protocol',
         // UI presentation tunables (frontend salvage, Gate 0)
         'home', 'summary', 'trends', 'export', 'settings',
+        // V3 Task 4: caregiver-authored text limit
+        'caregiver',
       ].sort(),
     );
   });
@@ -63,6 +65,11 @@ describe('thresholds', () => {
     expect(Object.keys(thresholds.session).sort()).toEqual(['metricEventMinIntervalMs', 'qualityProblemOfferStopMs', 'restExtendSeconds'].sort());
   });
 
+  it('feedback exposes the VoiceCoach minimum gap', () => {
+    expect(Object.keys(thresholds.feedback)).toEqual(['voiceMinGapMs']);
+    expect(thresholds.feedback.voiceMinGapMs).toBe(2500);
+  });
+
   it('profile exposes local-only text limits', () => {
     expect(Object.keys(thresholds.profile)).toEqual([
       'nicknameMaxLength',
@@ -70,6 +77,11 @@ describe('thresholds', () => {
     ]);
     expect(thresholds.profile.nicknameMaxLength).toBe(30);
     expect(thresholds.profile.motivationMaxLength).toBe(120);
+  });
+
+  it('caregiver exposes the encouragement-note length limit', () => {
+    expect(Object.keys(thresholds.caregiver)).toEqual(['noteMaxLength']);
+    expect(thresholds.caregiver.noteMaxLength).toBe(200);
   });
 
   it('v1Protocol exposes MODEL_AND_DATA §7 capture tunables', () => {
@@ -101,6 +113,13 @@ describe('thresholds', () => {
       'sessionLookbackDays',
       'afternoonStartHour',
       'eveningStartHour',
+      'gardenWeeks',
+      'gardenBloomSessions',
+      'daysPerWeek',
+      'sessions10',
+      'sessions25',
+      'practiceWeeks4Days',
+      'gentleReps100',
     ]);
     expect(Object.keys(thresholds.summary).sort()).toEqual(
       ['symmetryFairlyEvenMin', 'symmetryMostlyEvenMin', 'symmetrySomeDifferenceMin'].sort(),

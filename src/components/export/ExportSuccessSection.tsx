@@ -8,6 +8,8 @@ export interface ExportSuccessSectionProps {
   preview: ExportSummaryPreview;
   onDownloadJson: () => void;
   onDownloadHtml: () => void;
+  onDownloadWeeklyCard: () => void;
+  weeklyCardBusy?: boolean;
   className?: string;
 }
 
@@ -15,9 +17,12 @@ export function ExportSuccessSection({
   preview,
   onDownloadJson,
   onDownloadHtml,
+  onDownloadWeeklyCard,
+  weeklyCardBusy = false,
   className,
 }: ExportSuccessSectionProps) {
   const completionPct = Math.round(preview.completionRate * 100);
+  const card = strings.export.card;
 
   return (
     <section
@@ -47,7 +52,7 @@ export function ExportSuccessSection({
         {strings.export.advisory}
       </p>
 
-      {/* Two download cards (JSON / printable HTML) — download only, no share/clipboard. */}
+      {/* Download cards (JSON / printable HTML / weekly progressCard) — download only. */}
       <div className="space-y-3">
         <DownloadCard
           title={strings.export.success.jsonTitle}
@@ -62,6 +67,14 @@ export function ExportSuccessSection({
           actionLabel={strings.export.success.htmlDownload}
           actionAriaLabel={strings.export.success.htmlDownloadAriaLabel}
           onDownload={onDownloadHtml}
+        />
+        <DownloadCard
+          title={card.title}
+          description={card.description}
+          actionLabel={weeklyCardBusy ? card.generating : card.download}
+          actionAriaLabel={card.downloadAriaLabel}
+          onDownload={onDownloadWeeklyCard}
+          disabled={weeklyCardBusy}
         />
       </div>
     </section>
