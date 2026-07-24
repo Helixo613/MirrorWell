@@ -154,6 +154,8 @@ export function useSessionScreen(): UseSessionScreenResult {
   const isDemoRef = useRef(isDemo);
   const restDeadlineRef = useRef(0);
   const guideRef = useRef<HoldGuide | null>(null);
+  const voiceSeedRef = useRef(crypto.randomUUID());
+  const voiceEventCountRef = useRef(0);
   const seenExercisesRef = useRef(new Set<ExerciseId>());
   const enteredZoneAtRef = useRef<number | null>(null);
   const lastMetricTimestampRef = useRef<number | null>(null);
@@ -196,9 +198,10 @@ export function useSessionScreen(): UseSessionScreenResult {
   }, [settings, profile?.affectedSide, isDemo]);
 
   useEffect(() => {
+    VoiceCoach.setVoiceName(settings.voiceName);
     VoiceCoach.setEnabled(settings.voiceCoachEnabled);
     return () => VoiceCoach.setEnabled(false);
-  }, [settings.voiceCoachEnabled]);
+  }, [settings.voiceCoachEnabled, settings.voiceName]);
 
   // Warm-up, then start (real) or hand off to the quick-setup overlay (demo). StrictMode-safe via
   // mountedRef + startedRef (mirrors CalibrationScreen).
@@ -300,7 +303,15 @@ export function useSessionScreen(): UseSessionScreenResult {
         setGuide(nextGuide);
         if (nextGuide.phase !== guideRef.current?.phase) {
           guideRef.current = nextGuide;
-          VoiceCoach.speak(strings.session.voice[nextGuide.phase]);
+          VoiceCoach.speak(
+            strings.session.voice.pick(
+              strings.session.voice[nextGuide.phase],
+              voiceSeedRef.current,
+              voiceEventCountRef.current++,
+            ),
+            performance.now(),
+            nextGuide.phase === 'easeBack',
+          );
         }
       }),
       SessionController.on('qualityUpdate', ({ state }) => {
@@ -316,7 +327,12 @@ export function useSessionScreen(): UseSessionScreenResult {
         setRepDone(done);
         FeedbackRenderer.setRepCount(done, repTotalRef.current);
         setLiveAnnouncement(strings.session.a11y.repCompleted(done, repTotalRef.current));
-        VoiceCoach.speak(strings.session.voice.rep(done));
+        const repLine = strings.session.voice.pick(
+          strings.session.voice.repComplete,
+          voiceSeedRef.current,
+          voiceEventCountRef.current++,
+        );
+        VoiceCoach.speak(repLine(done));
       }),
       SessionController.on('easeOff', ({ active }) => {
         // Ease-off's persistent aria-live text is carried by the SessionStatusStrip (safety

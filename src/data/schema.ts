@@ -93,6 +93,7 @@ export interface AppSettings {
   hapticsEnabled: boolean;        // default true (effective on Android only)
   audioCuesEnabled: boolean;      // default true
   voiceCoachEnabled: boolean;     // default false
+  voiceName?: string;             // optional local OS speech voice name
   reducedFacePreview: boolean;    // default false ("show me less of my face")
   trendGranularity: 'weekly' | 'monthly'; // default 'monthly'
   // noiseFloorSymmetry lives on calibration_baseline (baseline-paired; DG-4), not here

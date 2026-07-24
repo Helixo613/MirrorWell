@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { SegmentedControl } from '@/components/controls/SegmentedControl';
 import { BlockingNotice } from '@/components/feedback/BlockingNotice';
 import { DeleteDataDialog } from '@/components/settings/DeleteDataDialog';
@@ -17,10 +18,14 @@ import { strings } from '@/config/strings';
 import { thresholds } from '@/config/thresholds';
 import { useSettingsScreen } from '@/hooks/useSettingsScreen';
 import { cn } from '@/lib/utils';
+import { VoiceCoach } from '@/session/voice';
 
 export function SettingsScreen() {
   const settingsScreen = useSettingsScreen();
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const disabled = settingsScreen.isSaving || settingsScreen.deletePhase !== 'idle';
+
+  useEffect(() => VoiceCoach.onVoicesChanged(setVoices), []);
 
   if (settingsScreen.status === 'loading') {
     return (
@@ -219,6 +224,30 @@ export function SettingsScreen() {
               void settingsScreen.updateSetting('voiceCoachEnabled', checked)
             }
           />
+          <div className="space-y-2 px-5 py-4 sm:px-6">
+            <Label htmlFor="settings-voice-name">{strings.settings.cues.voiceName.label}</Label>
+            <select
+              id="settings-voice-name"
+              className="min-h-12 w-full rounded-md border border-input bg-background px-3 text-base"
+              value={settingsScreen.settings.voiceName ?? ''}
+              disabled={disabled || voices.length === 0}
+              onChange={(event) =>
+                void settingsScreen.updateSetting('voiceName', event.target.value || undefined)
+              }
+            >
+              <option value="">{strings.settings.cues.voiceName.automatic}</option>
+              {voices.map((voice) => (
+                <option key={`${voice.name}-${voice.lang}`} value={voice.name}>
+                  {voice.name} ({voice.lang})
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-muted-foreground">
+              {voices.length === 0
+                ? strings.settings.cues.voiceName.unavailable
+                : strings.settings.cues.voiceName.description}
+            </p>
+          </div>
         </SettingsSection>
 
         <SettingsSection
