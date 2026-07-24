@@ -40,7 +40,8 @@ export interface SeedSpec {
   noiseFloorSymmetry?: number;
   fallbackSymmetry?: number;
   sessions?: SeedSession[];
-  /** Overrides the seeded consentVersion. Default undefined to match this build (no .env). */
+  /** Overrides the seeded consentVersion. Default reads process.env.VITE_CONSENT_VERSION (loaded
+   *  from .env by playwright.config) so the seed always matches whatever the build inlined. */
   consentVersion?: string | undefined;
 }
 
@@ -93,11 +94,11 @@ function buildPayload(spec: SeedSpec): SeedPayload {
     affectedSide: spec.affectedSide ?? 'left',
     assignedExercises: assigned,
     attestedAt: new Date(nowMs - 60 * 86_400_000).toISOString(),
-    // isAttested() requires consentVersion === import.meta.env.VITE_CONSENT_VERSION. No .env
-    // exists in this repo, so the build inlines that as undefined (dist: `consentVersion===void
-    // 0`) and real onboarding also writes undefined here. `null` would NOT match (null !==
-    // undefined); the key is set explicitly to undefined and survives page.evaluate's transfer.
-    consentVersion: spec.consentVersion,
+    // isAttested() requires consentVersion === import.meta.env.VITE_CONSENT_VERSION. The app build
+    // inlines that from .env (or undefined if absent); playwright.config loads the SAME .env into
+    // process.env, so this default matches the build either way. `null` would NOT match
+    // (null !== undefined); an explicit undefined still survives page.evaluate's transfer.
+    consentVersion: spec.consentVersion ?? process.env.VITE_CONSENT_VERSION,
   };
 
   const baseline = {

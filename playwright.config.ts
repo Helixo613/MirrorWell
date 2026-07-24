@@ -1,5 +1,14 @@
 import { defineConfig } from '@playwright/test';
 
+// Load .env so process.env.VITE_CONSENT_VERSION matches what Vite inlined into the build under
+// test (the e2e seed reads the same value in tests/e2e/helpers/seed.ts). No .env → build inlined
+// undefined and process.env stays unset, so both sides are still consistent.
+try {
+  process.loadEnvFile('.env');
+} catch {
+  /* no .env: undefined on both sides — the attested-flow seed still matches the build */
+}
+
 const PORT = 4173;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
