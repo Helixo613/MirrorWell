@@ -52,6 +52,7 @@ One dynamic, responsive app — no separate mobile build. Desktop-first, calm-cl
 - **States:** *empty* (no sessions yet) — encouraging first-run copy, no guilt; *error* `DB_UNAVAILABLE` → blocking notice; *success* default.
 - **Calls:** `StorageService.getSessions` (local session history: last-session line, garden, and milestones), `StorageService.getActiveBaseline` (date comparison only), `SettingsService.get`.
 - **Rule:** no streaks, no "you missed X days" — missed sessions change nothing on this screen (SAFETY §8.8). The garden only grows: a week without a session stays a seed and never changes an earlier plant.
+- **Practice rhythm:** a `PracticeRhythm` block sits under the garden, showing a count of recent consecutive practice days plus one encouraging line. It renders only when that count is at least 1 and disappears entirely when the run ends, with no reset state and no reference to days without practice. This is the narrow carve-out to SAFETY §8 rule 8 and is bound by every condition listed there; read it before changing the block.
 
 ### 2.4 `SessionScreen`
 

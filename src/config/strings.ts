@@ -391,6 +391,20 @@ export const strings = Object.freeze({
       weeks_4: 'Four weeks with practice',
       gentle_100: '100 gentle reps',
     },
+    // Daily-practice encouragement. Bound by the practice-rhythm carve-out in SAFETY §8: every
+    // string below states only what the user HAS done. There is deliberately no copy for a count
+    // of zero and none for a count ending, because neither is ever rendered. Do not add any;
+    // that absence is the mechanism keeping this inside the carve-out.
+    rhythm: {
+      label: 'Recent practice',
+      /** Only called with days >= thresholds.home.rhythmMinDays. */
+      count: (days: number) => `${days} days of practice`,
+      countAriaLabel: (days: number) => `Recent practice: ${days} days of practice`,
+      practicedToday: 'You practiced today.',
+      // Shown while the run is open but today has no session yet. An invitation, never a warning,
+      // and it makes no reference to the count being at risk.
+      openInvitation: 'Whenever you are ready for today.',
+    },
     nav: {
       primaryLabel: 'Primary navigation',
       home: 'Home',

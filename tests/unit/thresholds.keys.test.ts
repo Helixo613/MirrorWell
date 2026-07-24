@@ -120,6 +120,7 @@ describe('thresholds', () => {
       'sessions25',
       'practiceWeeks4Days',
       'gentleReps100',
+      'rhythmMinDays',
     ]);
     expect(Object.keys(thresholds.summary).sort()).toEqual(
       ['symmetryFairlyEvenMin', 'symmetryMostlyEvenMin', 'symmetrySomeDifferenceMin'].sort(),

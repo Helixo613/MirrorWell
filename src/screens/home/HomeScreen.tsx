@@ -16,6 +16,7 @@ import { useHomeScreen } from '@/hooks/useHomeScreen';
 import { greetingFor } from '@/screens/home/homeHelpers';
 import { gardenWeeks } from '@/screens/home/gardenData';
 import { milestonesFrom } from '@/screens/home/milestones';
+import { practiceRhythmFrom, showsRhythmCount } from '@/screens/home/practiceRhythm';
 
 const STAGGER_MS = 60;
 
@@ -46,6 +47,10 @@ export function HomeScreen() {
     gardenToday,
   );
   const milestones = milestonesFrom(sessions).filter((milestone) => milestone.achieved);
+  const rhythm = practiceRhythmFrom(
+    sessions.map((session) => session.startedAt.slice(0, 10)),
+    gardenToday,
+  );
 
   const startSession = useCallback(() => {
     navigate('/session');
@@ -107,6 +112,27 @@ export function HomeScreen() {
         <StaggerFadeIn animationKey={`${status}-garden`} delayMs={STAGGER_MS}>
           <AdherenceGarden weeks={garden} />
         </StaggerFadeIn>
+
+        {/* Practice rhythm (SAFETY §8 carve-out). Rendered only when there is something the user
+            has done; when the run ends this whole block disappears with no reset state, which is
+            what keeps the count free of loss framing. */}
+        {rhythm.days > 0 ? (
+          <section aria-label={strings.home.rhythm.label} className="flex flex-wrap items-center gap-3">
+            {showsRhythmCount(rhythm) ? (
+              <span
+                className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary"
+                aria-label={strings.home.rhythm.countAriaLabel(rhythm.days)}
+              >
+                {strings.home.rhythm.count(rhythm.days)}
+              </span>
+            ) : null}
+            <p className="text-sm text-muted-foreground">
+              {rhythm.practicedToday
+                ? strings.home.rhythm.practicedToday
+                : strings.home.rhythm.openInvitation}
+            </p>
+          </section>
+        ) : null}
 
         {milestones.length > 0 ? (
           <section aria-label={strings.home.milestones.label} className="flex flex-wrap gap-2">

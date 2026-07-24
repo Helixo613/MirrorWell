@@ -136,6 +136,8 @@ export const thresholds = Object.freeze({
     sessions25: 25,
     practiceWeeks4Days: 28,
     gentleReps100: 100,
+    /** Minimum consecutive practice days before the rhythm badge is drawn (SAFETY §8 carve-out). */
+    rhythmMinDays: 2,
   }),
   /** FRONTEND §2.5 — plain-language symmetry buckets (no numeric grades). */
   summary: Object.freeze({

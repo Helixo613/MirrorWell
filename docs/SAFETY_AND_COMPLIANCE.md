@@ -90,6 +90,23 @@ The app must **never**, in any screen, cue, summary, export, or listing:
 
 **Garden rule:** `AdherenceGarden` is a practice-only, derived display. A missed week may remain a seed, but no prior week is reduced, removed, wilted, or framed as a broken streak.
 
+**Practice-rhythm rule (narrow carve-out to rule 8):** `PracticeRhythm` may display a count of
+recent consecutive practice days, which rule 8 would otherwise forbid outright. It is permitted
+only under all of the following, which remove the loss mechanic rather than soften it:
+
+- **Positive-only.** A count is rendered only when it is at least 1. Zero is never drawn: not as
+  "0", not as an empty slot, not as a greyed placeholder.
+- **Never a possession to protect.** No "keep it going", no "don't lose it", no countdown, no
+  warning that it is about to end, and no reminder that references it.
+- **Silent ending.** When practice stops the count simply stops rendering. No reset state, no
+  "back to zero", no before/after comparison, no reference to the days without practice.
+- **§8 vocabulary still binds verbatim.** *streak*, *missed*, *in a row*, and break-language never
+  appear in any rhythm string.
+
+Rationale: the harm rule 8 targets is loss aversion, where the user practises to avoid losing a
+number and feels shame when it goes. A count that can only ever be gained, and that vanishes
+without comment, carries the encouragement without the loss.
+
 **Audit process:** every user-facing string lives in `src/config/strings.ts`; before any demo/release a checklist pass verifies rules 1–8 against every string (first run: IMPLEMENTATION Task 9; automated forbidden-vocabulary scan + manual pass; TESTS.md §4). Violations are release blockers, equal to the fairness gate.
 
 ## 9. Minors
