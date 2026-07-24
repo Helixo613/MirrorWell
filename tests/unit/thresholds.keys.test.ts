@@ -30,9 +30,12 @@ describe('thresholds', () => {
     expect(thresholds.qualityGates.interOcularMinFrac).toBe(0.09);
   });
 
-  it('blendshapes exposes activationFloor 0.05 (blendshape-si-v1)', () => {
-    expect(Object.keys(thresholds.blendshapes)).toEqual(['activationFloor']);
-    expect(thresholds.blendshapes.activationFloor).toBe(0.05);
+  it('blendshapes exposes the SI activation floor and the strain noise floor', () => {
+    expect(Object.keys(thresholds.blendshapes).sort()).toEqual(
+      ['activationFloor', 'strainAccessoryFloor'].sort(),
+    );
+    expect(thresholds.blendshapes.activationFloor).toBe(0.03);
+    expect(thresholds.blendshapes.strainAccessoryFloor).toBe(0.08);
   });
 
   it('metrics exposes all six metric tunables (incl. gapResetMs)', () => {
@@ -49,9 +52,12 @@ describe('thresholds', () => {
     expect(thresholds.metrics.gapResetMs).toBe(250);
   });
 
-  it('reps exposes all four rep-detection tunables', () => {
+  it('reps exposes the rep-detection and rep-classification tunables', () => {
     expect(Object.keys(thresholds.reps).sort()).toEqual(
-      ['endThreshold', 'minDurationMs', 'minQualityFramePct', 'startThreshold'].sort(),
+      [
+        'endThreshold', 'minDurationMs', 'minQualityFramePct', 'startThreshold',
+        'fullRepEffortMin', 'strainMax',
+      ].sort(),
     );
   });
 

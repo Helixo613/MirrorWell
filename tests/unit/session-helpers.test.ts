@@ -58,20 +58,25 @@ describe('demoComfortableMax; the demo baseline invariant', () => {
   it('applies the floor RELATIVE to the resting activation (neutral rebase)', () => {
     // A pair with a nonzero neutral read (eyeBlink-like): a peak barely above rest is a
     // held-still capture even though it clears the absolute floor.
-    expect(() => demoComfortableMax([0.32, 0.34], 0.3)).toThrow(
+    const floor = thresholds.blendshapes.activationFloor;
+    const rest = 0.3;
+    // Peaks that clear the ABSOLUTE floor but not the floor above rest: the case under test.
+    expect(() => demoComfortableMax([rest + floor * 0.4, rest + floor * 0.8], rest)).toThrow(
       expect.objectContaining({ code: 'NO_BASELINE' }),
     );
-    expect(demoComfortableMax([0.4], 0.3)).toBe(0.4);
+    expect(demoComfortableMax([rest + floor * 4, rest], rest)).toBe(rest + floor * 4);
   });
 
   it('throws NO_BASELINE when the peak is below activationFloor (a held-still face → noise peak)', () => {
     // A noise-level comfortableMax makes effortIndex = activation / comfortableMax read pure
     // sensor noise as full-effort movement, phantom reps at a timer-like cadence.
-    expect(() => demoComfortableMax([0.01, 0.02, 0.04])).toThrow(
+    // Floor-relative, so "below the floor" stays below it across retunes.
+    const floor = thresholds.blendshapes.activationFloor;
+    expect(() => demoComfortableMax([floor * 0.2, floor * 0.5, floor * 0.9])).toThrow(
       expect.objectContaining({ code: 'NO_BASELINE' }),
     );
     // At the floor exactly is accepted (>= activationFloor, mirroring the SI activation rule).
-    expect(demoComfortableMax([0.05])).toBe(0.05);
+    expect(demoComfortableMax([floor])).toBe(floor);
   });
 
   it('throws NO_BASELINE on non-finite input', () => {

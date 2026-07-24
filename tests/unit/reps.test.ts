@@ -12,18 +12,29 @@ import type { MetricSample } from '../../src/metrics/metrics.ts';
  * at ~30 Hz; sparse phase timestamps still need intermediate samples.
  */
 
-function sample(effortIndex: number, timestampMs: number, symmetryIndex: number | null = 0.5): MetricSample {
-  return { symmetryIndex, effortIndex, timestampMs };
+function sample(
+  effortIndex: number,
+  timestampMs: number,
+  symmetryIndex: number | null = 0.5,
+  strainIndex = 0,
+): MetricSample {
+  return { symmetryIndex, effortIndex, strainIndex, timestampMs };
 }
 
 /** Hold effort across [startMs, endMs] with steps ≤ 200ms so gap abort does not fire. */
-function hold(effort: number, startMs: number, endMs: number, si: number | null = 0.5): MetricSample[] {
+function hold(
+  effort: number,
+  startMs: number,
+  endMs: number,
+  si: number | null = 0.5,
+  strain = 0,
+): MetricSample[] {
   const out: MetricSample[] = [];
   for (let t = startMs; t <= endMs; t += 200) {
-    out.push(sample(effort, t, si));
+    out.push(sample(effort, t, si, strain));
   }
   if (out[out.length - 1]!.timestampMs !== endMs) {
-    out.push(sample(effort, endMs, si));
+    out.push(sample(effort, endMs, si, strain));
   }
   return out;
 }

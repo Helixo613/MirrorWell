@@ -267,7 +267,7 @@ export function useSessionScreen(): UseSessionScreenResult {
         FeedbackRenderer.render(sample, qualityRef.current);
         // metricUpdate is already throttled (~15 Hz) and only fires during REPS; setState with
         // an unchanged value is a no-op re-render-wise, so no extra guard is needed.
-        const nextCoachPhase = coachPhaseFor(sample.effortIndex);
+        const nextCoachPhase = coachPhaseFor(sample.effortIndex, sample.strainIndex);
         setCoachPhase(nextCoachPhase);
         if (nextCoachPhase !== coachPhaseRef.current) {
           coachPhaseRef.current = nextCoachPhase;

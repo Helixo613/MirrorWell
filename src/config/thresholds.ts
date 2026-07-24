@@ -30,22 +30,35 @@ export const thresholds = Object.freeze({
 
   // Blendshape SI tunables (candidate blendshape-si-v1), docs/API.md §15 / MODEL_AND_DATA §7.
   // SI is undefined (null) when max per-side blendshape score < activationFloor.
+  // DOCS-CHANGE (API §15): activationFloor 0.05→0.03. This is the real floor on the production
+  // path: below it SI is null and the session shows no reading at all. 0.05 silently swallowed
+  // faint-but-genuine movement on an affected side, which reads to the user as "it stopped
+  // working" rather than as a deliberate refusal to guess.
   blendshapes: Object.freeze({
-    activationFloor: 0.05,
+    activationFloor: 0.03,
+    /**
+     * Per-category noise floor for accessory (compensation) blendshapes, before they count
+     * toward strainIndex. MediaPipe reports small nonzero scores on a resting face, so without
+     * a floor every frame would look faintly strained.
+     */
+    strainAccessoryFloor: 0.08,
   }),
 
   // MetricEngine tunables (movement floor, effort zone, ease-off, gap). Owning section:
   // docs/API.md §15 / docs/BACKEND.md (MetricEngine).
-  // DOCS-CHANGE (API §15): movementFloorPct 0.008→0.012. Raising the floor discards more
-  // sub-intentional drift (postural sway, micro-tremor) before SI is defined, so the reading
-  // stops reacting to movement the user did not intend as an exercise.
+  // DOCS-CHANGE (API §15): movementFloorPct 0.012→0.006. The earlier raise to 0.012 was wrong
+  // for this user group: on the affected side of a facial palsy the whole point is that
+  // displacement is SMALL, so a higher floor discards exactly the movement the app exists to
+  // measure. Set below the original 0.008 so faint movement still reads.
+  // (Consumed by the geometry path and the dev harness; the production blendshape path floors
+  // on blendshapes.activationFloor instead.)
   //
   // smoothingWindow deliberately stays 5. It is not a free tunable: "trailing 5-frame median"
   // is a documented, directly tested contract (metrics.test.ts), and quality.ts reuses it as
   // JITTER_WINDOW, so widening it would also blunt the jitter gate's ability to see genuine
   // instability. Gauge steadiness is handled by the movement floor above instead.
   metrics: Object.freeze({
-    movementFloorPct: 0.012,
+    movementFloorPct: 0.006,
     effortTargetZone: Object.freeze([0.3, 0.5] as const),
     easeOffThreshold: 0.6,
     easeOffSustainMs: 300,
@@ -54,15 +67,23 @@ export const thresholds = Object.freeze({
   }),
 
   // RepDetector tunables. Owning section: docs/API.md §15 / docs/BACKEND.md (RepDetector).
-  // DOCS-CHANGE (API §15): startThreshold 0.15→0.18, endThreshold 0.1→0.12. Incidental movement
-  // (a swallow, a shift in the chair) was clearing 0.15 and logging phantom reps. The 0.06
-  // hysteresis gap is preserved, slightly wider than the previous 0.05, so a rep still has to
-  // fall well clear of its start level before it can end.
+  // DOCS-CHANGE (API §15): startThreshold 0.18→0.10, endThreshold 0.12→0.06. Raising these to
+  // suppress phantom reps set the bar above real ones: effort is a fraction of the user's OWN
+  // calibrated span, so 0.18 demanded 18% of a span that is already small on an affected side,
+  // and reps stopped being detected at all. Sensitivity is the safer failure direction here (a
+  // missed rep is invisible to the user; a spurious one is merely noise in a count), so these
+  // now sit below the original 0.15/0.10. Phantom reps are handled by minDurationMs and by
+  // strainIndex instead of by a high entry bar.
+  // Hysteresis gap 0.04, still wide enough that a rep must fall clear of its start to end.
   reps: Object.freeze({
-    startThreshold: 0.18,
-    endThreshold: 0.12,
+    startThreshold: 0.1,
+    endThreshold: 0.06,
     minDurationMs: 800,
     minQualityFramePct: 0.6,
+    /** Fraction of the user's own calibrated span a rep must reach to count as full, not partial. */
+    fullRepEffortMin: 0.45,
+    /** Mean strainIndex at or above which a rep is compensation-led rather than clean. */
+    strainMax: 0.4,
   }),
 
   // CalibrationFlow tunables. Owning section: docs/API.md §15 / docs/BACKEND.md (CalibrationFlow).

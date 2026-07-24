@@ -31,6 +31,20 @@ export interface ExerciseConfig {
   /** Per-side blendshape categories for SI/effort (blendshape-si-v1). Absent = no
    * validated pair (EX_PUCKER open decision), MetricEngine throws VALIDATION_FAILED. */
   blendshapePair?: { left: string; right: string };
+  /**
+   * Blendshape categories whose activation during THIS exercise indicates compensatory effort
+   * rather than the movement itself: the jaw, brow, or nose being recruited to help. Feeds
+   * `strainIndex` (MetricEngine), which is what separates a strained face from a full rep.
+   *
+   * Chosen to exclude each exercise's own natural synergists, which is the whole difficulty:
+   * a genuine full smile DOES crinkle the eyes, so eyeSquint/cheekSquint are deliberately not
+   * strain markers for EX_SMILE; flagging them would penalise precisely the rep we want to
+   * reward. Same reason browInnerUp is absent from EX_BROW_RAISE.
+   *
+   * These are exercise-form cues only. Nothing here detects synkinesis or nerve function, and
+   * no copy driven by it may claim to (SAFETY §8 rule 6).
+   */
+  accessoryBlendshapes: readonly string[];
   displayName: string;
   instruction: string;
   demoAssetPath: string;
@@ -47,6 +61,11 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
     // Second slot = same-side upper lid as a vertical reference (386 L / 159 R).
     landmarkIndices: Object.freeze({ left: ['334', '386'], right: ['105', '159'] }),
     blendshapePair: Object.freeze({ left: 'browOuterUpLeft', right: 'browOuterUpRight' }),
+    // browInnerUp omitted on purpose: it rises with a normal brow raise, so it is synergy.
+    accessoryBlendshapes: Object.freeze([
+      'eyeWideLeft', 'eyeWideRight', 'jawOpen',
+      'mouthUpperUpLeft', 'mouthUpperUpRight', 'mouthStretchLeft', 'mouthStretchRight',
+    ]),
     displayName: 'Gentle brow raise',
     instruction: 'Lift your eyebrows slowly, about half of what feels possible. Gentle is the goal.',
     demoAssetPath: '/demo-assets/EX_BROW_RAISE.webm',
@@ -60,6 +79,11 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
     // Geometry: gap vector upper−lower (386−374 L, 159−145 R). Scalar pairs match.
     landmarkIndices: Object.freeze({ left: ['386', '374'], right: ['159', '145'] }),
     blendshapePair: Object.freeze({ left: 'eyeBlinkLeft', right: 'eyeBlinkRight' }),
+    // Closure is meant to be gentle, so squeezing the cheeks/brow shut is compensation here.
+    accessoryBlendshapes: Object.freeze([
+      'cheekSquintLeft', 'cheekSquintRight', 'browDownLeft', 'browDownRight',
+      'noseSneerLeft', 'noseSneerRight', 'mouthPressLeft', 'mouthPressRight', 'jawForward',
+    ]),
     displayName: 'Gentle eye closure',
     instruction: 'Close your eyes slowly and comfortably, about half of what feels possible.',
     demoAssetPath: '/demo-assets/EX_EYE_CLOSURE.webm',
@@ -73,6 +97,13 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
     // Geometry: outer corners 291 (L) / 61 (R); anchors same-side eye centers (v2).
     landmarkIndices: Object.freeze({ left: ['291', '1'], right: ['61', '1'] }),
     blendshapePair: Object.freeze({ left: 'mouthSmileLeft', right: 'mouthSmileRight' }),
+    // eyeSquint / cheekSquint are absent by design: they are the Duchenne synergy of a real
+    // smile. Strain shows up instead as frowning, sneering, or clamping the lips while smiling.
+    accessoryBlendshapes: Object.freeze([
+      'browDownLeft', 'browDownRight', 'noseSneerLeft', 'noseSneerRight',
+      'mouthPressLeft', 'mouthPressRight', 'mouthStretchLeft', 'mouthStretchRight',
+      'mouthShrugUpper', 'jawForward',
+    ]),
     displayName: 'Gentle smile',
     instruction: 'Let a small, slow smile come; about half of what feels possible. Gentle is the goal.',
     demoAssetPath: '/demo-assets/EX_SMILE.webm',
@@ -85,6 +116,10 @@ export const exercises: Readonly<Record<string, ExerciseConfig>> = Object.freeze
     regionId: 'REGION_LIP',
     // Geometry: inner lip corners 308 (L) / 78 (R); anchors same-side eye centers (v2).
     landmarkIndices: Object.freeze({ left: ['308', '1'], right: ['78', '1'] }),
+    accessoryBlendshapes: Object.freeze([
+      'jawOpen', 'cheekPuff', 'noseSneerLeft', 'noseSneerRight',
+      'mouthPressLeft', 'mouthPressRight',
+    ]),
     displayName: 'Gentle lip pucker',
     instruction: 'Purse your lips slowly and gently, about half of what feels possible.',
     demoAssetPath: '/demo-assets/EX_PUCKER.webm',

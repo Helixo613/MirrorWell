@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { thresholds } from '../../src/config/thresholds.ts';
 import type { NormalizedFrame } from '../../src/metrics/normalize.ts';
 import type { Vec2 } from '../../src/metrics/geometry.ts';
 import type { CalibrationBaseline, ExerciseId, RegionId } from '../../src/data/schema.ts';
@@ -150,11 +151,12 @@ describe('MetricEngine, blendshape symmetryIndex', () => {
     expect(result.effortIndex).toBeCloseTo(0.4, 6);
   });
 
-  it('act exactly at activationFloor (0.05) is NOT null (boundary is strict <)', async () => {
+  it('act exactly at activationFloor is NOT null (boundary is strict <)', async () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    const result = MetricEngine.compute(bsFrame(0.05, 0.05), 'EX_SMILE');
+    const floor = thresholds.blendshapes.activationFloor;
+    const result = MetricEngine.compute(bsFrame(floor, floor), 'EX_SMILE');
     expect(result.symmetryIndex).toBe(1);
   });
 
@@ -162,9 +164,12 @@ describe('MetricEngine, blendshape symmetryIndex', () => {
     const { MetricEngine } = await import('../../src/metrics/metrics.ts');
     MetricEngine.setBaseline(baseline({ EX_SMILE: 1.0 }));
     MetricEngine.reset();
-    const result = MetricEngine.compute(bsFrame(0.02, 0.03), 'EX_SMILE');
+    // Kept strictly under activationFloor by construction rather than by a literal, so this
+    // stays the "below the floor" case whenever the floor is retuned.
+    const under = thresholds.blendshapes.activationFloor / 2;
+    const result = MetricEngine.compute(bsFrame(under * 0.5, under), 'EX_SMILE');
     expect(result.symmetryIndex).toBeNull();
-    expect(result.effortIndex).toBeCloseTo(0.03, 6);
+    expect(result.effortIndex).toBeCloseTo(under, 6);
   });
 
   it('missing pair scores in the record default to 0 (act 0 → null SI, effort 0)', async () => {

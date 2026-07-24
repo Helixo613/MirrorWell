@@ -202,15 +202,18 @@ describe('CalibrationFlow', () => {
   });
 
   it('rejects a comfortable-max median peak below activationFloor (held-still capture)', async () => {
+    const NOISE = thresholds.blendshapes.activationFloor;
     // Same invariant demoComfortableMax enforces: a noise-level comfortableMax makes
     // effortIndex = activation / comfortableMax read ANY facial motion, including
     // cross-activation bleed from an unrelated movement, as a full-effort rep.
     // QUALITY_TOO_LOW so CalibrationScreen's coaching/retry path handles it.
     const result = CalibrationFlow.captureComfortableMax('EX_SMILE');
     await captureThree(result.then(() => undefined, () => undefined), [
-      frame({ mouthSmileLeft: 0.02, mouthSmileRight: 0.01 }),
-      frame({ mouthSmileLeft: 0.03, mouthSmileRight: 0.02 }),
-      frame({ mouthSmileLeft: 0.04, mouthSmileRight: 0.02 }),
+      // Scaled to the floor rather than written as literals, so these stay noise-level peaks
+      // (the case under test) whenever activationFloor is retuned.
+      frame({ mouthSmileLeft: NOISE * 0.4, mouthSmileRight: NOISE * 0.2 }),
+      frame({ mouthSmileLeft: NOISE * 0.6, mouthSmileRight: NOISE * 0.4 }),
+      frame({ mouthSmileLeft: NOISE * 0.8, mouthSmileRight: NOISE * 0.4 }),
     ]);
     await expect(result).rejects.toMatchObject({ code: 'QUALITY_TOO_LOW' });
   });
@@ -248,11 +251,15 @@ describe('CalibrationFlow', () => {
       frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }),
       frame({ mouthSmileLeft: 0.3, mouthSmileRight: 0.3 }),
     ]);
+    // Peaks sit above the 0.3 resting read but by less than activationFloor, so they clear the
+    // absolute floor and still fail the rebased one. Derived, so a retune cannot invert the case.
+    const REST = 0.3;
+    const step = thresholds.blendshapes.activationFloor;
     const result = CalibrationFlow.captureComfortableMax('EX_SMILE');
     await captureThree(result.then(() => undefined, () => undefined), [
-      frame({ mouthSmileLeft: 0.33, mouthSmileRight: 0.33 }),
-      frame({ mouthSmileLeft: 0.32, mouthSmileRight: 0.32 }),
-      frame({ mouthSmileLeft: 0.34, mouthSmileRight: 0.34 }),
+      frame({ mouthSmileLeft: REST + step * 0.6, mouthSmileRight: REST + step * 0.6 }),
+      frame({ mouthSmileLeft: REST + step * 0.4, mouthSmileRight: REST + step * 0.4 }),
+      frame({ mouthSmileLeft: REST + step * 0.8, mouthSmileRight: REST + step * 0.8 }),
     ]);
     await expect(result).rejects.toMatchObject({ code: 'QUALITY_TOO_LOW' });
   });

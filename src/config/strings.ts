@@ -464,12 +464,16 @@ export const strings = Object.freeze({
       raise: 'Raise gently into the green band',
       hold: 'Lovely, hold it gently',
       easeBack: 'A little less, settle back toward the band',
+      // Shown when strainIndex says the work is coming from elsewhere in the face. Names only
+      // what to relax; it must never suggest a cause, a diagnosis, or synkinesis (SAFETY §8).
+      soften: 'Let your jaw and brow soften; keep it just the smile',
       legend: 'The green band is your gentle target: rise into it, hold, then relax to count a rep.',
     },
     voice: {
       raise: 'Gently up',
       hold: 'Hold there',
       easeBack: 'A little less',
+      soften: 'Soften the rest of your face',
       rep: (done: number) => `That's ${done}`,
     },
     rest: {

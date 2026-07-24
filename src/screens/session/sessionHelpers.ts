@@ -39,10 +39,19 @@ export function advanceArcPhase(frozen: boolean, phase: number, speed: number): 
  * the screen. Ease-off itself stays the MetricEngine sustained condition; this is guidance,
  * never the safety cue.
  */
-export type CoachPhase = 'raise' | 'hold' | 'easeBack';
+export type CoachPhase = 'raise' | 'hold' | 'easeBack' | 'soften';
 
-export function coachPhaseFor(effortIndex: number): CoachPhase {
+/**
+ * Strain outranks the effort band. If the jaw and brow are doing the work, "hold it gently" is
+ * the wrong thing to say however good the effort number looks: the number is high precisely
+ * because of the compensation. Softening the rest of the face is the useful instruction, and it
+ * has to come first or the user is coached into the habit the exercise is meant to undo.
+ *
+ * `strainIndex` is optional so existing callers that only track effort keep working unchanged.
+ */
+export function coachPhaseFor(effortIndex: number, strainIndex = 0): CoachPhase {
   const [zoneLow, zoneHigh] = thresholds.metrics.effortTargetZone;
+  if (strainIndex >= thresholds.reps.strainMax) return 'soften';
   if (effortIndex < zoneLow) return 'raise';
   if (effortIndex <= zoneHigh) return 'hold';
   return 'easeBack';

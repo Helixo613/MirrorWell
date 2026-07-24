@@ -115,7 +115,7 @@ Uncalibrated cross-session data is misleading; this protocol is what makes every
 2. `SessionController` enters `DEMO` for `EX_SMILE` (plays `demoAssetPath` WebM); user taps "I'm ready" → `REPS`. `CaptureService.start()` begins delivering the video element + timestamps per frame tick.
 3. Per frame: `LandmarkEngine.detect(video, timestampMs)` → `LandmarkFrame` (shape: §13) → orchestrator catches `INFERENCE_FAILED` and passes `null` → `QualityMonitor.evaluate(video, lf)` → `QualityResult`. On `{ state: 'QUALITY_OK', frame: ApprovedFrame }` → `NormalizationLayer.normalize(af)` → `NormalizedFrame` with vector `regionDisplacements` (shape: §13) → `MetricEngine.compute(nf, 'EX_SMILE')` → `MetricSample` (in `effortTargetZone`, no cue). Non-OK `QualityResult` has no `frame` key, `normalize`/`measureAbsolute` are uncallable.
 4. `FeedbackRenderer` updates the symmetry bar and arc ≤ 100 ms after capture; `SessionController` emits `metricUpdate` (throttled ~15 Hz) and `qualityUpdate` events consumed by `SessionScreen`.
-5. `RepDetector.feed(sample)` sees effort cross `repStartThreshold` 0.15 → hold ≥ 800 ms → fall below `repEndThreshold` 0.10 → emits `RepEvent` (shape: §13) → `SessionController` emits `repCompleted` → tick + haptic (Android) / tone (desktop).
+5. `RepDetector.feed(sample)` sees effort cross `repStartThreshold` 0.10 → hold ≥ 800 ms → fall below `repEndThreshold` 0.06 → emits `RepEvent` (shape: §13) → `SessionController` emits `repCompleted` → tick + haptic (Android) / tone (desktop).
 6. Mid-rep failure case: user's lamp dips → `QualityMonitor` returns `{ state: 'LOW_LIGHT' }` (no `frame`) → hot path cannot call `normalize` (type barrier, not policy) → `FeedbackRenderer` shows "More light needed", scoring paused → if < 60% of the rep's frames were `QUALITY_OK`, the rep is discarded with a gentle explanation.
 7. After configured `repsPerSet`, state → `REST` (`restSeconds`, extendable, never shortenable by pressure); next exercise; on completion `SessionController.stop('completed')` assembles `SessionRecord` + nested `exercise_result` + `rep_metric` rows → `StorageService.saveSession(s)` in **one Dexie transaction** → `sessionEnded` event → `SummaryScreen` renders from the returned record. All frames/landmarks from the session are already garbage-collected; nothing visual was ever persisted.
 
@@ -282,7 +282,8 @@ Every dev harness re-parents `CaptureService`'s single `<video>` element, so the
 | Key fields | `profileId`, `nickname` (optional local-only display name; never exported), `motivation` (optional local-only user-authored "why"; never exported), `affectedSide`, `assignedExercises`, `attestedAt`, `consentVersion`, `baselineId`, `neutralStats`, `comfortableMax`, `neutralActivation` (on `calibration_baseline`; optional, pre-field rows behave as 0), `qualityScore`, `isActive`, `noiseFloorSymmetry` (on `calibration_baseline`, not `app_settings`), `noiseFloorDisplacement` (on `calibration_baseline`), `sessionId`, `startedAt`, `endedAt`, `endReason`, `resultId`, `exerciseId`, `repsCompleted`, `meanSymmetryIndex`, `meanEffortIndex`, `easeOffCount`, `lowQualityFramePct`, `repId`, `repIndex`, `peakSymmetryIndex`, `peakEffortIndex`, `durationMs`, `easeOffTriggered`, `settingsId`, `highContrast`, `textScale`, `hapticsEnabled`, `audioCuesEnabled`, `voiceCoachEnabled`, `reducedFacePreview`, `trendGranularity`, `showAffectedSideMarker`, `caregiverViewEnabled`, `remindersEnabled`, `reminderTime`, `noteId` (on `encouragement_note`, SAFETY §5 narrow carve-out) |
 | Exercises (`ExerciseId`) | `EX_BROW_RAISE`, `EX_EYE_CLOSURE`, `EX_SMILE`, `EX_PUCKER`; config fields per exercise: `exerciseId`, `regionId`, landmark indices, display name, instruction, `demoAssetPath`, `repsPerSet` (10; `EX_EYE_CLOSURE` 5), `sets` (1), `restSeconds` (20); dosing fixed in v1, **needs verification** |
 | Regions (`RegionId`) | `REGION_BROW`, `REGION_EYELID`, `REGION_MOUTH_CORNER`, `REGION_LIP` (1:1 with exercises above) |
-| Metrics & types | `symmetryIndex`, `effortIndex`, `effortTargetZone`, `movementFloor`, `Vec2`, `LandmarkFrame`, `ApprovedFrame`, `QualityResult`, `AbsoluteFeatures`, `NeutralStats`, `NormalizedFrame`, `MetricSample`, `RepEvent`, `NeutralCaptureResult`, `UserProfile`, `CalibrationBaseline`, `SessionRecord`, `SessionRecordInput`, `SessionRecordFull`, `AppSettings`, `AppStateContext`, `TrendSeries`, `Adherence`, `MirrorWellError`, `progressCard` (weekly PNG card aggregates + canvas composer in `src/data/progressCard.ts`); exact TS shapes: **§13** |
+| Metrics & types | `symmetryIndex`, `effortIndex`, `effortTargetZone`, `movementFloor`, `Vec2`, `LandmarkFrame`, `ApprovedFrame`, `QualityResult`, `AbsoluteFeatures`, `NeutralStats`, `NormalizedFrame`, `MetricSample`, `strainIndex`, `RepEvent`, `RepQuality`, `meanStrainIndex`, `accessoryBlendshapes`, `NeutralCaptureResult`, `UserProfile`, `CalibrationBaseline`, `SessionRecord`, `SessionRecordInput`, `SessionRecordFull`, `AppSettings`, `AppStateContext`, `TrendSeries`, `Adherence`, `MirrorWellError`, `progressCard` (weekly PNG card aggregates + canvas composer in `src/data/progressCard.ts`); exact TS shapes: **§13** |
+| Strain vs full rep | `strainIndex` (share of current facial drive coming from non-target muscles, [0..1]), `accessoryBlendshapes` (per-exercise compensation markers, excluding each exercise's own synergists), `RepQuality` = `'full' \| 'partial' \| 'strained'`, `meanStrainIndex`. Exercise-form signals; they make no claim about synkinesis or nerve function (SAFETY §8 rule 6) |
 | Local reminders | `Reminders`, `msUntilNext`, `ReminderSupport`; on-device practice reminder scheduling. Local timer plus `showNotification` only; **never** `PushManager.subscribe()`, which would breach §9 |
 | Derived motivation | `AdherenceGarden`, `PlantStage`, `gardenWeeks`, `Milestone`, `milestonesFrom`, `PracticeRhythm`, `practiceRhythmFrom`; presentation-only values derived from session history; never stored. `PracticeRhythm` is bound by the practice-rhythm carve-out in SAFETY §8 (positive-only, silent ending) |
 | Quality states (`QualityState`) | `QUALITY_OK`, `LOW_LIGHT`, `FACE_LOST`, `TOO_FAR`, `POSE_OUT_OF_RANGE`, `LOW_CONFIDENCE` |
@@ -342,13 +343,18 @@ type NormalizedFrame = {
 type MetricSample = {
   symmetryIndex: number | null; // null under movementFloor
   effortIndex: number;
+  strainIndex: number;   // [0..1] share of current facial drive from NON-target muscles
   timestampMs: number;
 };
+
+type RepQuality = 'full' | 'partial' | 'strained';
 
 type RepEvent = {
   repIndex: number;
   peakSymmetryIndex: number | null;
   peakEffortIndex: number;
+  meanStrainIndex: number;  // mean strainIndex across the rep; one twitchy frame is not strain
+  quality: RepQuality;      // 'strained' is decided BEFORE 'full': a big strained rep is strained
   durationMs: number;
   easeOffTriggered: boolean; // boolean on the event surface; StorageService stores 0|1
 };

@@ -618,20 +618,29 @@ describe('SessionController hot path', () => {
       // (src/session/controller.ts ~line 196-201), and no frame is ever computed again while
       // in REST/DEMO (handleFrame returns early for both), so whatever sits in MetricEngine's
       // smoothing window right when this closing frame is processed is exactly what's still
-      // there the instant toId's first REPS frame computes. act=max(0.06,0.01)=0.06 is low
-      // enough that 3 of them reliably close the rep (same "3 lows outvote the window"
-      // trailing-median mechanics driveOkRepFrames relies on, verified numerically against
-      // MetricEngine's 5-entry window) while symmetryIndex=0.01/0.06≈0.167 is clearly
-      // asymmetric. Because 3 of the resulting 5 window entries are asymmetric (not 1-of-5),
-      // the leak survives the trailing median at the switch instead of being outvoted by it.
+      // there the instant toId's first REPS frame computes.
+      //
+      // The closing activation has to satisfy two opposing constraints at once, so it is derived
+      // rather than written as a literal (a literal silently inverted this case once already when
+      // endThreshold was retuned and 3 "low" frames stopped closing the rep):
+      //   * strictly BELOW reps.endThreshold, so 3 of them close the rep (comfortableMax is 1
+      //     here, so effortIndex == activation), and
+      //   * at or ABOVE blendshapes.activationFloor, so symmetryIndex is non-null and the
+      //     asymmetric value is actually able to leak, which is the whole point of the test.
+      // Midway between the two bounds satisfies both with the most margin on each side.
+      // The right side is held well under the left so SI stays clearly asymmetric. Because 3 of
+      // the resulting 5 window entries are asymmetric (not 1-of-5), the leak survives the
+      // trailing median at the switch instead of being outvoted by it.
       emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
       ts += 200;
       emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
       ts += 200;
       emitOk({ [fromPair.left]: 0.3, [fromPair.right]: 0.3 }, ts);
+      const closingAct =
+        (thresholds.reps.endThreshold + thresholds.blendshapes.activationFloor) / 2;
       for (let i = 0; i < 3; i++) {
         ts += 200;
-        emitOk({ [fromPair.left]: 0.06, [fromPair.right]: 0.01 }, ts);
+        emitOk({ [fromPair.left]: closingAct, [fromPair.right]: closingAct * 0.2 }, ts);
       }
       const lastComputedTs = ts;
 
