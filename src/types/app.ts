@@ -33,6 +33,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   hapticsEnabled: true,
   audioCuesEnabled: true,
   voiceCoachEnabled: false,
+  voiceName: undefined,
   reducedFacePreview: false,
   trendGranularity: 'monthly',
   showAffectedSideMarker: true,

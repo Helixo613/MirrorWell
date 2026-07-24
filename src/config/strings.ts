@@ -460,11 +460,22 @@ export const strings = Object.freeze({
       legend: 'The green band is your gentle target: rise into it, hold, then relax to count a rep.',
     },
     voice: {
-      raise: 'Gently up',
-      hold: 'Hold there',
-      release: 'Now relax gently',
-      easeBack: 'A little less',
-      rep: (done: number) => `That's ${done}`,
+      raise: ['Gently lift', 'Ease gently upward', 'Slowly raise'] as const,
+      hold: ['Hold there gently', 'Stay soft and steady', 'Keep that gentle hold'] as const,
+      release: ['Now relax gently', 'Ease back to rest', 'Slowly let go'] as const,
+      easeBack: ['A little less', 'Soften the movement', 'Ease back gently'] as const,
+      repComplete: [
+        (done: number) => `Rep ${done} complete`,
+        (done: number) => `That's rep ${done}`,
+        (done: number) => `Gentle rep ${done} complete`,
+      ] as const,
+      pick: <T>(variants: readonly T[], sessionSeed: string, eventCount: number): T => {
+        const seed = [...sessionSeed].reduce(
+          (total, character) => total + character.charCodeAt(0),
+          eventCount,
+        );
+        return variants[Math.abs(seed) % variants.length]!;
+      },
     },
     teach: {
       show: 'Show me how',
@@ -839,7 +850,14 @@ export const strings = Object.freeze({
       },
       voiceCoach: {
         label: 'Voice coach',
-        description: 'Short spoken cues during exercises',
+        description:
+          'Optional short cues from a voice installed on this device. Voice quality depends on your device.',
+      },
+      voiceName: {
+        label: 'Voice',
+        description: 'Choose an installed local voice. Automatic prefers a local English voice.',
+        automatic: 'Automatic local voice',
+        unavailable: 'No local voices are available on this device',
       },
     },
     trends: {

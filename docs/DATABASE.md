@@ -105,6 +105,7 @@ export interface AppSettings {
   hapticsEnabled: boolean;        // default true (effective on Android only)
   audioCuesEnabled: boolean;      // default true
   voiceCoachEnabled: boolean;     // default false
+  voiceName?: string;             // optional local OS speech voice name
   reducedFacePreview: boolean;    // default false ("show me less of my face")
   trendGranularity: 'weekly' | 'monthly'; // default 'monthly'
   // noiseFloorSymmetry lives on calibration_baseline (baseline-paired; DG-4), not here
@@ -165,6 +166,7 @@ export const db = new MirrorWellDB();
 | `exercise_result.*Index` fields | `meanSymmetryIndex` null or `[0..1]`; `lowQualityFramePct` `[0..1]`; counts non-negative integers |
 | `rep_metric.durationMs` | Integer `> 0` |
 | `app_settings.textScale` | `[1.0..2.0]` |
+| `app_settings.voiceName` | Optional installed local OS speech voice name; a missing/stale name falls back to the best available local English voice |
 | `encouragement_note.text` | Required non-empty string; trimmed before storage; trimmed length `1..200`; free text only — never parsed as an instruction, never referenced by `SessionController`/gating logic; excluded from `ExportService` entirely (SAFETY §5) |
 | `encouragement_note.noteId` / `createdAt` | uuid v4 / valid UTC ISO 8601 |
 | `encouragement_note` (table) | Singleton semantics: `saveEncouragementNote` clears any existing row before inserting the new one, in one transaction |
@@ -180,7 +182,7 @@ export const db = new MirrorWellDB();
 | `session_record` | One row per session: window, baseline link, end reason | `SessionController.stop` via `StorageService.saveSession` (single transaction with children) | `TrendsService`, `SummaryScreen`, `CaregiverScreen`, `ExportService` | Until user deletes |
 | `exercise_result` | Per-exercise aggregates within a session | Same transaction as parent | Same readers | Until user deletes |
 | `rep_metric` | Per-rep peaks and timing | Same transaction as parent | `SummaryScreen` (detail), `ExportService` | Until user deletes |
-| `app_settings` | Accessibility + consent-toggle settings singleton (no noise-floor field) | `SettingsService.update` | Every screen; `TrendsService` (granularity only — noise floor comes from active baseline); `SafetyGate` indirectly | Until user deletes |
+| `app_settings` | Accessibility + consent-toggle settings singleton, including the optional local OS `voiceName` (no noise-floor field) | `SettingsService.update` | Every screen; `TrendsService` (granularity only — noise floor comes from active baseline); `SafetyGate` indirectly | Until user deletes |
 | `encouragement_note` | The caregiver's single free-text encouragement note (singleton; saving replaces) | `CaregiverScreen` via `StorageService.saveEncouragementNote` — the sole mutating control on that screen (SAFETY §5) | `SessionScreen` (pre-session arrival display only); never read by `ExportService` | Until replaced, dismissed by the patient (`StorageService.deleteEncouragementNote`), or `deleteAllData` |
 
 **Global retention rules:** no automatic deletion or expiry — the data is the user's exercise history on their own device; `StorageService.deleteAllData()` (typed-confirmation in `SettingsScreen`) drops every table in one transaction; Demo Mode writes **nothing** to any table (structural rule, ARCHITECTURE §11).
@@ -220,3 +222,4 @@ Camera fixtures (masters `tests/fixtures/masters/*.{webm,mp4}` + Playwright repl
 - Every migration ships with a Vitest test: open a fixture DB at version *n−1* (JSON dump checked into `tests/unit/migrations/`), run the upgrade, assert row-level equality with expected output.
 - `consentVersion` (env `VITE_CONSENT_VERSION`) is **not** a schema version — bumping it re-runs onboarding but never migrates data.
 - **V3 Task 4 (`encouragement_note`):** the first additive migration since the v1.0/v2.0 tags — `version(2).stores({ encouragement_note: 'noteId' })` adds one new, empty table; every store left unlisted (all six from `version(1)`) carries forward unchanged per Dexie semantics, so no `.upgrade()` is needed. Verified in `tests/unit/migrations/v1-to-v2.test.ts` (in-line store definitions rather than a JSON fixture dump — there is nothing yet to backfill).
+- **V3 Craft Task 3 (`voiceName`):** optional non-indexed field on the existing `app_settings` row; no Dexie store/index migration is required. Legacy rows merge with the documented `undefined` default in `SettingsService.get`.

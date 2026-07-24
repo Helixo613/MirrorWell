@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   hapticsEnabled: true,
   audioCuesEnabled: true,
   voiceCoachEnabled: false,
+  voiceName: undefined,
   reducedFacePreview: false,
   trendGranularity: 'monthly',
   showAffectedSideMarker: true,
@@ -32,8 +33,8 @@ describe('SettingsService', () => {
     expect(await SettingsService.get()).toEqual(DEFAULT_SETTINGS);
   });
 
-  it('defaults voice coaching off for a legacy stored settings row', async () => {
-    const { voiceCoachEnabled: _, ...legacySettings } = {
+  it('defaults voice settings for a legacy stored settings row', async () => {
+    const { voiceCoachEnabled: _, voiceName: __, ...legacySettings } = {
       ...DEFAULT_SETTINGS,
       highContrast: true,
     };
@@ -52,6 +53,7 @@ describe('SettingsService', () => {
       caregiverViewEnabled: true,
       textScale: 1.5,
       voiceCoachEnabled: true,
+      voiceName: 'Natural Voice',
     });
 
     expect(updated).toEqual({
@@ -59,6 +61,7 @@ describe('SettingsService', () => {
       caregiverViewEnabled: true,
       textScale: 1.5,
       voiceCoachEnabled: true,
+      voiceName: 'Natural Voice',
     });
     expect(await SettingsService.get()).toEqual(updated);
   });
