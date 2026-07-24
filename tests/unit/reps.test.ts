@@ -29,12 +29,16 @@ function hold(effort: number, startMs: number, endMs: number, si: number | null 
 }
 
 describe('RepDetector — idle / start threshold', () => {
-  it('never emits while effortIndex stays at or below startThreshold (0.15)', async () => {
+  it('never emits while effortIndex stays at or below startThreshold', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
+    // Boundary read from config, not hardcoded, so the "exactly at threshold" case stays the
+    // case actually being tested when startThreshold is retuned (it moved 0.15 to 0.18).
+    const { thresholds } = await import('../../src/config/thresholds.ts');
+    const { startThreshold } = thresholds.reps;
     RepDetector.reset();
     expect(RepDetector.feed(sample(0.05, 0))).toBeNull();
-    expect(RepDetector.feed(sample(0.1, 100))).toBeNull();
-    expect(RepDetector.feed(sample(0.15, 200))).toBeNull(); // exactly at threshold — strict >
+    expect(RepDetector.feed(sample(startThreshold / 2, 100))).toBeNull();
+    expect(RepDetector.feed(sample(startThreshold, 200))).toBeNull(); // exactly at it: strict >
   });
 });
 
@@ -91,14 +95,19 @@ describe('RepDetector — double-peak without full drop', () => {
     expect(event!.durationMs).toBe(900);
   });
 
-  it('effortIndex exactly at endThreshold (0.10) does not end the rep — boundary is strict <', async () => {
+  it('effortIndex exactly at endThreshold does not end the rep; boundary is strict <', async () => {
     const { RepDetector } = await import('../../src/metrics/reps.ts');
+    // Read the boundary from config rather than hardcoding it: this test asserts the strict-<
+    // comparison, not one particular tuning, and a literal here silently inverts the case it is
+    // testing whenever endThreshold moves (it did, at 0.1 to 0.12).
+    const { thresholds } = await import('../../src/config/thresholds.ts');
+    const { endThreshold } = thresholds.reps;
     RepDetector.reset();
     for (const s of hold(0.3, 0, 200)) expect(RepDetector.feed(s)).toBeNull();
-    expect(RepDetector.feed(sample(0.1, 400))).toBeNull(); // exactly threshold — stays active
-    expect(RepDetector.feed(sample(0.1, 600))).toBeNull();
-    expect(RepDetector.feed(sample(0.1, 800))).toBeNull();
-    const event = RepDetector.feed(sample(0.099, 900));
+    expect(RepDetector.feed(sample(endThreshold, 400))).toBeNull(); // exactly at it: stays active
+    expect(RepDetector.feed(sample(endThreshold, 600))).toBeNull();
+    expect(RepDetector.feed(sample(endThreshold, 800))).toBeNull();
+    const event = RepDetector.feed(sample(endThreshold - 0.001, 900));
     expect(event).not.toBeNull();
     expect(event!.durationMs).toBe(900);
   });

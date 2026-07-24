@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { thresholds } from '../../src/config/thresholds.ts';
 import type { LandmarkFrame } from '../../src/sensing/landmarks.ts';
 import type { ApprovedFrame } from '../../src/sensing/quality.ts';
 import type { AbsoluteFeatures, Vec2 } from '../../src/metrics/geometry.ts';
@@ -336,7 +337,7 @@ describe('geometry kernel — measureAbsolute / aggregateNeutral', () => {
     const mR = Math.hypot(dRt.u, dRt.v);
     const maxM = Math.max(mL, mR);
     const minM = Math.min(mL, mR);
-    expect(maxM).toBeGreaterThanOrEqual(0.008); // above movementFloorPct — SI defined
+    expect(maxM).toBeGreaterThanOrEqual(thresholds.metrics.movementFloorPct); // SI defined
     const cosTheta = mL * mR === 0 ? 0 : (dL.u * dRt.u + dL.v * dRt.v) / (mL * mR);
     const si = (minM / maxM) * Math.max(0, cosTheta);
     expect(si).toBe(0);

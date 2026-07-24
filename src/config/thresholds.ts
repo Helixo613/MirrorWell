@@ -16,11 +16,16 @@ export const thresholds = Object.freeze({
   // interOcularMinFrac replaces retired interOcularMinPx — distance is a fraction of video
   // width so the same face scale passes at 640×480 and 1280×720.
   // jitterMaxPct is in RMS second-difference / IOD units (motion-compensated).
+  // Movement tolerance (DOCS-CHANGE: API §15) — poseMaxDeg 15→22 and jitterMaxPct 0.005→0.012.
+  // The prior pair rejected frames on ordinary sitting movement: a natural head turn toward the
+  // screen edge cleared 15°, and normal postural sway cleared the 0.005 jitter ceiling, so
+  // sessions spent long stretches in non-OK states with no metrics. Widened to tolerate ordinary
+  // movement while still rejecting genuine instability.
   qualityGates: Object.freeze({
     lumaMin: 60,
     interOcularMinFrac: 0.09,
-    poseMaxDeg: 15,
-    jitterMaxPct: 0.005,
+    poseMaxDeg: 22,
+    jitterMaxPct: 0.012,
   }),
 
   // Blendshape SI tunables (candidate blendshape-si-v1) — docs/API.md §15 / MODEL_AND_DATA §7.
@@ -31,8 +36,16 @@ export const thresholds = Object.freeze({
 
   // MetricEngine tunables (movement floor, effort zone, ease-off, gap). Owning section:
   // docs/API.md §15 / docs/BACKEND.md (MetricEngine).
+  // DOCS-CHANGE (API §15): movementFloorPct 0.008→0.012. Raising the floor discards more
+  // sub-intentional drift (postural sway, micro-tremor) before SI is defined, so the reading
+  // stops reacting to movement the user did not intend as an exercise.
+  //
+  // smoothingWindow deliberately stays 5. It is not a free tunable: "trailing 5-frame median"
+  // is a documented, directly tested contract (metrics.test.ts), and quality.ts reuses it as
+  // JITTER_WINDOW, so widening it would also blunt the jitter gate's ability to see genuine
+  // instability. Gauge steadiness is handled by the movement floor above instead.
   metrics: Object.freeze({
-    movementFloorPct: 0.008,
+    movementFloorPct: 0.012,
     effortTargetZone: Object.freeze([0.3, 0.5] as const),
     easeOffThreshold: 0.6,
     easeOffSustainMs: 300,
@@ -41,9 +54,13 @@ export const thresholds = Object.freeze({
   }),
 
   // RepDetector tunables. Owning section: docs/API.md §15 / docs/BACKEND.md (RepDetector).
+  // DOCS-CHANGE (API §15): startThreshold 0.15→0.18, endThreshold 0.1→0.12. Incidental movement
+  // (a swallow, a shift in the chair) was clearing 0.15 and logging phantom reps. The 0.06
+  // hysteresis gap is preserved, slightly wider than the previous 0.05, so a rep still has to
+  // fall well clear of its start level before it can end.
   reps: Object.freeze({
-    startThreshold: 0.15,
-    endThreshold: 0.1,
+    startThreshold: 0.18,
+    endThreshold: 0.12,
     minDurationMs: 800,
     minQualityFramePct: 0.6,
   }),

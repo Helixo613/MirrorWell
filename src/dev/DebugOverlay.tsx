@@ -9,19 +9,24 @@
 // Dev-only twice over: src/dev/ is dropped from production bundles, and tapDevLog() is a no-op
 // outside import.meta.env.DEV.
 import { useEffect, useState } from 'react';
+import { thresholds } from '../config/thresholds.ts';
 import { StorageService } from '../data/storage.ts';
 import { tapDevLog } from '../log.ts';
 import { seedDev } from './seed.ts';
 
 /** Which quality gate each state maps to — the gates are evaluated in a fixed order
  *  (src/sensing/quality.ts), so the state name uniquely identifies the failing gate. */
+// Gate values are interpolated from thresholds rather than written as literals: these hints
+// exist to tell a developer which boundary just rejected a frame, and a hardcoded copy of that
+// boundary starts lying the moment the gate is retuned.
+const { lumaMin, interOcularMinFrac, poseMaxDeg, jitterMaxPct } = thresholds.qualityGates;
 const GATE_HINT: Record<string, string> = {
   QUALITY_OK: 'all gates pass',
   FACE_LOST: 'no face detected (or inference failed)',
-  LOW_LIGHT: 'face-region luma < lumaMin (60)',
-  TOO_FAR: 'eyes < interOcularMinFrac (0.09) of frame width — move closer',
-  POSE_OUT_OF_RANGE: 'head angle > poseMaxDeg (15°)',
-  LOW_CONFIDENCE: 'jitter > jitterMaxPct (0.005) — landmark instability',
+  LOW_LIGHT: `face-region luma < lumaMin (${lumaMin})`,
+  TOO_FAR: `eyes < interOcularMinFrac (${interOcularMinFrac}) of frame width, move closer`,
+  POSE_OUT_OF_RANGE: `head angle > poseMaxDeg (${poseMaxDeg}°)`,
+  LOW_CONFIDENCE: `jitter > jitterMaxPct (${jitterMaxPct}), landmark instability`,
 };
 
 type Line = { id: number; scope: string; msg: string; data: string };

@@ -301,7 +301,7 @@ describe('QualityMonitor.evaluate — LOW_CONFIDENCE (RMS second-difference jitt
   it('oscillating jitter fails (high second difference → LOW_CONFIDENCE)', async () => {
     const { QualityMonitor } = await import('../../src/sensing/quality.ts');
     const base = makeLandmarks(0.3);
-    const amp = 0.05; // exaggerated oscillation so RMS 2nd-diff ≫ jitterMaxPct 0.005
+    const amp = 0.05; // exaggerated oscillation so RMS 2nd-diff stays well above jitterMaxPct
     // Alternate +amp / 0 so second difference is large once 3 frames exist.
     // t=0: 0, t=1: +amp, t=2: 0 → accel = 0 - 2*(+amp) + 0 = -2amp
     const offsets = [0, amp, 0, amp, 0];
