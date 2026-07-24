@@ -102,6 +102,13 @@ export const thresholds = Object.freeze({
     sessionLookbackDays: 7,
     afternoonStartHour: 12,
     eveningStartHour: 18,
+    gardenWeeks: 8,
+    gardenBloomSessions: 3,
+    daysPerWeek: 7,
+    sessions10: 10,
+    sessions25: 25,
+    practiceWeeks4Days: 28,
+    gentleReps100: 100,
   }),
   /** FRONTEND §2.5 — plain-language symmetry buckets (no numeric grades). */
   summary: Object.freeze({

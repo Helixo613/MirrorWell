@@ -101,6 +101,13 @@ describe('thresholds', () => {
       'sessionLookbackDays',
       'afternoonStartHour',
       'eveningStartHour',
+      'gardenWeeks',
+      'gardenBloomSessions',
+      'daysPerWeek',
+      'sessions10',
+      'sessions25',
+      'practiceWeeks4Days',
+      'gentleReps100',
     ]);
     expect(Object.keys(thresholds.summary).sort()).toEqual(
       ['symmetryFairlyEvenMin', 'symmetryMostlyEvenMin', 'symmetrySomeDifferenceMin'].sort(),

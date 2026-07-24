@@ -1,7 +1,8 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppState } from '@/context/useAppState';
 import type { SessionRecordFull } from '@/data/storage';
+import { StorageService } from '@/data/storage';
 import {
   SUMMARY_HEADING_ID,
   type SummaryLocationState,
@@ -17,12 +18,14 @@ export interface UseSummaryScreenResult {
   highContrast: boolean;
   handleDone: () => void;
   headingId: string;
+  history: SessionRecordFull[];
 }
 
 export function useSummaryScreen(): UseSummaryScreenResult {
   const navigate = useNavigate();
   const location = useLocation();
-  const { settings, gate } = useAppState();
+  const { settings, gate, profile } = useAppState();
+  const [history, setHistory] = useState<SessionRecordFull[]>([]);
 
   const state = location.state as SummaryLocationState | null;
   const record = state?.record ?? null;
@@ -41,6 +44,30 @@ export function useSummaryScreen(): UseSummaryScreenResult {
     }
   }, [record]);
 
+  useEffect(() => {
+    if (!record || isDemo || !profile) {
+      setHistory([]);
+      return;
+    }
+
+    let cancelled = false;
+    void StorageService.getSessions({
+      from: profile.createdAt,
+      to: new Date().toISOString(),
+    }).then(
+      (sessions) => {
+        if (!cancelled) setHistory(sessions);
+      },
+      () => {
+        if (!cancelled) setHistory([]);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [record, isDemo, profile]);
+
   const handleDone = useCallback(() => {
     navigate(isDemo ? '/onboarding' : '/home', { replace: true });
   }, [navigate, isDemo]);
@@ -53,5 +80,6 @@ export function useSummaryScreen(): UseSummaryScreenResult {
     highContrast: settings.highContrast,
     handleDone,
     headingId: SUMMARY_HEADING_ID,
+    history,
   };
 }

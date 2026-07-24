@@ -8,6 +8,7 @@ import {
 import { strings } from '@/config/strings';
 import { MirrorWellError } from '@/data/errors';
 import { StorageService } from '@/data/storage';
+import type { SessionRecordFull } from '@/data/storage';
 import { SettingsService } from '@/data/settings';
 import type { AppSettings } from '@/types/app';
 import { DEFAULT_SETTINGS } from '@/types/app';
@@ -22,6 +23,7 @@ export interface HomeScreenData {
   isFirstRun: boolean;
   errorTitle: string | null;
   errorBody: string | null;
+  sessions: SessionRecordFull[];
   reload: () => void;
 }
 
@@ -38,6 +40,7 @@ export function useHomeScreen(
   const [isFirstRun, setIsFirstRun] = useState(false);
   const [errorTitle, setErrorTitle] = useState<string | null>(null);
   const [errorBody, setErrorBody] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<SessionRecordFull[]>([]);
   const [reloadToken, setReloadToken] = useState(0);
 
   const reload = useCallback(() => {
@@ -70,6 +73,7 @@ export function useHomeScreen(
         }
 
         setSettings(loadedSettings);
+        setSessions(allSessions);
         setShowRecalibration(
           baseline !== null && isBaselineStale(baseline.capturedAt),
         );
@@ -125,6 +129,7 @@ export function useHomeScreen(
     isFirstRun,
     errorTitle,
     errorBody,
+    sessions,
     reload,
   };
 }
