@@ -11,6 +11,8 @@ describe('thresholds', () => {
         'profile', 'qualityGates', 'reps', 'session', 'v1Protocol',
         // UI presentation tunables (frontend salvage, Gate 0)
         'home', 'summary', 'trends', 'export', 'settings',
+        // V3 Task 4: caregiver-authored text limit
+        'caregiver',
       ].sort(),
     );
   });
@@ -75,6 +77,11 @@ describe('thresholds', () => {
     ]);
     expect(thresholds.profile.nicknameMaxLength).toBe(30);
     expect(thresholds.profile.motivationMaxLength).toBe(120);
+  });
+
+  it('caregiver exposes the encouragement-note length limit', () => {
+    expect(Object.keys(thresholds.caregiver)).toEqual(['noteMaxLength']);
+    expect(thresholds.caregiver.noteMaxLength).toBe(200);
   });
 
   it('v1Protocol exposes MODEL_AND_DATA §7 capture tunables', () => {

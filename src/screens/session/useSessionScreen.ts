@@ -5,6 +5,7 @@ import { strings } from '@/config/strings';
 import { useAppState } from '@/context/useAppState';
 import { MirrorWellError } from '@/data/errors';
 import type { ExerciseId } from '@/data/schema';
+import { StorageService } from '@/data/storage';
 import { resolveSessionStatus, type SessionStatusMessage } from '@/lib/sessionStatus';
 import { log } from '@/log';
 import { CaptureService } from '@/sensing/capture';
@@ -67,6 +68,10 @@ export interface UseSessionScreenResult {
   exerciseName: string;
   instruction: string;
   motivation: string | undefined;
+  /** Caregiver encouragement note (SAFETY §5 narrow carve-out), shown on arrival only — display
+   *  text, never parsed. null once dismissed or when none exists (never fetched in demo). */
+  encouragementNote: string | null;
+  handleDismissNote: () => void;
   quality: QualityState;
   status: SessionStatusMessage | null;
   repSummary: string;
@@ -112,6 +117,7 @@ export function useSessionScreen(): UseSessionScreenResult {
 
   const [phase, setPhase] = useState<SessionScreenPhase>('loading');
   const [subState, setSubState] = useState<SessionSubState>('DEMO');
+  const [encouragementNote, setEncouragementNote] = useState<string | null>(null);
   const [exerciseId, setExerciseId] = useState<ExerciseId | null>(null);
   const [quality, setQuality] = useState<QualityState>('FACE_LOST');
   const [repDone, setRepDone] = useState(0);
@@ -210,6 +216,16 @@ export function useSessionScreen(): UseSessionScreenResult {
         // already live behind it. Demo keeps its quick-setup flow, which goes straight to 'active'
         // from handleQuickSetup below.
         setPhase('arrival');
+        // Caregiver encouragement note (SAFETY §5): fetched only for real sessions, never demo —
+        // CaregiverScreen (the only writer) is itself unreachable in demo mode. Best-effort: a
+        // failed fetch just means no note shows, never a blocking error on the arrival moment.
+        StorageService.getEncouragementNote()
+          .then((note) => {
+            if (mountedRef.current) setEncouragementNote(note?.text ?? null);
+          })
+          .catch((err: unknown) => {
+            log.warn('Session', 'encouragement note fetch failed', { err: String(err) });
+          });
       } catch (err) {
         if (mountedRef.current) applyStartError(err);
       }
@@ -388,6 +404,16 @@ export function useSessionScreen(): UseSessionScreenResult {
     SessionController.advance();
   }, []);
 
+  // The patient's dismiss control (SAFETY §5: "deletable by the user"). Optimistic — the note
+  // leaves the screen immediately; a failed delete just means it may reappear next arrival,
+  // never a blocking error over the breathing moment.
+  const handleDismissNote = useCallback(() => {
+    setEncouragementNote(null);
+    StorageService.deleteEncouragementNote().catch((err: unknown) => {
+      log.warn('Session', 'encouragement note dismiss failed', { err: String(err) });
+    });
+  }, []);
+
   const handleAdvance = useCallback(() => {
     SessionController.advance();
   }, []);
@@ -493,6 +519,8 @@ export function useSessionScreen(): UseSessionScreenResult {
     exerciseName,
     instruction,
     motivation: isDemo ? undefined : profile?.motivation,
+    encouragementNote,
+    handleDismissNote,
     quality,
     status,
     repSummary: strings.session.repCounter(repDone, repTotal),

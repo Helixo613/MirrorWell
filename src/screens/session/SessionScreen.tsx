@@ -138,6 +138,11 @@ export function SessionScreen() {
             stopAriaLabel={strings.session.arrival.stopAriaLabel}
             onBegin={s.handleBeginArrival}
             onStop={s.openStopDialog}
+            note={s.encouragementNote}
+            noteHeading={strings.session.arrival.note.heading}
+            dismissNoteLabel={strings.session.arrival.note.dismiss}
+            dismissNoteAriaLabel={strings.session.arrival.note.dismissAriaLabel}
+            onDismissNote={s.handleDismissNote}
           />
         </div>
 

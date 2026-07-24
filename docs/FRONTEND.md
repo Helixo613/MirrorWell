@@ -79,11 +79,11 @@ One dynamic, responsive app — no separate mobile build. Desktop-first, calm-cl
 
 ### 2.7 `CaregiverScreen`
 
-- **Purpose:** read-only trusted-person view on the patient's device (SAFETY §5).
-- **Layout:** banner "Read-only view, enabled by the device owner"; adherence block (`getAdherence`); per-exercise mini-trends; last-session summary; data-quality line (`lowQualityFramePct` averaged, phrased as "measurement quality"); link to `ExportScreen`.
+- **Purpose:** read-only trusted-person view on the patient's device (SAFETY §5), with exactly one narrow exception.
+- **Layout:** banner "Read-only view, enabled by the device owner"; adherence block (`getAdherence`); per-exercise mini-trends; last-session summary; data-quality line (`lowQualityFramePct` averaged, phrased as "measurement quality"); the encouragement-note compose box (below); link to `ExportScreen`.
 - **States:** *guard* — redirect to `HomeScreen` when `caregiverViewEnabled` is false (including deep links); *empty/loading/error* as TrendsScreen.
-- **Calls:** `TrendsService.getTrend/getAdherence`, `StorageService.getSessions`, `SettingsService.get`.
-- **Rule:** zero mutating controls. Any interactive element that changes state is a review-blocking defect (TESTS.md audits every control).
+- **Calls:** `TrendsService.getTrend/getAdherence`, `StorageService.getSessions/getEncouragementNote/saveEncouragementNote`, `SettingsService.get`.
+- **Rule:** mutation confined to the encouragement-note compose box (SAFETY §5 narrow carve-out — plain text, ≤200 chars, singleton, never exported, never parsed as an instruction). Any OTHER interactive element that changes state is a review-blocking defect (TESTS.md audits every control).
 
 ### 2.8 `ExportScreen`
 
