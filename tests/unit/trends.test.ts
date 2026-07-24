@@ -210,6 +210,8 @@ describe('TrendsService.getTrend', () => {
       trendGranularity: 'monthly',
       showAffectedSideMarker: true,
       caregiverViewEnabled: false,
+      remindersEnabled: false,
+      reminderTime: '09:00',
     });
     // Same 0.02 delta that read as sub-noise-floor (false) against a 0.05 baseline noise floor
     // above; a smaller baseline noise floor of 0.01 must flip it to true, proving the source.

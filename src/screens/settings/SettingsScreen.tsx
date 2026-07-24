@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { SegmentedControl } from '@/components/controls/SegmentedControl';
 import { BlockingNotice } from '@/components/feedback/BlockingNotice';
 import { DeleteDataDialog } from '@/components/settings/DeleteDataDialog';
@@ -16,11 +17,34 @@ import { Label } from '@/components/ui/label';
 import { strings } from '@/config/strings';
 import { thresholds } from '@/config/thresholds';
 import { useSettingsScreen } from '@/hooks/useSettingsScreen';
+import { Reminders, type ReminderSupport } from '@/lib/reminders';
 import { cn } from '@/lib/utils';
 
 export function SettingsScreen() {
   const settingsScreen = useSettingsScreen();
   const disabled = settingsScreen.isSaving || settingsScreen.deletePhase !== 'idle';
+  const [reminderSupport, setReminderSupport] = useState<ReminderSupport>(() =>
+    Reminders.support(),
+  );
+
+  // Permission is requested only on the way ON, and the setting is stored only if it is granted.
+  // Persisting remindersEnabled while permission is denied would leave the toggle claiming
+  // reminders are on while the browser silently drops every one of them.
+  const toggleReminders = useCallback(
+    async (checked: boolean): Promise<void> => {
+      if (!checked) {
+        Reminders.cancel();
+        await settingsScreen.updateSetting('remindersEnabled', false);
+        return;
+      }
+
+      const permission = await Reminders.request();
+      setReminderSupport(permission);
+      if (permission !== 'granted') return;
+      await settingsScreen.updateSetting('remindersEnabled', true);
+    },
+    [settingsScreen],
+  );
 
   if (settingsScreen.status === 'loading') {
     return (
@@ -242,6 +266,53 @@ export function SettingsScreen() {
               void settingsScreen.updateSetting('caregiverViewEnabled', checked)
             }
           />
+        </SettingsSection>
+
+        <SettingsSection
+          title={strings.settings.sections.reminders}
+          headingId="settings-reminders-heading"
+        >
+          <ToggleSettingRow
+            id="settings-reminders"
+            label={strings.settings.reminders.toggleLabel}
+            description={strings.settings.reminders.toggleDescription}
+            checked={settingsScreen.settings.remindersEnabled}
+            disabled={disabled || reminderSupport === 'unsupported'}
+            onCheckedChange={(checked) => void toggleReminders(checked)}
+          />
+          {reminderSupport === 'denied' ? (
+            <p className="px-5 pb-4 text-sm text-muted-foreground sm:px-6" role="status">
+              {strings.settings.reminders.blocked}
+            </p>
+          ) : null}
+          {reminderSupport === 'unsupported' ? (
+            <p className="px-5 pb-4 text-sm text-muted-foreground sm:px-6" role="status">
+              {strings.settings.reminders.unsupported}
+            </p>
+          ) : null}
+          {settingsScreen.settings.remindersEnabled ? (
+            <div className="px-5 py-4 sm:px-6">
+              <label
+                htmlFor="settings-reminder-time"
+                className="block text-sm font-medium"
+              >
+                {strings.settings.reminders.timeLabel}
+              </label>
+              <input
+                id="settings-reminder-time"
+                type="time"
+                value={settingsScreen.settings.reminderTime}
+                disabled={disabled}
+                onChange={(event) =>
+                  void settingsScreen.updateSetting('reminderTime', event.target.value)
+                }
+                className="mt-2 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+              <p className="mt-2 text-sm text-muted-foreground">
+                {strings.settings.reminders.timeHint}
+              </p>
+            </div>
+          ) : null}
         </SettingsSection>
 
         <nav aria-label={strings.settings.calibration.navLabel}>

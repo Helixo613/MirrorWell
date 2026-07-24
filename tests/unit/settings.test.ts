@@ -14,6 +14,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   trendGranularity: 'monthly',
   showAffectedSideMarker: true,
   caregiverViewEnabled: false,
+  remindersEnabled: false,
+  reminderTime: '09:00',
 };
 
 beforeEach(async () => {
@@ -50,6 +52,8 @@ describe('SettingsService', () => {
   it('merges a partial update and persists it', async () => {
     const updated = await SettingsService.update({
       caregiverViewEnabled: true,
+      remindersEnabled: false,
+      reminderTime: '09:00',
       textScale: 1.5,
       voiceCoachEnabled: true,
     });
@@ -57,6 +61,8 @@ describe('SettingsService', () => {
     expect(updated).toEqual({
       ...DEFAULT_SETTINGS,
       caregiverViewEnabled: true,
+      remindersEnabled: false,
+      reminderTime: '09:00',
       textScale: 1.5,
       voiceCoachEnabled: true,
     });

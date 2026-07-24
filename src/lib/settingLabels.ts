@@ -26,6 +26,10 @@ export function settingLabelFor(key: EditableAppSettingKey): string {
       return strings.settings.trends.granularityLabel;
     case 'caregiverViewEnabled':
       return strings.settings.sharing.caregiver.label;
+    case 'remindersEnabled':
+      return strings.settings.reminders.toggleLabel;
+    case 'reminderTime':
+      return strings.settings.reminders.timeLabel;
     default: {
       const _exhaustive: never = key;
       return _exhaustive;

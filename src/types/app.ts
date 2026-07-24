@@ -37,4 +37,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   trendGranularity: 'monthly',
   showAffectedSideMarker: true,
   caregiverViewEnabled: false,
+  remindersEnabled: false,
+  reminderTime: '09:00',
 };

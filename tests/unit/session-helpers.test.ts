@@ -27,6 +27,8 @@ function settings(overrides: Partial<AppSettings>): AppSettings {
     trendGranularity: 'monthly',
     showAffectedSideMarker: true,
     caregiverViewEnabled: false,
+    remindersEnabled: false,
+    reminderTime: '09:00',
     ...overrides,
   };
 }

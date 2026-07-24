@@ -110,6 +110,8 @@ export interface AppSettings {
   // noiseFloorSymmetry lives on calibration_baseline (baseline-paired; DG-4), not here
   showAffectedSideMarker: boolean;// default true; no effect when affectedSide === 'unknown'
   caregiverViewEnabled: boolean;  // default false; the patient's consent act for CaregiverScreen
+  remindersEnabled: boolean;      // default false; opt-in local practice reminder
+  reminderTime: string;           // 'HH:MM' local 24h, default '09:00'
 }
 
 export class MirrorWellDB extends Dexie {

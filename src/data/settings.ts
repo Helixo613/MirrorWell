@@ -13,7 +13,12 @@ const DEFAULT_SETTINGS: AppSettings = {
   trendGranularity: 'monthly',
   showAffectedSideMarker: true,
   caregiverViewEnabled: false,
+  remindersEnabled: false,
+  reminderTime: '09:00',
 };
+
+/** 'HH:MM' in 24-hour local time. */
+const REMINDER_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const SETTINGS_KEYS = new Set<keyof AppSettings>([
   'highContrast',
@@ -25,6 +30,8 @@ const SETTINGS_KEYS = new Set<keyof AppSettings>([
   'trendGranularity',
   'showAffectedSideMarker',
   'caregiverViewEnabled',
+  'remindersEnabled',
+  'reminderTime',
 ]);
 
 function assertSettings(settings: AppSettings): void {
@@ -33,6 +40,9 @@ function assertSettings(settings: AppSettings): void {
   }
   if (settings.trendGranularity !== 'weekly' && settings.trendGranularity !== 'monthly') {
     throw new MirrorWellError('VALIDATION_FAILED', 'invalid trendGranularity');
+  }
+  if (!REMINDER_TIME_PATTERN.test(settings.reminderTime)) {
+    throw new MirrorWellError('VALIDATION_FAILED', 'reminderTime must be HH:MM in 24-hour time');
   }
 }
 

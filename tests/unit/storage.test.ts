@@ -118,6 +118,8 @@ describe('StorageService — round-trip', () => {
       trendGranularity: 'monthly' as const,
       showAffectedSideMarker: true,
       caregiverViewEnabled: false,
+      remindersEnabled: false,
+      reminderTime: '09:00',
     };
     await db.app_settings.put(row);
     const got = await db.app_settings.get('singleton');
@@ -457,6 +459,8 @@ describe('Demo Mode isolation', () => {
         trendGranularity: 'monthly',
         showAffectedSideMarker: true,
         caregiverViewEnabled: false,
+        remindersEnabled: false,
+        reminderTime: '09:00',
       }),
       () => StorageService.saveBaseline(baseline),
       () => StorageService.saveSession({ ...sessions[0]!, results: sessions[0]!.results.map((result) => ({ ...result, reps: result.reps })) }),
@@ -485,6 +489,8 @@ describe('Demo Mode isolation', () => {
       trendGranularity: 'weekly',
       showAffectedSideMarker: false,
       caregiverViewEnabled: false,
+      remindersEnabled: false,
+      reminderTime: '09:00',
     });
     SafetyGate.enterDemoMode();
 

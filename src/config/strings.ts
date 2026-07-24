@@ -775,7 +775,27 @@ export const strings = Object.freeze({
       sharing: 'Sharing',
       trendsAndSharing: 'Trends & sharing',
       calibration: 'Calibration',
+      reminders: 'Reminders',
       danger: 'Danger zone',
+    },
+    // Local practice reminders. Two rules bind this copy:
+    //   * SAFETY §8 carve-out: never reference the practice rhythm count or any run of days. A
+    //     nudge like "don't lose your 5 days" is the exact loss mechanic the carve-out forbids.
+    //   * Honesty: these are on-device timers, not push. The description says so plainly rather
+    //     than implying alarm-clock reliability the platform cannot give without a push service.
+    reminders: {
+      toggleLabel: 'Daily practice reminder',
+      toggleDescription:
+        'A gentle nudge at a time you choose. Scheduled on this device only, with no account and no server, so it arrives while the app is open or recently used.',
+      timeLabel: 'Reminder time',
+      timeHint: 'Uses this device clock.',
+      blocked:
+        'Notifications are switched off for this site in your browser settings. You can turn them back on there.',
+      unsupported: 'This browser cannot show reminders.',
+      notification: {
+        title: 'Time for your practice',
+        body: 'A few gentle minutes whenever suits you.',
+      },
     },
     profile: {
       nicknameLabel: 'What should we call you? (optional)',

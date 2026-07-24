@@ -208,6 +208,8 @@ export async function seedDev(): Promise<void> {
     hapticsEnabled: true,
     audioCuesEnabled: true,
     voiceCoachEnabled: false,
+    remindersEnabled: false,
+    reminderTime: '09:00',
     reducedFacePreview: false,
     trendGranularity: 'monthly',
     showAffectedSideMarker: true,
