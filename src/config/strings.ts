@@ -644,6 +644,28 @@ export const strings = Object.freeze({
     },
     advisory: 'Share this file only with your care team.',
     filename: (dateYmd: string) => `mirrorwell-summary-${dateYmd}`,
+    // Weekly progressCard (V3 Task 6) — local PNG download only; derived aggregates only.
+    card: {
+      title: 'Weekly progress card',
+      description:
+        'A calm image of this week’s practice — session count, gentle reps, and garden growth. Saves only to this device.',
+      download: 'Download weekly card',
+      downloadAriaLabel: 'Download this week’s progress card as an image',
+      generating: 'Drawing your week…',
+      filename: (weekStartYmd: string) => `mirrorwell-week-${weekStartYmd}`,
+      canvasHeading: 'This week’s practice',
+      weekRange: (from: string, to: string) => `${from} – ${to}`,
+      sessionsLabel: (count: number) =>
+        count === 1 ? 'session of showing up' : 'sessions of showing up',
+      gentlenessLabel: (gentle: number, total: number) =>
+        `Gentle ${gentle} of ${total} reps — control practice`,
+      gentlenessEmpty: 'Gentle practice begins when you do',
+      gardenLabel: 'Garden this week',
+      plantStageLabel: (stage: 0 | 1 | 2 | 3) =>
+        (['Seed', 'Sprout', 'Leaf', 'Bloom'] as const)[stage],
+      footer: 'MirrorWell · on this device only · not a clinical assessment',
+      announcementReady: 'Weekly progress card downloaded.',
+    },
     nav: {
       back: 'Back to home',
       backAriaLabel: 'Return to home',
