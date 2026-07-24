@@ -288,6 +288,20 @@ export const strings = Object.freeze({
   },
   calibration: {
     loading: 'Warming up the camera — about 3 seconds',
+    // Pre-capture intro (camera-primary redesign): the guidance that used to crowd the capture
+    // screen lives here, so the capture screen can be camera-first with minimal text.
+    intro: {
+      title: 'Set up for a good measurement',
+      lead: 'This takes about a minute. A few things keep it accurate:',
+      tips: [
+        'Show your whole face — eyebrows and forehead in view.',
+        'Sit in even light, facing a window or lamp (not backlit).',
+        'Keep the camera steady — prop your phone up or use a tripod.',
+        'Sit about an arm’s length away and look straight at the camera.',
+      ] as const,
+      start: 'Start calibration',
+      startAriaLabel: 'Start calibration',
+    },
     // Shown on every calibration capture phase — brow/forehead landmarks need a full face frame.
     framingTip:
       'Keep your whole face visible in the oval — including your eyebrows and forehead.',

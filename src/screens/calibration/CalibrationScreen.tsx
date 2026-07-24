@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { CalibrationActionBar } from '@/components/calibration/CalibrationActionBar';
 import { CalibrationJourneyBar } from '@/components/calibration/CalibrationJourneyBar';
 import { CaptureProgress } from '@/components/calibration/CaptureProgress';
-import { InstructionCard } from '@/components/calibration/InstructionCard';
 import { CameraPreview } from '@/components/camera/CameraPreview';
 import { QualityBanner } from '@/components/camera/QualityBanner';
 import { BlockingNotice } from '@/components/feedback/BlockingNotice';
@@ -58,6 +57,9 @@ export function CalibrationScreen() {
   const { profile, settings, setActiveBaseline } = useAppState();
 
   const [ready, setReady] = useState(false);
+  // Pre-capture intro gate: the tips page shows first; capture UI only after "Start calibration".
+  // Screen-local (not in the machine) so the capture state machine + its unit tests are untouched.
+  const [started, setStarted] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [paused, setPaused] = useState(false);
   const [blockingCode, setBlockingCode] = useState<BlockingErrorCode | null>(
@@ -330,6 +332,65 @@ export function CalibrationScreen() {
     );
   }
 
+  // Pre-capture intro: tips live here so the capture screen stays camera-first. The camera warms
+  // up behind this (mount effect), so permission is resolved before the user taps Start.
+  if (!started) {
+    const intro = strings.calibration.intro;
+    return (
+      <ScreenShell
+        variant="wide"
+        textScale={settings.textScale}
+        ariaLabelledBy={HEADING_ID}
+        className="mx-auto flex h-dvh max-w-standalone flex-col py-xs sm:py-sm"
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-shell space-y-5">
+            <h1
+              id={HEADING_ID}
+              tabIndex={-1}
+              className="text-2xl font-semibold tracking-tight outline-none sm:text-3xl"
+            >
+              {intro.title}
+            </h1>
+            <p className="text-base leading-relaxed text-muted-foreground">{intro.lead}</p>
+            <ul className="space-y-3">
+              {intro.tips.map((tip) => (
+                <li key={tip} className="flex gap-3 text-base leading-relaxed">
+                  <span aria-hidden className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+        <CalibrationActionBar className="mt-3 shrink-0">
+          <Button
+            type="button"
+            size="lg"
+            className="w-full"
+            aria-label={intro.startAriaLabel}
+            onClick={() => setStarted(true)}
+          >
+            {intro.start}
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="w-full"
+            aria-label={strings.calibration.actions.notNowAriaLabel}
+            onClick={() => {
+              CaptureService.stop();
+              navigate('/home', { replace: true });
+            }}
+          >
+            {strings.calibration.actions.notNow}
+          </Button>
+        </CalibrationActionBar>
+      </ScreenShell>
+    );
+  }
+
   if (!ready) {
     return (
       <ScreenShell textScale={settings.textScale}>
@@ -371,26 +432,35 @@ export function CalibrationScreen() {
           />
         </div>
       </div>
-      <div className="shrink-0 space-y-3 pt-3">
-        <InstructionCard
-          id={HEADING_ID}
-          variant="inline"
-          title={copy.title}
-          body={copy.body}
-          subtitle={copy.subtitle}
-        />
+      <div className="max-h-[26vh] shrink-0 space-y-3 overflow-y-auto pt-3">
+        {/* Camera-primary: only the short title + per-exercise cue here. The verbose setup
+            guidance now lives on the intro page, so the preview stays the hero. */}
+        <div className="space-y-1 text-center">
+          <h1
+            id={HEADING_ID}
+            tabIndex={-1}
+            className="text-lg font-semibold leading-tight outline-none sm:text-xl"
+          >
+            {copy.title}
+          </h1>
+          {copy.subtitle ? (
+            <p className="text-base leading-relaxed text-muted-foreground">{copy.subtitle}</p>
+          ) : null}
+        </div>
         <CaptureProgress
           total={total}
           completed={completed}
           label={copy.progressLabel}
         />
-        {coaching ? (
-          <BlockingNotice
-            title={strings.errors.QUALITY_TOO_LOW.title}
-            body={strings.errors.QUALITY_TOO_LOW.body}
-          />
-        ) : null}
       </div>
+      {/* Coaching lives OUTSIDE the capped scroll box so the retry guidance is always visible. */}
+      {coaching ? (
+        <BlockingNotice
+          className="mt-3 shrink-0"
+          title={strings.errors.QUALITY_TOO_LOW.title}
+          body={strings.errors.QUALITY_TOO_LOW.body}
+        />
+      ) : null}
       <CalibrationActionBar
         className="mt-3 shrink-0"
         helperText={helperText(isCapturing, quality === 'QUALITY_OK')}
