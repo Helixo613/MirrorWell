@@ -1,0 +1,22 @@
+PASS  2 minutes → 5 windows (ends at 60,75,90,105,120 s): got 5
+PASS  pulse rate ≈72 bpm: 72.5 (sd 2.43, 72 valid IBIs)
+PASS  contact window is usable: quality 1.00
+PASS  still arm, no timing gap
+PASS  feature JSON fits in 349 bytes and is labelled replay
+PASS  contact loss → pulseRateBpm null, quality 0
+PASS  movement flagged (rms 0.276 g), quality 0.50
+PASS  no window without a valid clock (0)
+PASS  motor-on periods flagged in the window
+PASS  valid command accepted
+PASS  same commandId again → duplicate
+PASS  past expiry → expired
+PASS  an expired id can never buzz later (remembered)
+PASS  no valid clock → no_clock
+PASS  unknown pattern → bad_pattern
+PASS  garbage → malformed
+PASS  ease_off = on 120, off 100, on 120, then finished
+PASS  STOP turns the motor off at once and does not report 'executed'
+PASS  maxDuration cap ends a long pattern
+PASS  outbox keeps newest 120, drops 5 oldest, FIFO order
+
+20 passed, 0 failed

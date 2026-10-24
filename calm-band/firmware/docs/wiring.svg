@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 700" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <rect width="1040" height="700" fill="#ffffff"/>
+  <text x="24" y="34" font-size="20" font-weight="bold" fill="#1f2a30">Calm Band — wiring (ESP32 DevKit V1, 30-pin)</text>
+  <text x="24" y="56" fill="#55636b">Both sensors share one I2C bus (SDA = GPIO21, SCL = GPIO22). All logic is 3.3 V. Optional parts dashed.</text>
+
+  <!-- ESP32 -->
+  <rect x="420" y="110" width="270" height="440" rx="10" fill="#e9eef0" stroke="#1f2a30" stroke-width="2"/>
+  <text x="555" y="140" text-anchor="middle" font-weight="bold" font-size="15">ESP32 DevKit V1</text>
+  <text x="555" y="158" text-anchor="middle" fill="#55636b" font-size="11">USB to laptop or power bank</text>
+  <g font-size="12" fill="#1f2a30">
+    <text x="432" y="205">3V3</text><text x="432" y="245">GND</text>
+    <text x="432" y="285">GPIO21 (SDA)</text><text x="432" y="325">GPIO22 (SCL)</text>
+    <text x="678" y="205" text-anchor="end">VIN (5 V)</text><text x="678" y="245" text-anchor="end">GND</text>
+    <text x="678" y="325" text-anchor="end">GPIO25 → motor IN</text><text x="678" y="405" text-anchor="end">GPIO27 → STOP</text>
+    <text x="678" y="445" text-anchor="end">GND</text><text x="678" y="500" text-anchor="end">GPIO2 = on-board LED</text>
+  </g>
+
+  <!-- I2C bus on mini breadboard -->
+  <rect x="300" y="180" width="70" height="170" rx="6" fill="#f6f3e8" stroke="#8a7f5a" stroke-dasharray="0"/>
+  <text x="335" y="172" text-anchor="middle" font-size="11" fill="#6b623f">mini breadboard</text>
+  <text x="335" y="372" text-anchor="middle" font-size="11" fill="#6b623f">power + I2C rows</text>
+
+  <!-- MAX30102 -->
+  <rect x="40" y="110" width="200" height="150" rx="8" fill="#fff" stroke="#1f2a30" stroke-width="2"/>
+  <text x="140" y="136" text-anchor="middle" font-weight="bold">MAX30102 pulse</text>
+  <text x="140" y="153" text-anchor="middle" font-size="11" fill="#55636b">on fingertip, velcro loop · I2C 0x57</text>
+  <g font-size="12"><text x="228" y="185" text-anchor="end">VIN</text><text x="228" y="205" text-anchor="end">GND</text><text x="228" y="225" text-anchor="end">SDA</text><text x="228" y="245" text-anchor="end">SCL</text></g>
+
+  <!-- MPU6050 -->
+  <rect x="40" y="300" width="200" height="150" rx="8" fill="#fff" stroke="#1f2a30" stroke-width="2"/>
+  <text x="140" y="326" text-anchor="middle" font-weight="bold">MPU6050 (GY-521)</text>
+  <text x="140" y="343" text-anchor="middle" font-size="11" fill="#55636b">on the wrist base · I2C 0x68</text>
+  <g font-size="12"><text x="228" y="375" text-anchor="end">VCC</text><text x="228" y="395" text-anchor="end">GND</text><text x="228" y="415" text-anchor="end">SDA</text><text x="228" y="435" text-anchor="end">SCL</text></g>
+
+  <!-- wires: sensors to bus to ESP32 -->
+  <g stroke-width="3" fill="none">
+    <path d="M240 181 H300" stroke="#d62828"/><path d="M240 371 H270 V190 H300" stroke="#d62828"/><path d="M370 200 H420" stroke="#d62828"/>
+    <path d="M240 201 H300" stroke="#222"/><path d="M240 391 H278 V230 H300" stroke="#222"/><path d="M370 240 H420" stroke="#222"/>
+    <path d="M240 221 H286 V270 H300" stroke="#1d6fd6"/><path d="M240 411 H286 V280 H300" stroke="#1d6fd6"/><path d="M370 280 H420" stroke="#1d6fd6"/>
+    <path d="M240 241 H292 V315 H300" stroke="#e0a800"/><path d="M240 431 H294 V325 H300" stroke="#e0a800"/><path d="M370 320 H420" stroke="#e0a800"/>
+  </g>
+  <!-- optional 100 nF near sensors -->
+  <g stroke="#7a7a7a" stroke-dasharray="4 3" fill="none"><rect x="420" y="575" width="64" height="36" rx="5"/></g>
+  <text x="452" y="598" text-anchor="middle" font-size="11" fill="#55636b">100 nF</text>
+  <text x="496" y="590" font-size="11" fill="#55636b">optional, across 3V3–GND</text>
+  <text x="496" y="605" font-size="11" fill="#55636b">at the breadboard rows</text>
+
+  <!-- Motor module -->
+  <rect x="800" y="110" width="215" height="170" rx="8" fill="#fff" stroke="#1f2a30" stroke-width="2"/>
+  <text x="907" y="136" text-anchor="middle" font-weight="bold">Vibration motor module</text>
+  <text x="907" y="153" text-anchor="middle" font-size="11" fill="#55636b">built-in driver + flyback protection</text>
+  <text x="907" y="168" text-anchor="middle" font-size="11" fill="#55636b">IN must accept 3.3 V logic</text>
+  <g font-size="12"><text x="812" y="205">VCC</text><text x="812" y="245">GND</text><text x="812" y="265">IN</text></g>
+  <circle cx="975" cy="235" r="22" fill="#d9dde0" stroke="#1f2a30"/><text x="975" y="239" text-anchor="middle" font-size="10">motor</text>
+  <g stroke-width="3" fill="none">
+    <path d="M690 200 H800" stroke="#d62828"/>
+    <path d="M690 240 H800" stroke="#222"/>
+    <path d="M690 320 H760 V261 H800" stroke="#f07f13"/>
+  </g>
+  <g stroke="#7a7a7a" stroke-dasharray="4 3" fill="none"><rect x="705" y="140" width="80" height="40" rx="5"/><path d="M730 180 V200"/><path d="M760 180 V240"/></g>
+  <text x="745" y="165" text-anchor="middle" font-size="11" fill="#55636b">100 µF 16 V</text>
+  <text x="745" y="128" text-anchor="middle" font-size="11" fill="#55636b">optional, + to VCC</text>
+
+  <!-- STOP button -->
+  <rect x="800" y="370" width="215" height="100" rx="8" fill="#fff" stroke="#1f2a30" stroke-width="2"/>
+  <text x="907" y="396" text-anchor="middle" font-weight="bold">STOP button</text>
+  <text x="907" y="413" text-anchor="middle" font-size="11" fill="#55636b">6×6 mm tactile, internal pull-up</text>
+  <circle cx="907" cy="445" r="14" fill="#c62828"/>
+  <g stroke-width="3" fill="none"><path d="M690 400 H800" stroke="#2e9e4f"/><path d="M690 440 H770 V455 H800" stroke="#222"/></g>
+
+  <!-- legend -->
+  <g font-size="12">
+    <rect x="24" y="500" width="250" height="150" rx="8" fill="#f7f9fa" stroke="#c9d2d6"/>
+    <text x="40" y="524" font-weight="bold">Wire colours</text>
+    <line x1="40" y1="545" x2="70" y2="545" stroke="#d62828" stroke-width="3"/><text x="80" y="549">power (3.3 V; motor VCC 5 V)</text>
+    <line x1="40" y1="567" x2="70" y2="567" stroke="#222" stroke-width="3"/><text x="80" y="571">ground</text>
+    <line x1="40" y1="589" x2="70" y2="589" stroke="#1d6fd6" stroke-width="3"/><text x="80" y="593">SDA (data)</text>
+    <line x1="40" y1="611" x2="70" y2="611" stroke="#e0a800" stroke-width="3"/><text x="80" y="615">SCL (clock)</text>
+    <line x1="40" y1="633" x2="70" y2="633" stroke="#f07f13" stroke-width="3"/><text x="80" y="637">motor control / </text><line x1="185" y1="633" x2="205" y2="633" stroke="#2e9e4f" stroke-width="3"/><text x="210" y="637">button</text>
+  </g>
+  <text x="1016" y="680" text-anchor="end" font-size="11" fill="#55636b">Wokwi: MAX30102 is simulated in firmware; an LED stands in for the motor on GPIO25.</text>
+</svg>

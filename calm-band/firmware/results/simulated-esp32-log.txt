@@ -1,0 +1,15 @@
+[band] simulated ESP32 cb-01: window 5000 ms, hop 1000 ms, broker 127.0.0.1:1883
+[band] connected (boot 69ff5b78)
+[band] BUZZ rep_pulse
+[band] BUZZ ease_off
+[band] reject expired 64b0ef3a
+[band] BUZZ rep_pulse
+[band] reject duplicate fixed-7f
+[band] BUZZ session_complete
+[band] BUZZ session_complete
+[band] STOP pressed — vibration stopped
+[band] BUZZ rep_pulse
+[band] reject no_clock 835fdc48
+[band] simulating network loss for 6000 ms
+[band] network back — reconnecting (6 windows queued)
+[band] connected (boot 69ff5b78), flushed 6 queued windows

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "author": "MirrorWell Calm Band",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-esp32-devkit-v1", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-mpu6050", "id": "imu", "top": -140, "left": 160, "attrs": {} },
+    { "type": "wokwi-pushbutton", "id": "stop", "top": 180, "left": 200, "attrs": { "color": "red", "label": "STOP" } },
+    { "type": "wokwi-led", "id": "motor", "top": 60, "left": 260, "attrs": { "color": "orange", "label": "MOTOR (stand-in)" } },
+    { "type": "wokwi-resistor", "id": "r1", "top": 110, "left": 200, "attrs": { "value": "220" } }
+  ],
+  "connections": [
+    [ "esp:TX0", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX0", "$serialMonitor:TX", "", [] ],
+    [ "imu:VCC", "esp:3V3", "red", [] ],
+    [ "imu:GND", "esp:GND.1", "black", [] ],
+    [ "imu:SDA", "esp:D21", "blue", [] ],
+    [ "imu:SCL", "esp:D22", "yellow", [] ],
+    [ "esp:D25", "r1:1", "orange", [] ],
+    [ "r1:2", "motor:A", "orange", [] ],
+    [ "motor:C", "esp:GND.2", "black", [] ],
+    [ "stop:1.l", "esp:D27", "green", [] ],
+    [ "stop:2.l", "esp:GND.1", "black", [] ]
+  ],
+  "dependencies": {}
+}

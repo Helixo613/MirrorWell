@@ -1,0 +1,8 @@
+# Wokwi project for the Calm Band. Build first (see ../README.md, "Wokwi build"), then either
+#  - VS Code + Wokwi extension: open this folder and press F1 → "Wokwi: Start Simulator", or
+#  - wokwi-cli (needs a free CI token from wokwi.com/dashboard/ci): wokwi-cli --timeout 60000 .
+# The MAX30102 is not a Wokwi part: the Wokwi build uses the synthetic pulse (SIM_PULSE=1).
+# The orange LED stands in for the vibration motor module's IN pin.
+[wokwi]
+version = 1
+firmware = '../build/wokwi/calm_band.ino.merged.bin'
