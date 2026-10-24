@@ -1,0 +1,15 @@
+PASS  band status is usable before session  — {"device": "cb-01", "state": "usable", "problems": [], "pulseRateBpm": 73.3, "online": true, "lastHeardMs": 1792814376167, "readingEndMs": 1792814376167, "readingAgeMs": 678, "sensors": {"pulse": "simulated", "motion": "simulated"}}
+PASS  exercise_state event accepted, no haptic
+PASS  rep -> rep_pulse executed on band
+PASS  duplicate session event ignored
+PASS  ease_off -> band executes
+PASS  ease_off cleared -> no command
+PASS  expired command rejected
+PASS  duplicate command id buzzes only once
+PASS  telemetry delivered 3 times is stored once  — 1 stored
+PASS  session ended with whitelisted summary
+PASS  pulse windows linked to the session  — 6 windows, 1 usable
+PASS  haptic commands executed during session  — 3/5
+PASS  contact loss -> contact_required, no value shown  — {"device": "cb-01", "state": "contact_required", "problems": ["no_contact", "no_pulse", "low_quality"], "pulseRateBpm": null, "online": true, "lastHeardMs": 1792814382995, "readingEndMs": 1792814384538, "readingAgeMs": -1455, "sensors": {"pulse": "simulated", "motion": "simulated"}}
+
+13/13 checks passed

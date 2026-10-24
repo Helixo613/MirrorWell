@@ -29,7 +29,19 @@ BROKER_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 DEVICE_ID = os.environ.get("DEVICE_ID", "cb-01")
 DIST = Path(os.environ.get("MIRRORWELL_DIST", "../../MirrorWell/dist")).resolve()
 CMD_TTL_MS = int(os.environ.get("CMD_TTL_MS", "3000"))
+# Connectivity: no message FROM the band for this long → "stale" (status is retained and the band
+# sends a window every 15 s, so 45 s = three missed windows).
 STALE_AFTER_MS = int(os.environ.get("STALE_AFTER_MS", "45000"))
+# Freshness of the reading itself, judged on the band's own acquisition time (windowEndMs), not
+# on when it arrived. A queued window flushed after an outage is real data but not "now".
+READING_MAX_AGE_MS = int(os.environ.get("READING_MAX_AGE_MS", "30000"))
+# A window whose end time is further than this in the future is a clock error and is ignored.
+FUTURE_TOLERANCE_MS = int(os.environ.get("FUTURE_TOLERANCE_MS", "5000"))
+USABLE_QUALITY = 0.8
+# Pre/post-session pulse: the last clean window ending before the session (within this long)
+# and the first clean window starting after it.
+PRE_POST_WINDOW_MS = int(os.environ.get("PRE_POST_WINDOW_MS", "300000"))
+BAND_TOPICS = ("features", "status", "events", "ack")   # messages that prove the band is alive
 
 # Which MirrorWell event plays which band pattern. Patterns are executed ON the band.
 HAPTIC_FOR_EVENT = {
@@ -42,7 +54,7 @@ db = {
     "sessions": {},        # companionSessionId -> session dict
     "feature_windows": {}, # (device, boot, seq) -> window   (unique key = duplicate guard)
     "commands": {},        # commandId -> command + acks
-    "device": {"lastSeenMs": None, "status": None},
+    "device": {"lastHeardMs": None, "status": None},
 }
 active_session: dict = {"id": None}
 
@@ -65,8 +77,13 @@ def on_message(client, userdata, msg):
     except ValueError:
         return
     kind = msg.topic.rsplit("/", 1)[-1]
+    if kind not in BAND_TOPICS:
+        return  # our own outgoing commands (and test hooks) echo back on the wildcard subscription
     with lock:
-        db["device"]["lastSeenMs"] = now_ms()
+        if kind == "status" and body.get("online") is False:
+            db["device"]["status"] = body          # Last Will / clean offline: not "heard from"
+            return
+        db["device"]["lastHeardMs"] = now_ms()
         if kind == "features":
             key = (body["dev"], body["boot"], body["seq"])
             if key in db["feature_windows"]:
@@ -181,29 +198,79 @@ def end_session(sid: str, body: EndBody):
     return {"ok": True}
 
 
+def quality_problems(w: dict) -> list[str]:
+    """Why a window cannot be used as a pulse reading ([] = clean). Same rule everywhere."""
+    p = []
+    if not w.get("contact"):
+        p.append("no_contact")
+    if w.get("pulseRateBpm") is None:
+        p.append("no_pulse")
+    if (w.get("quality") or 0) < USABLE_QUALITY:
+        p.append("low_quality")
+    if w.get("timingGap"):
+        p.append("timing_gap")
+    if w.get("motionValid") is False:
+        p.append("motion_unavailable")
+    if w.get("moving"):
+        p.append("moving")
+    if w.get("motorActive"):
+        p.append("vibration_overlap")
+    if not w.get("clockValid", True):
+        p.append("no_clock")
+    return p
+
+
+def is_clean(w: dict) -> bool:
+    return not quality_problems(w)
+
+
+def plausible_windows(now: int) -> list[dict]:
+    """Windows ordered by acquisition time, without ones dated in the future (clock errors)."""
+    ws = [w for w in db["feature_windows"].values()
+          if isinstance(w.get("windowEndMs"), int) and w["windowEndMs"] <= now + FUTURE_TOLERANCE_MS]
+    return sorted(ws, key=lambda w: w["windowEndMs"])
+
+
 @app.get("/api/companion/status")
 def status():
+    now = now_ms()
     with lock:
-        last = db["device"]["lastSeenMs"]
-        windows = sorted(db["feature_windows"].values(), key=lambda w: w["windowEndMs"])
+        heard = db["device"]["lastHeardMs"]
+        dev_status = db["device"]["status"] or {}
+        windows = plausible_windows(now)
         latest = windows[-1] if windows else None
-    fresh = last is not None and now_ms() - last < STALE_AFTER_MS
-    if not fresh:
+    online = dev_status.get("online")
+    connected = online is not False and heard is not None and now - heard < STALE_AFTER_MS
+    age = now - latest["windowEndMs"] if latest else None
+    problems = quality_problems(latest) if latest else []
+    # Order matters: connectivity first, then whether the reading is current, then its quality.
+    if online is False:
+        state = "offline"
+    elif not connected:
         state = "stale"
     elif latest is None:
         state = "collecting"
-    elif not latest.get("contact"):
+    elif age > READING_MAX_AGE_MS:
+        state = "reading_stale"
+    elif "no_contact" in problems:
         state = "contact_required"
-    elif latest.get("quality", 0) < 0.8:
+    elif problems == ["vibration_overlap"]:
+        state = "vibration_overlap"   # cue just played; pulse is withheld, see CONTRACT §4
+    elif problems:
         state = "poor_quality"
     else:
         state = "usable"
     return {
         "device": DEVICE_ID,
         "state": state,
+        "problems": problems if latest else [],
         # Missing data is reported as missing — never converted into a calm estimate.
         "pulseRateBpm": latest.get("pulseRateBpm") if state == "usable" else None,
-        "lastSeenMs": last,
+        "online": online,
+        "lastHeardMs": heard,
+        "readingEndMs": latest["windowEndMs"] if latest else None,
+        "readingAgeMs": age,
+        "sensors": {"pulse": dev_status.get("pulseSensor"), "motion": dev_status.get("motionSensor")},
     }
 
 
@@ -213,7 +280,15 @@ def reviewer_sessions():
         out = []
         for s in db["sessions"].values():
             linked = [w for w in db["feature_windows"].values() if w.get("companionSessionId") == s["id"]]
-            usable = [w for w in linked if w.get("contact") and w.get("quality", 0) >= 0.8]
+            usable = [w for w in linked if is_clean(w)]
+            # Vibration policy (Phase 1): cues are frequent during reps, so in-session windows are
+            # mostly vibration-overlapped and are NOT used as pulse readings. The comparison is
+            # a clean reading just before the session and the first clean one after it.
+            allw = plausible_windows(now_ms())
+            start, end = s["startedAtMs"], s.get("endedAtMs")
+            pre = [w for w in allw if is_clean(w) and start - PRE_POST_WINDOW_MS <= w["windowEndMs"] <= start]
+            post = [w for w in allw if end is not None and is_clean(w)
+                    and end <= w["windowStartMs"] <= end + PRE_POST_WINDOW_MS]
             cmds = [c for c in db["commands"].values() if c["sessionId"] == s["id"]]
             out.append({
                 "companionSessionId": s["id"],
@@ -222,6 +297,9 @@ def reviewer_sessions():
                 "end": s["end"],
                 "featureWindows": len(linked),
                 "usableWindows": len(usable),
+                "vibrationOverlapWindows": sum(1 for w in linked if w.get("motorActive")),
+                "prePulseBpm": pre[-1]["pulseRateBpm"] if pre else None,
+                "postPulseBpm": post[0]["pulseRateBpm"] if post else None,
                 "hapticCommands": len(cmds),
                 "hapticExecuted": sum(1 for c in cmds if any(a["result"] == "executed" for a in c["acks"])),
             })

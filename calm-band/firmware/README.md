@@ -44,8 +44,11 @@ Optional parts: a 100 µF 16 V capacitor across the motor module's VCC and GND (
 - **Sampling:** pulse at 100 Hz, motion at 32 Hz.
 - **Windows:** 60-second windows, a new one every 15 seconds. `FAST_WINDOWS=1` switches to 5 s windows every 1 s for testing.
 - **Missing data stays missing.** No finger contact → `contact:false`, `quality:0`, `pulseRateBpm:null`. Arm movement → `moving:true`, quality capped at 0.5. A window overlapping a vibration → `motorActive:true`.
+- **Motion sensor health is reported.** If too few motion samples arrive (MPU6050 missing or failing), the window says `motionValid:false`, the motion fields are `null` and quality is capped at 0.5. Status reports `motionSensor: "missing"`, and the band retries the sensor every 5 s.
 - **No valid clock, no data.** Nothing is published without an NTP-valid timestamp, and commands are rejected as `no_clock`.
-- **Command rules:** a command is rejected as `duplicate`, `expired`, `no_clock`, `bad_pattern` or `malformed`. Every command ID is remembered, so a re-delivered command can never vibrate later. Commands are never queued.
+- **Command rules:** the command must be one valid JSON object with `commandId`, `pattern`, `issuedAtMs` and `expiresAtMs`. It is rejected as `malformed`, `duplicate`, `no_clock`, `bad_time`, `expired` (including anything issued more than 5 s ago), `bad_pattern` or `bad_duration` (over 1500 ms). Every command ID is remembered, so a re-delivered command can never vibrate later. Commands are never queued for later.
+- **Motor timing doesn't depend on the network:** a 2 ms hardware timer runs the vibration pattern and forces the motor off after 1.5 s of continuous on-time, even if `loop()` is stuck in a TLS handshake.
+- **No publishing inside the MQTT callback:** commands are copied into a queue there, then handled and acknowledged in `loop()` (arduino-mqtt can deadlock otherwise).
 - **Vibration patterns** run on the band itself and are capped at 1.5 s: `rep_pulse`, `ease_off`, `session_complete`, `breath_in`, `breath_out`. The band acknowledges each command as `accepted`, `executed`, `rejected` or `stopped`.
 - **STOP button:** cuts the motor inside the interrupt routine, then reports `stopped / local_stop`. It works without Wi-Fi.
 - **Offline queue:** up to 120 windows (30 minutes) are kept while disconnected. On reconnect they're sent oldest first with their original timestamps. If the queue overflows, the oldest are dropped and counted in `status.droppedWindows`.
@@ -57,21 +60,24 @@ Optional parts: a 100 µF 16 V capacitor across the motor module's VCC and GND (
   - **BENCH**: leave `WIFI_SSID` empty to print readings to Serial with no network
   - **Replay**: the `SIM_PULSE=1` build
 
-## Test results (re-run 24 Oct 2026, after the I2C change)
+## Test results (re-run 24 Oct 2026, after the review fixes)
 
 | Test | Result | Output |
 |---|---|---|
-| Core unit tests (`host/test_core`) | **20/20 pass** | `results/1-core-unit-tests.txt` |
-| Existing integration checks, with the **simulated ESP32 replacing `fake_band.py`** | **13/13 pass** | `results/2-integration-with-simulated-esp32.txt` |
-| Firmware scenarios: movement, contact loss and recovery, STOP, motor flag, clock loss, 6 s network drop | **14/14 pass** | `results/3-firmware-scenarios.txt` |
-| ESP32 compile, simulation build | **pass**: 910,657 B flash (69%), 111,612 B RAM (34%) | `build/sim/` |
-| ESP32 compile, real-sensor build (MAX30102 driver) | **pass**: 908,617 B flash (69%) | `build/hardware/` |
-| Real ESP32 binary booted on an **emulated ESP32** (Espressif QEMU 9.0.0), BENCH mode | **pass**: boots, runs the loop, printed 38 correct readings (~76 bpm, all beats valid) in about 45 s | `results/4-qemu-esp32-boot-log.txt` |
+| Core unit tests (`host/test_core`) | **33/33 pass** | `results/1-core-unit-tests.txt` |
+| Backend status rules (old reading, own commands, offline, vibration, timing gap, missing motion, future clock, pre/post pulse) | **11/11 pass** | `results/2-backend-status-checks.txt` |
+| Integration checks with the **simulated ESP32** | **13/13 pass** | `results/3-integration-with-simulated-esp32.txt` |
+| Firmware scenarios: movement, contact, STOP, motor flag, clock loss, network drop, broken/old/oversized commands, motion sensor loss | **22/22 pass** | `results/4-firmware-scenarios.txt` |
+| ESP32 compile, Wokwi/simulated-pulse build | **pass**: 913,241 B flash (69%), 113,932 B RAM (34%) | `build/wokwi/` |
+| ESP32 compile, real-sensor build | **pass**: 911,293 B flash (69%) | — |
+| Real ESP32 binary on an **emulated ESP32** (QEMU 9.0.0), BENCH mode | **pass**: 42 readings in ~50 s. QEMU has no MPU6050, so each one correctly says `motionValid:false`, quality 0.50 | `results/5-qemu-esp32-boot-log.txt` |
+| Motor self-test on the emulated ESP32 (`MOTOR_SELFTEST=1`) | **pass**: with `loop()` blocked for 3 s, the pattern ran exactly and the motor was off at +1500 ms | `results/6-qemu-motor-selftest-log.txt` |
 
 Bugs found and fixed while testing:
 - **Sideways arm movement was under-detected** (0.046 g against a 0.05 g threshold). Gravity is now removed separately on each axis, and the same swing reads 0.27 g.
 - **Exuberant ctags generated wrong function declarations** for the sketch. The code moved into `calm_app.cpp`.
 - **The MAX30102 driver forced 400 kHz** on the shared bus. It now uses `I2C_HZ` (100 kHz).
+- **Review fixes (24 Oct):** QoS 1 acks were published inside the MQTT callback (deadlock risk); motor timing depended on `loop()`; a missing motion sensor read as "still, quality 1.0"; command parsing accepted non-JSON and ancient `issuedAtMs`. All four are fixed and tested.
 
 ## Not yet verified
 
@@ -89,10 +95,18 @@ Bugs found and fixed while testing:
 
 For the real sensor, set `SIM_PULSE 0` in `config.h`.
 
-**Command line (what was used here):**
+**Command line (what was used here):** copy `wokwi/secrets.wokwi.h` to `calm_band/secrets.h` (or write your own) first.
 ```
-arduino-cli compile --fqbn espressif:esp32:esp32 --libraries libs \
-  --build-property "compiler.cpp.extra_flags=-DSIM_PULSE=0 -DFAST_WINDOWS=0" calm_band
+arduino-cli compile --fqbn espressif:esp32:esp32:FlashMode=dio,FlashFreq=40 --libraries libs \
+  --build-property "compiler.cpp.extra_flags=-DSIM_PULSE=0 -DFAST_WINDOWS=0" --build-path out calm_band
+```
+
+**Emulated ESP32 (QEMU):** build with an empty `WIFI_SSID` (BENCH mode) and `-DENABLE_RECORD_BOOT=0 -DFAST_WINDOWS=1`. Add `-DMOTOR_SELFTEST=1` for the motor timing test. Then:
+```
+esptool.py --chip esp32 merge_bin -o flash.bin --fill-flash-size 4MB --flash_mode dio --flash_freq 40m \
+  0x1000 out/calm_band.ino.bootloader.bin 0x8000 out/calm_band.ino.partitions.bin \
+  0xe000 <esp32 core>/tools/partitions/boot_app0.bin 0x10000 out/calm_band.ino.bin
+qemu-system-xtensa -nographic -machine esp32 -drive file=flash.bin,if=mtd,format=raw
 ```
 
 **Linux simulation and tests:**

@@ -2,7 +2,7 @@ PASS  2 minutes → 5 windows (ends at 60,75,90,105,120 s): got 5
 PASS  pulse rate ≈72 bpm: 72.5 (sd 2.43, 72 valid IBIs)
 PASS  contact window is usable: quality 1.00
 PASS  still arm, no timing gap
-PASS  feature JSON fits in 349 bytes and is labelled replay
+PASS  feature JSON fits in 390 bytes and is labelled replay
 PASS  contact loss → pulseRateBpm null, quality 0
 PASS  movement flagged (rms 0.276 g), quality 0.50
 PASS  no window without a valid clock (0)
@@ -14,9 +14,22 @@ PASS  an expired id can never buzz later (remembered)
 PASS  no valid clock → no_clock
 PASS  unknown pattern → bad_pattern
 PASS  garbage → malformed
+PASS  8 kinds of broken input all rejected as malformed (8/8)
+PASS  missing issuedAtMs → malformed
+PASS  valid JSON with spaces/newlines and a null field is accepted (cap 1500 ms)
+PASS  ancient issuedAtMs with a future expiry → bad_time (bad_time)
+PASS  issued 6 s ago, expiry still ahead → expired by age (expired)
+PASS  issued 5 s in the future → bad_time (bad_time)
+PASS  expires before it was issued → bad_time (bad_time)
+PASS  maxDurationMs 5000 > 1500 cap → bad_duration (bad_duration)
+PASS  maxDurationMs 400 accepted and used as the cap (400 ms)
 PASS  ease_off = on 120, off 100, on 120, then finished
 PASS  STOP turns the motor off at once and does not report 'executed'
 PASS  maxDuration cap ends a long pattern
+PASS  no MPU6050 data → motionValid false, motion fields null, quality capped (0.50)
+PASS  half the motion samples → not valid (coverage 0.50)
+PASS  full motion data → valid (coverage 0.99)
+PASS  status reports sensor health: {"dev":"cb-01","boot":"b","online":true,"clockValid":true,"droppedWindows":0,"publishFailures":0,"pulseSensor":"ok","motionSensor":"missing"}
 PASS  outbox keeps newest 120, drops 5 oldest, FIFO order
 
-20 passed, 0 failed
+33 passed, 0 failed

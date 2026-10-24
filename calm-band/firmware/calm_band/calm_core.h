@@ -23,6 +23,11 @@ struct Config {
   uint32_t ibiMinMs = 300;         // 200 bpm
   uint32_t ibiMaxMs = 2000;        // 30 bpm
   uint32_t maxPatternMs = 1500;    // hard cap on any vibration pattern
+  float motionCoverageMin = 0.8f;  // share of expected motion samples needed to judge movement
+  // Command timing rules (all checked on the band, not only by the backend).
+  uint32_t maxCommandAgeMs = 5000; // now − issuedAtMs above this → expired (3 s TTL + 2 s clock skew)
+  uint32_t maxClockSkewMs = 2000;  // issuedAtMs further than this in the future → bad_time
+  uint32_t maxCommandTtlMs = 10000;// expiresAtMs − issuedAtMs above this → bad_time
 };
 
 // ---------------------------------------------------------------- one finished window
@@ -37,6 +42,9 @@ struct Window {
   float validBeatFraction;
   uint16_t validIbis;
   float motionRmsG, motionMaxG;
+  bool motionValid;                    // false → motion sensor missing or too few samples;
+                                       // motion fields are JSON null and quality is capped
+  float motionCoverage;                // received ÷ expected motion samples (0..1)
   bool moving;
   bool motorActive;
   bool timingGap;
@@ -50,6 +58,7 @@ const char* patternName(Pattern p);
 class HapticPlayer {
  public:
   // Starts a pattern; returns false if the pattern is unknown. Any running pattern is replaced.
+  // capMs limits the total time (motor on + gaps); the motor never runs past it.
   bool start(Pattern p, uint32_t nowMs, uint32_t capMs);
   // Advance the pattern. Returns the motor state the hardware should apply.
   bool tick(uint32_t nowMs);
@@ -71,18 +80,24 @@ class HapticPlayer {
 enum class CmdResult : uint8_t { Accepted, Rejected };
 struct CmdDecision {
   CmdResult result;
-  const char* reason;   // null when accepted: "duplicate" | "expired" | "no_clock" | "bad_pattern" | "malformed"
+  // null when accepted, else one of: "malformed" | "duplicate" | "no_clock" | "bad_time" |
+  // "expired" | "bad_pattern" | "bad_duration"
+  const char* reason;
   Pattern pattern;
+  uint32_t durationMs;  // cap for this command: min(maxDurationMs, Config::maxPatternMs)
   char commandId[48];
 };
 
 class CommandGate {
  public:
-  // Parse + check one command payload (JSON text). Order: malformed → duplicate → no_clock →
-  // expired → bad_pattern. A seen id is remembered even when rejected, so a re-delivery can
-  // never buzz later.
+  explicit CommandGate(const Config& c = Config()) : cfg_(c) {}
+  // Parse + check one command payload. The payload must be ONE valid JSON object whose values
+  // are strings, numbers, booleans or null. Order: malformed → duplicate → no_clock → bad_time →
+  // expired → bad_pattern → bad_duration. A seen id is remembered even when rejected, so a
+  // re-delivery can never buzz later.
   CmdDecision check(const char* json, size_t len, bool clockValid, int64_t nowEpochMs);
  private:
+  Config cfg_;
   static const int kSeen = 32;
   char seen_[kSeen][48] = {};
   int next_ = 0;
@@ -125,8 +140,15 @@ class Band {
 size_t buildFeatures(const Config& c, const char* bootId, const Window& w, bool replay, char* buf, size_t n);
 size_t buildAck(const Config& c, const char* bootId, const char* commandId, const char* result,
                 const char* reason, int64_t atMs, char* buf, size_t n);
+// pulseSensor / motionSensor: "ok" | "missing" | "simulated"
 size_t buildStatus(const Config& c, const char* bootId, bool online, bool clockValid, uint32_t dropped,
-                   uint32_t publishFailures, char* buf, size_t n);
+                   uint32_t publishFailures, const char* pulseSensor, const char* motionSensor,
+                   char* buf, size_t n);
+
+// Strict parser for a flat JSON object (used for commands). Exposed for tests.
+struct JsonField { char key[24]; char str[64]; uint16_t strLen; bool isStr, isNum, isInt; int64_t i; };
+// Returns the number of fields (≤ maxFields), or -1 if the text is not exactly one flat object.
+int parseFlatJson(const char* json, size_t len, JsonField* fields, int maxFields);
 size_t buildEvent(const Config& c, const char* bootId, const char* type, const char* detail, int64_t atMs,
                   char* buf, size_t n);
 

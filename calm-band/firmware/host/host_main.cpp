@@ -3,7 +3,10 @@
 // The ESP32 build (calm_band.ino) wires the SAME core to real pins, Wi-Fi and NTP instead.
 //
 // Test hooks (topic calmband/<dev>/sim, JSON): {"contact":false} {"moving":true}
-// {"button":"stop"} {"offlineMs":8000} {"clockValid":false}
+// {"button":"stop"} {"offlineMs":8000} {"clockValid":false} {"motionSensor":false}
+//
+// Like the ESP32 build, nothing is published from inside the MQTT receive callback: commands are
+// copied into a small queue there and handled (and acknowledged) from the main loop.
 #include <mosquitto.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +21,7 @@ using namespace calm;
 
 static Config cfg;
 static Band* band;
-static CommandGate gate;
+static CommandGate gate(cfg);
 static HapticPlayer player;
 static Outbox outbox;
 static SimPulse simPulse;
@@ -26,7 +29,9 @@ static SimMotion simMotion;
 static mosquitto* mq;
 static char boot[12];
 static char topicFeatures[64], topicStatus[64], topicEvents[64], topicCmd[64], topicAck[64], topicSim[64];
-static bool connected = false, clockValid = true;
+static bool connected = false, clockValid = true, motionSensorOk = true;
+static const int kCmdSlots = 4;
+static char cmdQueue[kCmdSlots][512]; static size_t cmdLen[kCmdSlots]; static int cmdHead = 0, cmdCount = 0;
 static uint32_t publishFailures = 0, offlineUntil = 0;
 static char playingId[48] = "";
 static uint64_t t0;
@@ -49,7 +54,8 @@ static void sendAck(const char* id, const char* result, const char* reason) {
 }
 
 static void sendStatus(bool online) {
-  char b[256]; size_t k = buildStatus(cfg, boot, online, clockValid, outbox.dropped(), publishFailures, b, sizeof b);
+  char b[320]; size_t k = buildStatus(cfg, boot, online, clockValid, outbox.dropped(), publishFailures,
+                                      "simulated", motionSensorOk ? "simulated" : "missing", b, sizeof b);
   pub(topicStatus, b, k, true);
 }
 
@@ -68,21 +74,30 @@ static bool flagIs(const std::string& s, const char* key, const char* val) {
   return s.find(pat) != std::string::npos || s.find(std::string("\"") + key + "\": " + val) != std::string::npos;
 }
 
+static void handleCommand(const char* payload, size_t len) {
+  CmdDecision d = gate.check(payload, len, clockValid, epochMs());
+  if (d.result == CmdResult::Rejected) {
+    printf("[band] reject %s %.8s\n", d.reason, d.commandId);
+    if (d.commandId[0]) sendAck(d.commandId, "rejected", d.reason);
+    return;
+  }
+  sendAck(d.commandId, "accepted", nullptr);
+  if (player.playing() && playingId[0]) sendAck(playingId, "stopped", "replaced");
+  player.start(d.pattern, nowT(), d.durationMs);
+  snprintf(playingId, sizeof playingId, "%s", d.commandId);
+  printf("[band] BUZZ %s (cap %u ms)\n", patternName(d.pattern), d.durationMs);
+}
+
 static void onMessage(mosquitto*, void*, const mosquitto_message* m) {
   const char* payload = (const char*)m->payload;
   size_t len = m->payloadlen;
   if (!strcmp(m->topic, topicCmd)) {
-    CmdDecision d = gate.check(payload, len, clockValid, epochMs());
-    if (d.result == CmdResult::Rejected) {
-      printf("[band] reject %s %.8s\n", d.reason, d.commandId);
-      if (d.commandId[0]) sendAck(d.commandId, "rejected", d.reason);
-      return;
-    }
-    sendAck(d.commandId, "accepted", nullptr);
-    if (player.playing() && playingId[0]) sendAck(playingId, "stopped", "replaced");
-    player.start(d.pattern, nowT(), cfg.maxPatternMs);
-    snprintf(playingId, sizeof playingId, "%s", d.commandId);
-    printf("[band] BUZZ %s\n", patternName(d.pattern));
+    // Queue only. A command that does not fit is turned into an oversize marker, which the
+    // gate rejects as malformed (so it is still acknowledged if it carried a readable id).
+    if (cmdCount == kCmdSlots) { printf("[band] command queue full — dropped\n"); return; }
+    int tail = (cmdHead + cmdCount) % kCmdSlots;
+    size_t n = len < sizeof cmdQueue[0] ? len : 0;
+    memcpy(cmdQueue[tail], payload, n); cmdLen[tail] = n; cmdCount++;
     return;
   }
   if (!strcmp(m->topic, topicSim)) {
@@ -93,6 +108,8 @@ static void onMessage(mosquitto*, void*, const mosquitto_message* m) {
     if (flagIs(s, "moving", "false")) simMotion.moving = false;
     if (flagIs(s, "clockValid", "false")) clockValid = false;
     if (flagIs(s, "clockValid", "true")) clockValid = true;
+    if (flagIs(s, "motionSensor", "false")) { motionSensorOk = false; sendStatus(true); }
+    if (flagIs(s, "motionSensor", "true")) { motionSensorOk = true; sendStatus(true); }
     if (flagIs(s, "button", "\"stop\"")) pressStop();
     size_t p = s.find("\"offlineMs\":");
     if (p != std::string::npos) {
@@ -158,9 +175,11 @@ int main() {
     uint32_t t = nowT();
     while ((int32_t)(t - nextPulse) >= 0) { band->addPulseSample(nextPulse, simPulse.sample(nextPulse)); nextPulse += 1000 / cfg.pulseHz; }
     while ((int32_t)(t - nextMotion) >= 0) {
-      float ax, ay, az; simMotion.sample(nextMotion, &ax, &ay, &az); band->addMotionSample(nextMotion, ax, ay, az);
+      float ax, ay, az; simMotion.sample(nextMotion, &ax, &ay, &az);
+      if (motionSensorOk) band->addMotionSample(nextMotion, ax, ay, az);   // failed sensor → no samples
       motionCount++; nextMotion = (uint32_t)(motionCount * 1000 / cfg.motionHz);
     }
+    while (cmdCount) { handleCommand(cmdQueue[cmdHead], cmdLen[cmdHead]); cmdHead = (cmdHead + 1) % kCmdSlots; cmdCount--; }
     bool motor = player.tick(t);
     if (motor != wasMotor) { band->setMotor(motor, t); wasMotor = motor; }
     if (player.takeFinished() && playingId[0]) { sendAck(playingId, "executed", nullptr); playingId[0] = 0; }

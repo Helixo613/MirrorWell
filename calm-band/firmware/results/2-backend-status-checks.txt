@@ -1,0 +1,13 @@
+PASS  outgoing command does not refresh 'last heard'  — state stale, lastHeard None
+PASS  10-minute-old reading → reading_stale, no pulse  — reading_stale, age 600488 ms
+PASS  fresh clean reading → usable with a pulse value  — usable
+PASS  reading overlapping a vibration → vibration_overlap, no pulse  — vibration_overlap ['vibration_overlap']
+PASS  timing gap → poor_quality  — ['timing_gap']
+PASS  missing motion data → poor_quality + motion_unavailable, sensor shown missing  — ['low_quality', 'motion_unavailable'] sensors {'pulse': 'ok', 'motion': 'missing'}
+PASS  future-dated window ignored; latest real one used  — usable
+PASS  online:false → offline, no pulse even with a fresh clean reading  — offline
+PASS  back online → usable again  — usable
+PASS  in-session vibration windows counted, not used as readings  — 3 overlap, 0 usable
+PASS  pre- and post-session clean pulse reported  — pre 80.0 post 74.0
+
+11/11 backend checks passed

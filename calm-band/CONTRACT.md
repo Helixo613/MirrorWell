@@ -33,8 +33,9 @@ Window rules (from `calm_core.cpp`):
 - **Beats:** DC-removed, inverted IR; peak with adaptive threshold (50 % of a decaying envelope) and a ≥ 300 ms refractory period. Valid intervals are **300–2000 ms** (200–30 bpm).
 - **pulseRateBpm** = 60000 ÷ mean valid interval; `null` when no contact or too few valid intervals. **Never** filled with a made-up value.
 - **Motion:** gravity removed per axis (slow baseline, α = 0.01 at 32 Hz), then RMS and max of what remains. `moving = motionRms_g > 0.05`.
-- **quality** = validBeatFraction with contact, else 0; capped at 0.5 when there is no pulse value or when moving.
-- **motorActive** = the motor was on at any point in the window. Quality is **not** reduced for this; consumers must exclude or flag these windows (vibration can disturb the pulse signal).
+- **Motion sensor health:** `motionCoverage` = received ÷ expected motion samples (expected = 32 × window seconds, so 1920 per 60 s window). `motionValid` = coverage ≥ **0.8**. When it is false (MPU6050 missing, unplugged or failing reads), `motionRms_g`, `motionMax_g` and `moving` are **JSON null**. A failed sensor never reads as "perfectly still".
+- **quality** = validBeatFraction with contact, else 0; capped at 0.5 when there is no pulse value, when moving, or when `motionValid` is false.
+- **motorActive** = the motor was on at any point in the window. Quality is **not** reduced for this on the band; the backend withholds the pulse value for these windows (§4, vibration policy).
 - **timingGap** = a full second inside the window had < 80 % of the expected pulse samples, or no data.
 - **Clock:** nothing is published until NTP has set the clock (`time > 1 700 000 000`). In BENCH mode only, a fixed clock (1 760 000 000 s) is seeded and windows are printed to Serial, never published.
 
@@ -58,8 +59,8 @@ Broker: any MQTT 3.1.1 broker. Real: EMQX Cloud, port 8883, TLS with CA certific
 {"schema":1,"dev":"cb-01","boot":"91ce996b","seq":17,"origin":"live",
  "windowStartMs":1760000030003,"windowEndMs":1760000090003,"clockValid":true,
  "contact":true,"quality":1.00,"pulseRateBpm":76.4,"pulseRateSdBpm":0.49,
- "validBeatFraction":1.00,"validIbis":72,"motionRms_g":0.0120,"motionMax_g":0.031,
- "moving":false,"motorActive":false,"timingGap":false}
+ "validBeatFraction":1.00,"validIbis":72,"motionValid":true,"motionCoverage":1.00,
+ "motionRms_g":0.0120,"motionMax_g":0.031,"moving":false,"motorActive":false,"timingGap":false}
 ```
 
 - `boot`: 8 hex chars, new on every power-up. Duplicate key = `dev` + `boot` + `seq`.
@@ -70,8 +71,12 @@ Broker: any MQTT 3.1.1 broker. Real: EMQX Cloud, port 8883, TLS with CA certific
 ### 3.2 Status (retained)
 
 ```json
-{"dev":"cb-01","boot":"91ce996b","online":true,"clockValid":true,"droppedWindows":0,"publishFailures":0}
+{"dev":"cb-01","boot":"91ce996b","online":true,"clockValid":true,"droppedWindows":0,"publishFailures":0,
+ "pulseSensor":"ok","motionSensor":"ok"}
 ```
+
+- `pulseSensor` / `motionSensor`: `"ok"`, `"missing"` or `"simulated"`. The band re-sends status when a sensor is lost (about 32 failed MPU6050 reads in a row, ~1 s) or comes back (it retries every 5 s).
+- The Last Will `{"dev":"cb-01","online":false}` is published by the broker if the band disappears without a clean disconnect (about 45 s with a 30 s keep-alive).
 
 ### 3.3 Event
 
@@ -86,15 +91,23 @@ Broker: any MQTT 3.1.1 broker. Real: EMQX Cloud, port 8883, TLS with CA certific
  "issuedAtMs":1760000040000,"expiresAtMs":1760000043000}
 ```
 
+The payload must be **one valid JSON object** with flat values (string, number, true, false, null). Required: `commandId` (1–47 characters, letters, digits, `-`, `_`), `pattern` (string), `issuedAtMs` and `expiresAtMs` (whole numbers). Optional: `maxDurationMs` (whole number), `sessionId`, and any other flat field (ignored).
+
 The band checks in this order, and rejects with the first reason that applies:
 
-1. `malformed`: no `commandId`, or no `pattern` / `expiresAtMs`.
+1. `malformed`: not exactly one valid flat JSON object (truncated, trailing text, nested values, duplicate keys, single quotes…), or a required field is missing or has the wrong type. No ack is possible if no valid `commandId` could be read.
 2. `duplicate`: the ID was seen this boot (last 32 IDs remembered, even if rejected).
 3. `no_clock`: the clock is not valid yet.
-4. `expired`: now > `expiresAtMs`.
-5. `bad_pattern`: unknown pattern name.
+4. `bad_time`: `expiresAtMs ≤ issuedAtMs`, or `expiresAtMs − issuedAtMs` > **10 000 ms**, or `issuedAtMs` is more than **2000 ms** in the future (clock skew).
+5. `expired`: now > `expiresAtMs`, **or** now − `issuedAtMs` > **5000 ms** (3 s TTL + 2 s skew). The band enforces command age itself; it doesn't rely on the backend's expiry.
+6. `bad_pattern`: unknown pattern name.
+7. `bad_duration`: `maxDurationMs` < 1 or > **1500**.
 
-`sessionId` and `maxDurationMs` are accepted but not used by the band; it applies its own **1500 ms cap**. A new command replaces a pattern that is playing; the replaced one is acknowledged as `stopped / replaced`.
+The pattern runs for at most `min(maxDurationMs, 1500)` ms. `sessionId` is not used by the band. A new command replaces a pattern that is playing; the replaced one is acknowledged as `stopped / replaced`.
+
+**Motor timing on the ESP32:** the pattern is stepped by a 2 ms hardware timer task (`esp_timer`), not by `loop()`, so blocking network calls (TLS handshake, reconnects) cannot stretch a vibration. The timer also has a backstop that forces the motor off after 1500 ms of continuous on-time. Checked on the emulated ESP32 by the `MOTOR_SELFTEST` build: with `loop()` blocked for 3 s, the motor turned off at +1500 ms (`firmware/results/6-qemu-motor-selftest-log.txt`).
+
+**MQTT callback rule:** the band never publishes from inside the MQTT receive callback (arduino-mqtt does not allow it, and a QoS 1 publish there can deadlock). Commands are copied into a 4-slot queue and handled, and acknowledged, in `loop()` after `mqtt.loop()`. If the queue is full, the command is dropped (never delayed).
 
 | Pattern | Motor on/off sequence (ms) | Total |
 |---|---|---|
@@ -113,7 +126,7 @@ Patterns run locally on the band; only start, finish and stop cross the network.
 ```
 
 - `result`: `accepted` (pattern started), `executed` (pattern finished on its own), `rejected` (with a reason from §3.4), or `stopped`.
-- `stopped` has reason `local_stop` (STOP button) or `replaced` (a newer command took over). A stopped command is never also `executed`.
+- `stopped` has reason `local_stop` (STOP button), `replaced` (a newer command took over) or `max_duration` (the timer backstop cut the motor; this should never happen in normal use). A stopped command is never also `executed`.
 - **STOP** turns the motor off inside the interrupt routine, works with no Wi-Fi or clock, and also publishes the `events` message.
 
 ### 3.6 Raw (RECORD mode: hold STOP while powering on)
@@ -131,8 +144,8 @@ Patterns run locally on the band; only start, finish and stop cross the network.
 | `POST /api/companion/sessions` | `{"companionSessionId":"cs-…","startedAtMs":…}`; opens the session that new windows are linked to |
 | `POST /api/companion/sessions/{id}/events` | One of: `{"type":"exercise_state","seq":1,"atMs":…,"exerciseId":"EX_SMILE","state":"DEMO\|REPS\|REST"}`; `{"type":"rep","seq":2,"atMs":…,"repIndex":0,"peakEffortIndex":0.7,"durationMs":1500}`; `{"type":"ease_off","seq":3,"atMs":…,"active":true}`. Response `{"ok":true,"command":<id or null>}`, or `{"ok":true,"duplicate":true}` for a repeated `seq` |
 | `POST /api/companion/sessions/{id}/end` | `{"localSessionId":…,"endReason":"completed\|user_stopped\|red_flag_stopped\|quality_abandoned","endedAtMs":…,"exercises":[{"exerciseId","repsCompleted","meanSymmetryIndex","meanEffortIndex","easeOffCount","lowQualityFramePct"}]}`; also sends `session_complete` |
-| `GET /api/companion/status` | `{"device":"cb-01","state":"stale\|collecting\|contact_required\|poor_quality\|usable","pulseRateBpm":<number or null>,"lastSeenMs":…}`. Stale after 45 s with nothing received; `poor_quality` below 0.8; pulse only when `usable` |
-| `GET /api/companion/reviewer/sessions` | Per session: state, event count, summary, linked/usable window counts, command and executed counts |
+| `GET /api/companion/status` | `{"device","state","problems":[…],"pulseRateBpm":<number or null>,"online","lastHeardMs","readingEndMs","readingAgeMs","sensors":{"pulse","motion"}}`. See the status rules below. Pulse is given **only** when `state` is `usable` |
+| `GET /api/companion/reviewer/sessions` | Per session: state, event count, summary, linked windows, `usableWindows` (clean), `vibrationOverlapWindows`, `prePulseBpm`, `postPulseBpm`, command and executed counts |
 | `POST /api/companion/_test/command` | **Test only:** `{"pattern","sessionId"?,"ttlMs"?,"commandId"?,"issuedAtMs"?}` publishes a command |
 | `GET /api/companion/_test/command/{id}` | **Test only:** the command plus all its acks |
 | `GET /api/companion/_test/windows/{boot}` | **Test only:** `{"count":n}` windows stored for that boot ID |
@@ -141,7 +154,24 @@ Event → vibration mapping: `rep` → `rep_pulse`; `ease_off` with `active:true
 
 A window is linked to the open session when its `windowEndMs ≥` the session's `startedAtMs`. Storage is **in memory**; it resets when the backend restarts.
 
-Environment variables: `MQTT_HOST` (127.0.0.1), `MQTT_PORT` (1883), `DEVICE_ID` (cb-01), `MIRRORWELL_DIST` (../../MirrorWell/dist), `CMD_TTL_MS` (3000), `STALE_AFTER_MS` (45000).
+**Status rules**, checked in this order (first match wins):
+
+| `state` | When |
+|---|---|
+| `offline` | the retained status says `online:false` (clean offline or Last Will) |
+| `stale` | nothing **from the band** (features, status, events or ack) for 45 s. The backend's own outgoing commands and test hooks don't count |
+| `collecting` | connected, but no reading yet |
+| `reading_stale` | the newest reading ended more than **30 s** ago, judged by the band's `windowEndMs`, not by when it arrived (a queued window flushed after an outage is real but not current) |
+| `contact_required` | the newest reading has no finger contact |
+| `vibration_overlap` | the only problem is `motorActive` (a cue just played) |
+| `poor_quality` | any other problem: `no_pulse`, `low_quality` (< 0.8), `timing_gap`, `motion_unavailable`, `moving`, `no_clock` |
+| `usable` | none of the above; this is the only state that returns `pulseRateBpm` |
+
+Readings dated more than 5 s in the future (a device clock error) are ignored. `problems` lists every reason the newest reading is not clean, using the same rule as `usableWindows`.
+
+**Vibration policy (Phase 1):** cues are frequent during reps (one every few seconds), so almost every 60 s window inside a session overlaps a vibration. Those windows are stored and counted (`vibrationOverlapWindows`) but **not** used as pulse readings. The comparison pulse is the last clean window ending in the 5 minutes before the session (`prePulseBpm`) and the first clean window starting in the 5 minutes after it (`postPulseBpm`). Once real hardware data exists, measure how long the motor actually disturbs the MAX30102 signal; only then consider using in-session windows with a margin around each cue cut out. Synthetic data cannot answer that question.
+
+Environment variables: `MQTT_HOST` (127.0.0.1), `MQTT_PORT` (1883), `DEVICE_ID` (cb-01), `MIRRORWELL_DIST` (../../MirrorWell/dist), `CMD_TTL_MS` (3000), `STALE_AFTER_MS` (45000), `READING_MAX_AGE_MS` (30000), `FUTURE_TOLERANCE_MS` (5000), `PRE_POST_WINDOW_MS` (300000).
 
 ## 5. Simulators
 
@@ -154,17 +184,21 @@ Environment variables: `MQTT_HOST` (127.0.0.1), `MQTT_PORT` (1883), `DEVICE_ID` 
   - `{"button":"stop"}`
   - `{"offlineMs":6000}`: drops the MQTT connection for that long while still producing windows
   - `{"clockValid":false}` / `{"clockValid":true}`
+  - `{"motionSensor":false}` / `{"motionSensor":true}`: the MPU6050 stops or starts giving samples (status changes to `missing` / back)
+- Like the ESP32, the simulator only queues commands in its MQTT callback and handles them in the main loop.
 
 **`backend-sample/fake_band.py`** is the older Python stand-in (no STOP or motion). Use `calm_band_sim` instead.
 
-## 6. Expected test results (21–24 Oct 2026)
+## 6. Expected test results (re-run 24 Oct 2026, after the review fixes)
 
 | Test | Command | Expected |
 |---|---|---|
-| Core unit tests | `cd firmware/host && make && ./test_core` | 20 passed, 0 failed |
-| Integration (band ↔ broker ↔ backend) | broker + backend + `calm_band_sim` (fast windows), then `python3 backend-sample/run_integration.py` | 13/13 |
-| Firmware scenarios | **fresh** backend + same simulator, then `python3 firmware/host/firmware_scenarios.py` | 14/14 |
-| ESP32 compile | see `firmware/README.md` | sim 910,657 B (69 % flash), RAM 111,612 B (34 %); hardware 908,617 B |
-| Emulated ESP32 (QEMU 9.0.0, BENCH build) | see `firmware/README.md` | boots, prints readings (38 in 45 s), MPU6050 reported MISSING (QEMU has no MPU6050) |
+| 1. Core unit tests | `cd firmware/host && make && ./test_core` | 33 passed, 0 failed |
+| 2. Backend status rules | own backend: `DEVICE_ID=cb-check uvicorn app:app --port 8001`, then `BACKEND_URL=http://127.0.0.1:8001 DEVICE_ID=cb-check python3 backend-sample/backend_checks.py` | 11/11 |
+| 3. Integration (band ↔ broker ↔ backend) | broker + backend + `calm_band_sim` (fast windows), then `python3 backend-sample/run_integration.py` | 13/13 |
+| 4. Firmware scenarios | **fresh** backend + same simulator, then `python3 firmware/host/firmware_scenarios.py` | 22/22 |
+| ESP32 compile | see `firmware/README.md` | Wokwi/sim build 913,241 B (69 % flash); real-sensor build 911,293 B; RAM 34 % |
+| Emulated ESP32 (QEMU 9.0.0, BENCH build) | see `firmware/README.md` | boots, prints readings (42 in ~50 s), `motionValid:false` and quality ≤ 0.5 because QEMU has no MPU6050 |
+| Emulated ESP32, `MOTOR_SELFTEST=1` | see `firmware/README.md` | `RESULT PASS`: 6 motor edges, off at +1500 ms while `loop()` is blocked for 3 s |
 
-`scripts/run_all_tests.sh` runs the first three in order and restarts the backend between them. `run_integration.py` injects a future-dated "no contact" window, so the scenarios need a fresh backend.
+`scripts/run_all_tests.sh` runs suites 1–4. A suite counts as passed only if its process exits 0, its log has no `FAIL` line and no Python traceback, **and** its summary shows exactly the expected count. Otherwise the script prints `SOME SUITES FAILED` and exits 1. If a tool or Python package is missing, it exits 2 before running anything.

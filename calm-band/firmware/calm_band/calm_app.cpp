@@ -8,11 +8,19 @@
 //          RECORD (hold STOP at power-on) raw 100 Hz pulse + 32 Hz motion streamed over MQTT
 //          BENCH  (no Wi-Fi configured)   sensor values printed to Serial, no network
 //          Replay = SIM_PULSE build: synthetic pulse, windows labelled origin "replay"
+//
+// Two timing rules keep the motor safe even when the network code blocks (TLS handshakes and
+// reconnects can stall loop() for seconds):
+//   * the vibration pattern is driven by a 2 ms esp_timer, NOT by loop(), and that timer also
+//     forces the motor off if it has been on continuously for longer than Config::maxPatternMs;
+//   * nothing is published from inside the MQTT receive callback (arduino-mqtt forbids it — a
+//     QoS 1 publish there can deadlock). Commands are copied into a queue and handled in loop().
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <Wire.h>
 #include <MQTT.h>
+#include <esp_timer.h>
 #include <sys/time.h>
 #include <time.h>
 
@@ -30,7 +38,7 @@ using namespace calm;
 // ---------------------------------------------------------------- state
 static Config cfg;
 static Band* band;
-static CommandGate gate;
+static CommandGate gate(cfg);
 static HapticPlayer player;
 static Outbox outbox;
 #if SIM_PULSE
@@ -44,10 +52,50 @@ static MQTTClient mqtt(1024);   // 1 KB buffer: our largest message is ~400 byte
 static char boot[12];
 static char tFeatures[48], tStatus[48], tEvents[48], tCmd[48], tAck[48], tRaw[48];
 static char playingId[48] = "";
-static bool clockValid = false, recordMode = false, benchMode = false, mpuOk = false;
+static bool clockValid = false, recordMode = false, benchMode = false, mpuOk = false, pulseOk = SIM_PULSE;
+static uint32_t mpuFailStreak = 0, lastMpuRetry = 0;
 static uint32_t publishFailures = 0, lastReconnect = 0, nextMotionMs = 0, motionCount = 0;
 static volatile bool stopPressed = false;
 static volatile uint32_t lastStopIsr = 0;
+
+// Commands received in the MQTT callback, handled later in loop().
+static const int kCmdSlots = 4;
+static char cmdQueue[kCmdSlots][512];
+static size_t cmdLen[kCmdSlots];
+static int cmdHead = 0, cmdCount = 0;
+
+// Motor timer state. `player` is shared between loop() and the timer task, so every access
+// to it goes through motorMux.
+static portMUX_TYPE motorMux = portMUX_INITIALIZER_UNLOCKED;
+static esp_timer_handle_t motorTimer;
+static bool timerMotorOn = false;
+static uint32_t motorOnSince = 0;
+static volatile uint32_t forcedOffCount = 0;
+struct MotorEdge { bool on; uint32_t t; };
+static MotorEdge edges[16];
+static int edgeCount = 0;          // edges waiting for loop() to pass to band->setMotor()
+
+static void motorTick(void*) {   // runs in the esp_timer task, not in loop()
+  uint32_t now = millis();
+  portENTER_CRITICAL(&motorMux);
+  bool on;
+  if (stopPressed) { on = false; }                         // STOP pending → never re-energise
+  else {
+    on = player.tick(now);
+    if (on && timerMotorOn && now - motorOnSince > cfg.maxPatternMs) {
+      player.stop();                                       // backstop: continuous-on limit
+      on = false;
+      forcedOffCount++;
+    }
+  }
+  if (on != timerMotorOn) {
+    digitalWrite(PIN_MOTOR, on ? HIGH : LOW);
+    if (on) motorOnSince = now;
+    timerMotorOn = on;
+    if (edgeCount < 16) edges[edgeCount++] = {on, now};
+  }
+  portEXIT_CRITICAL(&motorMux);
+}
 
 // ---------------------------------------------------------------- time
 static int64_t epochMs() {
@@ -75,24 +123,41 @@ static bool pub(const char* topic, const char* msg, bool retain = false, int qos
 static void sendAck(const char* id, const char* result, const char* reason) {
   char b[256]; if (buildAck(cfg, boot, id, result, reason, epochMs(), b, sizeof b)) pub(tAck, b);
 }
+static const char* pulseHealth() { return SIM_PULSE ? "simulated" : (pulseOk ? "ok" : "missing"); }
+static const char* motionHealth() { return mpuOk ? "ok" : "missing"; }
 static void sendStatus(bool online) {
-  char b[256]; if (buildStatus(cfg, boot, online, clockValid, outbox.dropped(), publishFailures, b, sizeof b)) pub(tStatus, b, true);
+  char b[320];
+  if (buildStatus(cfg, boot, online, clockValid, outbox.dropped(), publishFailures, pulseHealth(), motionHealth(), b, sizeof b))
+    pub(tStatus, b, true);
 }
 
+// MQTT receive callback: copy only. No publishing here (see the note at the top of the file).
 static void onMessage(MQTTClient*, char topic[], char bytes[], int length) {
   if (strcmp(topic, tCmd) != 0) return;
+  if (cmdCount == kCmdSlots) return;                       // queue full: dropped, never late
+  int tail = (cmdHead + cmdCount) % kCmdSlots;
+  size_t n = (length > 0 && (size_t)length < sizeof cmdQueue[0]) ? (size_t)length : 0;  // oversize → malformed
+  memcpy(cmdQueue[tail], bytes, n);
+  cmdLen[tail] = n;
+  cmdCount++;
+}
+
+static void handleCommand(const char* payload, size_t len) {
   updateClockValid();
-  CmdDecision d = gate.check(bytes, (size_t)length, clockValid, epochMs());
+  CmdDecision d = gate.check(payload, len, clockValid, epochMs());
   if (d.result == CmdResult::Rejected) {
     Serial.printf("[band] reject %s %.8s\n", d.reason, d.commandId);
     if (d.commandId[0]) sendAck(d.commandId, "rejected", d.reason);
     return;
   }
   sendAck(d.commandId, "accepted", nullptr);
-  if (player.playing() && playingId[0]) sendAck(playingId, "stopped", "replaced");
-  player.start(d.pattern, millis(), cfg.maxPatternMs);
+  portENTER_CRITICAL(&motorMux);
+  bool replacing = player.playing();
+  player.start(d.pattern, millis(), d.durationMs);
+  portEXIT_CRITICAL(&motorMux);
+  if (replacing && playingId[0]) sendAck(playingId, "stopped", "replaced");
   snprintf(playingId, sizeof playingId, "%s", d.commandId);
-  Serial.printf("[band] BUZZ %s\n", patternName(d.pattern));
+  Serial.printf("[band] BUZZ %s (cap %u ms)\n", patternName(d.pattern), (unsigned)d.durationMs);
 }
 
 static void connectMqtt() {
@@ -187,7 +252,8 @@ void setup() {
   Wire.begin(PIN_SDA, PIN_SCL, I2C_HZ);
   mpuOk = mpuInit();
 #if !SIM_PULSE
-  if (pulseSensor.begin(Wire, I2C_HZ)) {
+  pulseOk = pulseSensor.begin(Wire, I2C_HZ);
+  if (pulseOk) {
     // 400 samples/s averaged by 4 → 100 samples/s; IR + red LEDs; 411 µs pulse width (18-bit).
     pulseSensor.setup(60, 4, 2, 400, 411, 4096);
   } else {
@@ -196,6 +262,37 @@ void setup() {
 #endif
   Serial.printf("[band] Calm Band %s boot %s mode %s, MPU6050 %s, pulse %s\n", DEVICE_ID, boot,
                 recordMode ? "RECORD" : "LIVE", mpuOk ? "ok" : "MISSING", SIM_PULSE ? "simulated" : "MAX30102");
+
+  // Motor pattern timer: independent of loop() and of any blocking network call.
+  esp_timer_create_args_t ta = {};
+  ta.callback = motorTick;
+  ta.name = "motor";
+  esp_timer_create(&ta, &motorTimer);
+  esp_timer_start_periodic(motorTimer, 2000);              // every 2 ms
+
+#if MOTOR_SELFTEST
+  // Test build only: start the longest pattern, then block this task for 3 s, as a stuck TLS
+  // handshake would. The motor timer must still end the pattern on time.
+  {
+    uint32_t t0 = millis();
+    portENTER_CRITICAL(&motorMux);
+    player.start(Pattern::SessionComplete, t0, cfg.maxPatternMs);
+    portEXIT_CRITICAL(&motorMux);
+    delay(3000);                                           // loop() is NOT running during this
+    portENTER_CRITICAL(&motorMux);
+    MotorEdge e[16]; int n = edgeCount; memcpy(e, edges, sizeof(MotorEdge) * n); edgeCount = 0;
+    bool stillOn = timerMotorOn;
+    portEXIT_CRITICAL(&motorMux);
+    uint32_t onMs = 0, lastOff = 0;
+    for (int i = 0; i < n; i++) {
+      Serial.printf("[selftest] motor %s at +%lu ms\n", e[i].on ? "ON " : "OFF", (unsigned long)(e[i].t - t0));
+      if (!e[i].on && i > 0) { onMs += e[i].t - e[i - 1].t; lastOff = e[i].t - t0; }
+    }
+    Serial.printf("[selftest] %d edges, motor on %lu ms total, last off at +%lu ms, still on after 3 s stall: %s\n",
+                  n, (unsigned long)onMs, (unsigned long)lastOff, stillOn ? "YES" : "no");
+    Serial.printf("[selftest] RESULT %s\n", (!stillOn && lastOff <= cfg.maxPatternMs + 10 && n == 6) ? "PASS" : "FAIL");
+  }
+#endif
 
   benchMode = strlen(WIFI_SSID) == 0;
   if (benchMode) {
@@ -226,9 +323,11 @@ void loop() {
 
   // 1. Local STOP first — independent of Wi-Fi, MQTT and the clock.
   if (stopPressed) {
-    stopPressed = false;
+    portENTER_CRITICAL(&motorMux);
     bool was = player.stop();
     digitalWrite(PIN_MOTOR, LOW);
+    stopPressed = false;                                   // cleared only after the player stopped
+    portEXIT_CRITICAL(&motorMux);
     band->setMotor(false, now);
     Serial.printf("[band] STOP pressed%s\n", was ? " — vibration stopped" : "");
     if (was && playingId[0]) { sendAck(playingId, "stopped", "local_stop"); playingId[0] = 0; }
@@ -239,15 +338,33 @@ void loop() {
   readPulse(now);
   while ((int32_t)(now - nextMotionMs) >= 0) {
     float ax, ay, az;
-    if (mpuOk && mpuRead(&ax, &ay, &az)) band->addMotionSample(nextMotionMs, ax, ay, az);
+    if (mpuOk) {
+      if (mpuRead(&ax, &ay, &az)) { band->addMotionSample(nextMotionMs, ax, ay, az); mpuFailStreak = 0; }
+      else if (++mpuFailStreak >= 32) {                    // ~1 s of failed reads → sensor lost
+        mpuOk = false; lastMpuRetry = now;
+        Serial.println("[band] MPU6050 stopped answering");
+        sendStatus(true);
+      }
+    }
     motionCount++; nextMotionMs = (uint32_t)((uint64_t)motionCount * 1000 / cfg.motionHz);
   }
+  if (!mpuOk && now - lastMpuRetry > 5000) {               // try to bring a lost sensor back
+    lastMpuRetry = now;
+    if (mpuInit()) { mpuOk = true; mpuFailStreak = 0; Serial.println("[band] MPU6050 back"); sendStatus(true); }
+  }
 
-  // 3. Vibration pattern runs locally; only start/stop/finish go over the network.
-  static bool wasOn = false;
-  bool on = player.tick(now);
-  if (on != wasOn) { digitalWrite(PIN_MOTOR, on ? HIGH : LOW); band->setMotor(on, now); wasOn = on; }
-  if (player.takeFinished() && playingId[0]) { sendAck(playingId, "executed", nullptr); playingId[0] = 0; }
+  // 3. Vibration runs on the motor timer. Here we only pass its on/off edges to the window
+  //    logic and report a pattern that finished.
+  MotorEdge pending[16]; int nEdges; bool finished; uint32_t forced;
+  portENTER_CRITICAL(&motorMux);
+  nEdges = edgeCount; memcpy(pending, edges, sizeof(MotorEdge) * nEdges); edgeCount = 0;
+  finished = player.takeFinished();
+  forced = forcedOffCount; forcedOffCount = 0;
+  portEXIT_CRITICAL(&motorMux);
+  for (int i = 0; i < nEdges; i++) band->setMotor(pending[i].on, pending[i].t);
+  if (forced) Serial.printf("[band] motor backstop cut-off fired (%u)\n", (unsigned)forced);
+  if (forced && playingId[0]) { sendAck(playingId, "stopped", "max_duration"); playingId[0] = 0; }
+  else if (finished && playingId[0]) { sendAck(playingId, "executed", nullptr); playingId[0] = 0; }
 
   // 4. Feature windows (LIVE). Offline → queue with original timestamps.
   Window w;
@@ -262,6 +379,12 @@ void loop() {
   if (!benchMode) {
     connectMqtt();
     mqtt.loop();
+    // Commands received during mqtt.loop() are handled (and acknowledged) here, outside the callback.
+    while (cmdCount) {
+      handleCommand(cmdQueue[cmdHead], cmdLen[cmdHead]);
+      cmdHead = (cmdHead + 1) % kCmdSlots;
+      cmdCount--;
+    }
     digitalWrite(PIN_STATUS_LED, mqtt.connected() ? HIGH : ((now / 250) % 2));
   }
   delay(1);

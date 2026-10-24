@@ -77,38 +77,136 @@ bool HapticPlayer::takeFinished() {
   return f;
 }
 
-// ================================================================ minimal JSON field readers
-// The backend sends a small flat object; these readers accept exactly that shape.
-static const char* findKey(const char* json, size_t len, const char* key) {
-  char pat[40];
-  snprintf(pat, sizeof pat, "\"%s\"", key);
-  size_t pl = strlen(pat);
-  for (size_t i = 0; i + pl <= len; i++) {
-    if (memcmp(json + i, pat, pl) == 0) {
-      const char* p = json + i + pl;
-      const char* end = json + len;
-      while (p < end && (*p == ' ' || *p == ':')) p++;
-      return p < end ? p : nullptr;
+// ================================================================ strict flat JSON parser
+// Accepts exactly one JSON object whose values are strings, numbers, true, false or null.
+// Anything else (truncated text, trailing bytes, nested objects/arrays, duplicate keys,
+// control characters in strings) is rejected, so a garbled command can never be "half read".
+namespace {
+struct Cursor { const char* p; const char* end; };
+void ws(Cursor& c) { while (c.p < c.end && (*c.p == ' ' || *c.p == '\t' || *c.p == '\n' || *c.p == '\r')) c.p++; }
+// Reads a JSON string into out (truncated to n-1 chars); *fullLen gets the decoded length.
+bool str(Cursor& c, char* out, size_t n, uint16_t* fullLen) {
+  if (c.p >= c.end || *c.p != '"') return false;
+  c.p++;
+  size_t k = 0, full = 0;
+  while (c.p < c.end && *c.p != '"') {
+    unsigned char ch = (unsigned char)*c.p++;
+    if (ch < 0x20) return false;                         // raw control char: not valid JSON
+    if (ch == '\\') {
+      if (c.p >= c.end) return false;
+      char e = *c.p++;
+      switch (e) {
+        case '"': case '\\': case '/': ch = (unsigned char)e; break;
+        case 'b': ch = '\b'; break; case 'f': ch = '\f'; break; case 'n': ch = '\n'; break;
+        case 'r': ch = '\r'; break; case 't': ch = '\t'; break;
+        case 'u':
+          for (int i = 0; i < 4; i++) {
+            if (c.p >= c.end) return false;
+            char h = *c.p++;
+            if (!((h >= '0' && h <= '9') || (h >= 'a' && h <= 'f') || (h >= 'A' && h <= 'F'))) return false;
+          }
+          ch = '?';                                        // not needed for commands; kept as a placeholder
+          break;
+        default: return false;
+      }
+    }
+    if (k + 1 < n) out[k++] = (char)ch;
+    full++;
+  }
+  if (c.p >= c.end) return false;                          // unterminated
+  c.p++;
+  if (n) out[k] = 0;
+  if (fullLen) *fullLen = (uint16_t)(full > 65535 ? 65535 : full);
+  return true;
+}
+bool num(Cursor& c, JsonField& f) {
+  const char* s = c.p;
+  bool neg = false, isInt = true;
+  if (c.p < c.end && *c.p == '-') { neg = true; c.p++; }
+  if (c.p >= c.end) return false;
+  if (*c.p == '0') c.p++;
+  else if (*c.p >= '1' && *c.p <= '9') { while (c.p < c.end && *c.p >= '0' && *c.p <= '9') c.p++; }
+  else return false;
+  int intDigits = (int)(c.p - s) - (neg ? 1 : 0);
+  if (c.p < c.end && *c.p == '.') {
+    isInt = false; c.p++;
+    if (c.p >= c.end || *c.p < '0' || *c.p > '9') return false;
+    while (c.p < c.end && *c.p >= '0' && *c.p <= '9') c.p++;
+  }
+  if (c.p < c.end && (*c.p == 'e' || *c.p == 'E')) {
+    isInt = false; c.p++;
+    if (c.p < c.end && (*c.p == '+' || *c.p == '-')) c.p++;
+    if (c.p >= c.end || *c.p < '0' || *c.p > '9') return false;
+    while (c.p < c.end && *c.p >= '0' && *c.p <= '9') c.p++;
+  }
+  f.isNum = true;
+  f.isInt = isInt && intDigits <= 18;                      // fits int64 without overflow
+  if (f.isInt) {
+    int64_t v = 0;
+    for (const char* q = s + (neg ? 1 : 0); q < c.p; q++) v = v * 10 + (*q - '0');
+    f.i = neg ? -v : v;
+  }
+  return true;
+}
+bool lit(Cursor& c, const char* w) {
+  size_t n = strlen(w);
+  if ((size_t)(c.end - c.p) < n || memcmp(c.p, w, n) != 0) return false;
+  c.p += n;
+  return true;
+}
+}  // namespace
+
+int parseFlatJson(const char* json, size_t len, JsonField* fields, int maxFields) {
+  if (!json) return -1;
+  for (size_t i = 0; i < len; i++) if (json[i] == 0) return -1;  // embedded NUL
+  Cursor c{json, json + len};
+  ws(c);
+  if (c.p >= c.end || *c.p != '{') return -1;
+  c.p++;
+  int n = 0;
+  ws(c);
+  if (c.p < c.end && *c.p == '}') { c.p++; }
+  else {
+    while (true) {
+      ws(c);
+      JsonField f{};
+      uint16_t keyLen = 0;
+      if (!str(c, f.key, sizeof f.key, &keyLen) || keyLen >= sizeof f.key) return -1;
+      ws(c);
+      if (c.p >= c.end || *c.p != ':') return -1;
+      c.p++;
+      ws(c);
+      if (c.p >= c.end) return -1;
+      char ch = *c.p;
+      if (ch == '"') { if (!str(c, f.str, sizeof f.str, &f.strLen)) return -1; f.isStr = true; }
+      else if (ch == '-' || (ch >= '0' && ch <= '9')) { if (!num(c, f)) return -1; }
+      else if (ch == 't') { if (!lit(c, "true")) return -1; }
+      else if (ch == 'f') { if (!lit(c, "false")) return -1; }
+      else if (ch == 'n') { if (!lit(c, "null")) return -1; }
+      else return -1;                                      // nested object/array or junk
+      for (int i = 0; i < n && i < maxFields; i++) if (!strcmp(fields[i].key, f.key)) return -1;  // duplicate key
+      if (n < maxFields) fields[n] = f;
+      n++;
+      ws(c);
+      if (c.p < c.end && *c.p == ',') { c.p++; continue; }
+      if (c.p < c.end && *c.p == '}') { c.p++; break; }
+      return -1;
     }
   }
+  ws(c);
+  if (c.p != c.end) return -1;                             // trailing bytes
+  return n > maxFields ? maxFields : n;
+}
+
+static const JsonField* field(const JsonField* f, int n, const char* key) {
+  for (int i = 0; i < n; i++) if (!strcmp(f[i].key, key)) return &f[i];
   return nullptr;
 }
 
-static bool readString(const char* json, size_t len, const char* key, char* out, size_t n) {
-  const char* p = findKey(json, len, key);
-  if (!p || *p != '"') return false;
-  p++;
-  size_t i = 0;
-  const char* end = json + len;
-  while (p < end && *p != '"' && i + 1 < n) out[i++] = *p++;
-  out[i] = 0;
-  return p < end && *p == '"' && i > 0;
-}
-
-static bool readInt64(const char* json, size_t len, const char* key, int64_t* out) {
-  const char* p = findKey(json, len, key);
-  if (!p || !(*p == '-' || (*p >= '0' && *p <= '9'))) return false;
-  *out = strtoll(p, nullptr, 10);
+static bool validId(const JsonField* f) {
+  if (!f || !f->isStr || f->strLen == 0 || f->strLen > 47) return false;
+  for (const char* p = f->str; *p; p++)
+    if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '-' || *p == '_')) return false;
   return true;
 }
 
@@ -129,18 +227,33 @@ CmdDecision CommandGate::check(const char* json, size_t len, bool clockValid, in
   CmdDecision d{};
   d.result = CmdResult::Rejected;
   d.pattern = Pattern::None;
-  char pat[32] = {};
-  int64_t expires = 0;
-  if (!readString(json, len, "commandId", d.commandId, sizeof d.commandId)) { d.reason = "malformed"; return d; }
+  d.reason = "malformed";
+  JsonField f[12];
+  int n = parseFlatJson(json, len, f, 12);
+  if (n < 0) return d;
+  const JsonField* id = field(f, n, "commandId");
+  if (!validId(id)) return d;
+  memcpy(d.commandId, id->str, id->strLen);  // validId() guarantees strLen ≤ 47
+  d.commandId[id->strLen] = 0;
   if (seenBefore(d.commandId)) { d.reason = "duplicate"; return d; }
   remember(d.commandId);
-  if (!readString(json, len, "pattern", pat, sizeof pat) || !readInt64(json, len, "expiresAtMs", &expires)) {
-    d.reason = "malformed"; return d;
-  }
+  const JsonField* pat = field(f, n, "pattern");
+  const JsonField* iss = field(f, n, "issuedAtMs");
+  const JsonField* exp = field(f, n, "expiresAtMs");
+  const JsonField* dur = field(f, n, "maxDurationMs");
+  if (!pat || !pat->isStr || !iss || !iss->isInt || !exp || !exp->isInt) return d;      // malformed
+  if (dur && !dur->isInt) return d;                                                     // malformed
   if (!clockValid) { d.reason = "no_clock"; return d; }
-  if (now > expires) { d.reason = "expired"; return d; }
-  d.pattern = patternFromName(pat);
+  if (exp->i <= iss->i || exp->i - iss->i > (int64_t)cfg_.maxCommandTtlMs ||
+      iss->i > now + (int64_t)cfg_.maxClockSkewMs) { d.reason = "bad_time"; return d; }
+  if (now > exp->i || now - iss->i > (int64_t)cfg_.maxCommandAgeMs) { d.reason = "expired"; return d; }
+  d.pattern = patternFromName(pat->strLen < sizeof pat->str ? pat->str : nullptr);
   if (d.pattern == Pattern::None) { d.reason = "bad_pattern"; return d; }
+  d.durationMs = cfg_.maxPatternMs;
+  if (dur) {
+    if (dur->i < 1 || dur->i > (int64_t)cfg_.maxPatternMs) { d.pattern = Pattern::None; d.reason = "bad_duration"; return d; }
+    d.durationMs = (uint32_t)dur->i;
+  }
   d.result = CmdResult::Accepted;
   d.reason = nullptr;
   return d;
@@ -236,9 +349,15 @@ bool Band::poll(uint32_t t, bool clockValid, int64_t epochNow, Window* out) {
     if (s < lastSec && b.pulseN < cfg_.pulseHz * 8 / 10) w.timingGap = true;
   }
   w.contact = pulseN > 0 && (float)contactN / pulseN >= cfg_.contactFractionMin;
+  // Motion is only judged when enough samples arrived. A missing or failed MPU6050 must never
+  // look like "perfectly still".
+  float expectedMotion = (float)cfg_.motionHz * cfg_.windowMs / 1000.0f;
+  w.motionCoverage = expectedMotion > 0 ? (float)motionN / expectedMotion : 0;
+  if (w.motionCoverage > 1) w.motionCoverage = 1;
+  w.motionValid = w.motionCoverage >= cfg_.motionCoverageMin;
   w.motionRmsG = motionN ? sqrtf(motionSq / motionN) : 0;
   w.motionMaxG = motionMax;
-  w.moving = w.motionRmsG > cfg_.movingRmsG;
+  w.moving = w.motionValid && w.motionRmsG > cfg_.movingRmsG;
   w.motorActive = motorMs > 0 || motor_;
 
   // Beat intervals inside the window.
@@ -267,7 +386,7 @@ bool Band::poll(uint32_t t, bool clockValid, int64_t epochNow, Window* out) {
   }
   float q = w.contact ? w.validBeatFraction : 0.0f;
   if (!w.hasPulse) q = q < 0.5f ? q : 0.5f;
-  if (w.moving) q = q < 0.5f ? q : 0.5f;
+  if (w.moving || !w.motionValid) q = q < 0.5f ? q : 0.5f;  // can't confirm a still arm → not usable
   w.quality = q;
   *out = w;
   return true;
@@ -275,7 +394,14 @@ bool Band::poll(uint32_t t, bool clockValid, int64_t epochNow, Window* out) {
 
 // ================================================================ messages
 size_t buildFeatures(const Config& c, const char* boot, const Window& w, bool replay, char* buf, size_t n) {
-  char pulse[24], sd[24];
+  char pulse[24], sd[24], rms[24], mx[24], moving[8];
+  if (w.motionValid) {
+    snprintf(rms, sizeof rms, "%.4f", w.motionRmsG);
+    snprintf(mx, sizeof mx, "%.3f", w.motionMaxG);
+    strcpy(moving, w.moving ? "true" : "false");
+  } else {
+    strcpy(rms, "null"); strcpy(mx, "null"); strcpy(moving, "null");  // unknown, not "still"
+  }
   if (w.hasPulse) {
     snprintf(pulse, sizeof pulse, "%.1f", w.pulseRateBpm);
     snprintf(sd, sizeof sd, "%.2f", w.pulseRateSdBpm);
@@ -286,12 +412,12 @@ size_t buildFeatures(const Config& c, const char* boot, const Window& w, bool re
       "{\"schema\":1,\"dev\":\"%s\",\"boot\":\"%s\",\"seq\":%lu,\"origin\":\"%s\","
       "\"windowStartMs\":%lld,\"windowEndMs\":%lld,\"clockValid\":%s,"
       "\"contact\":%s,\"quality\":%.2f,\"pulseRateBpm\":%s,\"pulseRateSdBpm\":%s,"
-      "\"validBeatFraction\":%.2f,\"validIbis\":%u,\"motionRms_g\":%.4f,\"motionMax_g\":%.3f,"
-      "\"moving\":%s,\"motorActive\":%s,\"timingGap\":%s}",
+      "\"validBeatFraction\":%.2f,\"validIbis\":%u,\"motionValid\":%s,\"motionCoverage\":%.2f,"
+      "\"motionRms_g\":%s,\"motionMax_g\":%s,\"moving\":%s,\"motorActive\":%s,\"timingGap\":%s}",
       c.deviceId, boot, (unsigned long)w.seq, replay ? "replay" : "live",
       (long long)w.windowStartMs, (long long)w.windowEndMs, w.clockValid ? "true" : "false",
       w.contact ? "true" : "false", w.quality, pulse, sd, w.validBeatFraction, (unsigned)w.validIbis,
-      w.motionRmsG, w.motionMaxG, w.moving ? "true" : "false", w.motorActive ? "true" : "false",
+      w.motionValid ? "true" : "false", w.motionCoverage, rms, mx, moving, w.motorActive ? "true" : "false",
       w.timingGap ? "true" : "false");
   return (k > 0 && (size_t)k < n) ? (size_t)k : 0;
 }
@@ -306,10 +432,11 @@ size_t buildAck(const Config& c, const char* boot, const char* id, const char* r
 }
 
 size_t buildStatus(const Config& c, const char* boot, bool online, bool clockValid, uint32_t dropped,
-                   uint32_t fails, char* buf, size_t n) {
-  int k = snprintf(buf, n, "{\"dev\":\"%s\",\"boot\":\"%s\",\"online\":%s,\"clockValid\":%s,\"droppedWindows\":%lu,\"publishFailures\":%lu}",
+                   uint32_t fails, const char* pulseSensor, const char* motionSensor, char* buf, size_t n) {
+  int k = snprintf(buf, n, "{\"dev\":\"%s\",\"boot\":\"%s\",\"online\":%s,\"clockValid\":%s,\"droppedWindows\":%lu,"
+                   "\"publishFailures\":%lu,\"pulseSensor\":\"%s\",\"motionSensor\":\"%s\"}",
                    c.deviceId, boot, online ? "true" : "false", clockValid ? "true" : "false",
-                   (unsigned long)dropped, (unsigned long)fails);
+                   (unsigned long)dropped, (unsigned long)fails, pulseSensor, motionSensor);
   return (k > 0 && (size_t)k < n) ? (size_t)k : 0;
 }
 

@@ -15,8 +15,7 @@ This package has everything needed to check that data flows from the band, throu
 | `firmware/wokwi/` + `firmware/build/wokwi/` | Wokwi project and its ready-made 4 MB merged firmware image |
 | `firmware/results/` | Outputs from the reference run (24 Oct 2026) |
 | `firmware/docs/wiring.*` | Wiring diagram |
-| `backend-sample/` | FastAPI companion backend sample (`backend/app.py`), `run_integration.py`, the older `fake_band.py`, and `CODEX_BRIEF.md` |
-| `mirrorwell-patch/companion-spike.patch` | MirrorWell companion bridge spike (3 files, +306 lines) |
+| `backend-sample/` | FastAPI companion backend sample (`backend/app.py`), `backend_checks.py` (status rules), `run_integration.py`, the older `fake_band.py`, and `CODEX_BRIEF.md` |
 | `scripts/run_all_tests.sh` | One command that runs all three suites |
 
 ## Quick start (Ubuntu or Debian)
@@ -27,7 +26,7 @@ pip install fastapi uvicorn paho-mqtt httpx
 ./scripts/run_all_tests.sh
 ```
 
-Expected output: `20 passed, 0 failed`, then `13/13 checks passed`, then `14/14 firmware checks passed`, and finally `ALL SUITES PASSED`. Logs go to `test-logs/`. The script uses ports 1883 and 8000, and it reuses an MQTT broker that's already running on 1883.
+Expected output: `33 passed, 0 failed`, `11/11 backend checks passed`, `13/13 checks passed`, `22/22 firmware checks passed`, and finally `ALL SUITES PASSED`. The script checks exit codes, `FAIL` lines, Python tracebacks and the exact counts, so it can't report success when a suite crashed. Logs go to `test-logs/`. The script uses ports 1883, 8000 and 8001, and it reuses an MQTT broker that's already running on 1883.
 
 ## Running pieces by hand
 
@@ -46,17 +45,9 @@ Restart the backend before `firmware/host/firmware_scenarios.py`. `run_integrati
 
 To use a different broker, set `MQTT_HOST`, `MQTT_PORT`, `MQTT_USER` and `MQTT_PASS` on both the simulator and the backend. TLS (EMQX on port 8883) is implemented on the ESP32 but **not on the simulator or the sample backend**.
 
-## MirrorWell patch
+## MirrorWell companion bridge
 
-```bash
-cd MirrorWell
-git checkout -b spike/companion-sample 4d48705     # base: "release: calibration intro + camera-primary session…"
-git apply --check mirrorwell-patch/companion-spike.patch && git apply mirrorwell-patch/companion-spike.patch
-npm run test -- companion-bridge
-VITE_COMPANION_ENABLED=true npm run build          # then point MIRRORWELL_DIST at ./dist
-```
-
-The patch was checked against commit 4d48705 and applies cleanly. Companion mode is off unless `VITE_COMPANION_ENABLED=true` is set. The bridge only calls same-origin `/api/companion/*`, so the no-network rule still holds.
+The bridge itself is in this repo: `src/companion/companionBridge.ts`, plus one hook in `src/screens/session/useSessionScreen.ts`, plus `tests/unit/companion-bridge.test.ts`. It's off unless `VITE_COMPANION_ENABLED=true` is set at build time, and it only calls same-origin `/api/companion/*`, so the no-network rule still holds. To serve the app from the sample backend, run `VITE_COMPANION_ENABLED=true npm run build` and set `MIRRORWELL_DIST` to the `dist/` folder.
 
 ## Building the ESP32 firmware
 
@@ -76,4 +67,4 @@ Use the Arduino IDE: install "esp32 by Espressif" 2.0.17 and point it at the lib
 - real sensors
 - motor interference on real hardware
 
-Windows that overlap a vibration are marked `motorActive:true` and should be excluded or flagged downstream; their quality is **not** reduced automatically.
+Windows that overlap a vibration are marked `motorActive:true`. The backend does not use them as pulse readings: it reports a clean pulse from just before and just after the session instead (CONTRACT §4, vibration policy).

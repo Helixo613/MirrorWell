@@ -25,6 +25,11 @@
 #define ENABLE_RECORD_BOOT 1
 #endif
 
+// MOTOR_SELFTEST 1: test build that checks the motor timer keeps working while loop() is blocked.
+#ifndef MOTOR_SELFTEST
+#define MOTOR_SELFTEST 0
+#endif
+
 #define MPU6050_ADDR 0x68
 #define I2C_HZ 100000      // 100 kHz: tolerant of the 30 cm sensor wires in the desk-hub layout
 #define RECONNECT_EVERY_MS 5000

@@ -1,6 +1,7 @@
 """End-to-end check of the companion path WITHOUT a camera:
 browser bridge payloads (same shapes the TS bridge sends) -> FastAPI -> MQTT -> fake band -> ack.
-Assumes mosquitto, the backend (port 8000) and fake_band.py (fast hop) are already running.
+Assumes mosquitto, the backend (port 8000) and the simulated band (firmware/host/calm_band_sim,
+fast windows) are already running.
 """
 import json
 import subprocess
@@ -99,7 +100,8 @@ check("haptic commands executed during session", s["hapticExecuted"] >= 3, f"{s[
 
 # 10. Contact lost -> status says so and reports NO pulse value (missing != calm)
 nocontact = {"schema": 1, "dev": "cb-01", "boot": "ncboot", "seq": 1, "windowStartMs": 0,
-             "windowEndMs": int(time.time() * 1000) + 60_000, "contact": False, "quality": 0.0, "pulseRateBpm": None}
+             "windowEndMs": int(time.time() * 1000) + 2_000, "clockValid": True, "contact": False, "quality": 0.0,
+             "pulseRateBpm": None}
 subprocess.run(["mosquitto_pub", "-t", "calmband/cb-01/features", "-m", json.dumps(nocontact), "-q", "1"], check=True)
 time.sleep(0.5)
 st = httpx.get(f"{B}/api/companion/status").json()

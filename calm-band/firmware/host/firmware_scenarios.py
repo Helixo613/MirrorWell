@@ -22,6 +22,8 @@ def check(name, ok, detail=""):
 
 
 def on_msg(c, u, m):
+    if not (m.topic.endswith("/features") or m.topic.endswith("/ack")):
+        return                       # cmd/sim/status echoes (some tests send deliberately broken text)
     body = json.loads(m.payload)
     with lock:
         if m.topic.endswith("/features"):
@@ -143,6 +145,51 @@ check("no sequence gaps, delivered in order", seqs == list(range(seqs[0], seqs[0
 a = acks_for(stale, wait=1.0)
 check("command sent while offline never buzzes after reconnect", not any(x["result"] == "executed" for x in a),
       ",".join(x["result"] for x in a) or "never delivered")
+
+# 8. Command validation on the band: broken JSON, missing issue time, ancient issue time, long duration
+def raw_cmd(text):
+    cli.publish(f"calmband/{DEV}/cmd", text, qos=1)
+
+cid = f"raw-{uuid.uuid4().hex[:8]}"
+now_ms = int(time.time() * 1000)
+raw_cmd(json.dumps({"commandId": cid, "pattern": "rep_pulse", "expiresAtMs": now_ms + 3000}))
+a = acks_for(cid, wait=2)
+check("command without issuedAtMs → rejected malformed", any(x.get("reason") == "malformed" for x in a),
+      ",".join(f"{x['result']}/{x.get('reason')}" for x in a) or "no ack")
+cid = f"raw-{uuid.uuid4().hex[:8]}"
+raw_cmd('{"commandId":"%s","pattern":"rep_pulse","issuedAtMs":%d,"expiresAtMs":%d} junk' % (cid, now_ms, now_ms + 3000))
+a = acks_for(cid, wait=2)
+check("non-JSON command never buzzes", not any(x["result"] in ("accepted", "executed") for x in a),
+      ",".join(x["result"] for x in a) or "ignored")
+cid = command("rep_pulse", ttl_ms=86_400_000 + 3000, issued=int(time.time() * 1000) - 86_400_000)
+a = acks_for(cid, wait=2)
+check("ancient issuedAtMs with future expiry → rejected bad_time", any(x.get("reason") == "bad_time" for x in a),
+      ",".join(f"{x['result']}/{x.get('reason')}" for x in a))
+cid = f"raw-{uuid.uuid4().hex[:8]}"
+now_ms = int(time.time() * 1000)
+raw_cmd(json.dumps({"commandId": cid, "pattern": "rep_pulse", "maxDurationMs": 9000, "issuedAtMs": now_ms,
+                    "expiresAtMs": now_ms + 3000}))
+a = acks_for(cid, wait=2)
+check("maxDurationMs above the 1500 ms cap → rejected bad_duration", any(x.get("reason") == "bad_duration" for x in a))
+
+# 9. Motion sensor failure is reported, not read as "still"
+status_msgs = []
+def on_status(c, u, m):
+    if m.topic.endswith("/status"):
+        status_msgs.append(json.loads(m.payload))
+cli.message_callback_add(f"calmband/{DEV}/status", on_status)
+sim({"motionSensor": False}); time.sleep(6)
+f = latest_feature(time.time() * 1000 - 800)
+check("motion sensor lost → window motionValid false, motion null, quality ≤ 0.5",
+      f and f.get("motionValid") is False and f.get("motionRms_g") is None and f["quality"] <= 0.5,
+      f"motionValid {f and f.get('motionValid')}, quality {f and f['quality']}")
+check("motion sensor lost → status reports motionSensor missing",
+      any(s.get("motionSensor") == "missing" for s in status_msgs))
+st = httpx.get(f"{B}/api/companion/status").json()
+check("backend does not call it usable", st["state"] == "poor_quality" and "motion_unavailable" in st["problems"], st["state"])
+sim({"motionSensor": True}); time.sleep(6)
+f = latest_feature(time.time() * 1000 - 800)
+check("motion sensor back → motionValid true again", f and f.get("motionValid") is True)
 
 print(f"\n{sum(results)}/{len(results)} firmware checks passed")
 sys.exit(0 if all(results) else 1)

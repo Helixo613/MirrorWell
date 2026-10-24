@@ -1,0 +1,5 @@
+test-logs/
+__pycache__/
+firmware/calm_band/secrets.h
+firmware/host/test_core
+firmware/host/calm_band_sim
