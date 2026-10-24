@@ -29,6 +29,11 @@ import {
   type HoldGuide,
 } from '@/screens/session/holdGuide';
 import type { SummaryLocationState } from '@/types/summary';
+import {
+  attachCompanion,
+  companionEnabledAtBuild,
+  sameOriginTransport,
+} from '@/companion/companionBridge';
 
 export type SessionScreenPhase =
   | 'loading'
@@ -357,6 +362,18 @@ export function useSessionScreen(): UseSessionScreenResult {
       for (const unsub of unsubscribers) unsub();
     };
   }, [navigate]);
+
+  // SPIKE: opt-in Calm Band companion. Inert unless the build sets VITE_COMPANION_ENABLED=true;
+  // never for demo sessions. Subscribes to the same closed event surface as the UI above.
+  useEffect(() => {
+    const handle = attachCompanion({
+      on: SessionController.on,
+      transport: sameOriginTransport,
+      enabled: companionEnabledAtBuild,
+      isDemo,
+    });
+    return () => handle.detach();
+  }, [isDemo]);
 
   // REST countdown — derived from the event stream (there is no getRestEndsAt). Display-only; the
   // controller auto-advances REST on its own frame timestamps.
