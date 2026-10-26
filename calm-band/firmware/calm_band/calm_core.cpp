@@ -318,6 +318,11 @@ void Band::notePulseLoss(uint32_t t, uint16_t count) {
   b.lost = (uint16_t)(b.lost + count);
 }
 
+void Band::resetPulse(uint32_t t) {
+  dcInit_ = false; envMax_ = 0; lastBeat_ = 0; lp_ = prevLp_ = prevSlope_ = 0;
+  notePulseLoss(t, 1);
+}
+
 void Band::setMotor(bool on, uint32_t t) {
   if (on == motor_) return;
   if (on) motorSince_ = t;
@@ -397,6 +402,56 @@ bool Band::poll(uint32_t t, bool clockValid, int64_t epochNow, Window* out) {
   w.quality = q;
   *out = w;
   return true;
+}
+
+// ================================================================ contact, health, FIFO
+bool ContactTracker::update(uint32_t t, bool raw) {
+  if (!candSet_ || raw != cand_) { cand_ = raw; candSet_ = true; since_ = t; }
+  if ((!known_ || cand_ != on_) && t - since_ >= holdMs_) {
+    on_ = cand_; known_ = true;
+    return true;
+  }
+  return false;
+}
+
+bool SensorHealth::report(bool success, uint32_t t) {
+  if (success) { streak_ = 0; return false; }
+  if (!ok_) return false;
+  if (++streak_ >= failLimit_) { ok_ = false; streak_ = 0; lastTry_ = t; return true; }
+  return false;
+}
+
+bool SensorHealth::retryDue(uint32_t t) {
+  if (ok_ || t - lastTry_ < retryMs_) return false;
+  lastTry_ = t;
+  return true;
+}
+
+FifoResult drainMax30102(PulseBus& bus, uint32_t now, uint32_t spacing, PulseSink sink, void* ctx) {
+  FifoResult r{false, 0, 0};
+  uint8_t wr, ovf, rd;
+  if (!bus.read8(0x04, &wr) || !bus.read8(0x05, &ovf) || !bus.read8(0x06, &rd)) return r;
+  wr &= 31; rd &= 31; ovf &= 31;
+  int n = (wr - rd) & 31;
+  if (ovf) n = 32;                       // overflow implies a full FIFO (write pointer == read pointer)
+  r.lost = ovf;
+  uint32_t tOldest = now - (uint32_t)(n > 0 ? n - 1 : 0) * spacing;
+  const int per = 6, maxBatch = 20;      // 120 bytes: under the ESP32 Wire buffer (128)
+  uint8_t buf[maxBatch * per];
+  while (r.samples < n) {
+    int k = n - r.samples < maxBatch ? n - r.samples : maxBatch;
+    int got = bus.readBytes(0x07, buf, k * per);
+    int complete = got > 0 ? got / per : 0;
+    for (int i = 0; i < complete; i++) {
+      const uint8_t* b = buf + i * per + 3;  // skip red, take IR
+      uint32_t ir = (((uint32_t)b[0] << 16) | ((uint32_t)b[1] << 8) | b[2]) & 0x3FFFF;
+      sink(ctx, tOldest + (uint32_t)r.samples * spacing, (float)ir);
+      r.samples++;
+    }
+    if (got != k * per) return r;        // partial or failed burst: ok stays false
+  }
+  r.ok = true;
+  return r;
 }
 
 // ================================================================ messages

@@ -12,6 +12,7 @@ Storage is an in-memory dict here; in the real build these writes go to Supabase
 from __future__ import annotations
 
 import json
+import math
 import os
 import threading
 import time
@@ -54,7 +55,7 @@ db = {
     "sessions": {},        # companionSessionId -> session dict
     "feature_windows": {}, # (device, boot, seq) -> window   (unique key = duplicate guard)
     "commands": {},        # commandId -> command + acks
-    "device": {"lastHeardMs": None, "status": None, "boot": None},
+    "device": {"lastHeardMs": None, "status": None, "boot": None, "contact": None},
     "rejected": {"count": 0, "last": None},   # band messages that failed validation
 }
 active_session: dict = {"id": None}
@@ -84,7 +85,12 @@ def _int(v):
 
 
 def _num(v):
-    return isinstance(v, (int, float)) and not isinstance(v, bool)
+    # finite only: NaN / Infinity would pass a range check and then break JSON responses
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def _str_in(v, allowed) -> bool:
+    return isinstance(v, str) and v in allowed   # type first: [] or {} in a set raises TypeError
 
 
 FEATURE_REQUIRED = {"dev": str, "boot": str, "seq": _int, "windowStartMs": _int, "windowEndMs": _int,
@@ -109,7 +115,7 @@ def validate(kind: str, body) -> str | None:
     """Returns why the message is invalid, or None if it can be used."""
     if not isinstance(body, dict):
         return "not an object"
-    if "dev" in body and body["dev"] != DEVICE_ID:
+    if "dev" in body and not (isinstance(body["dev"], str) and body["dev"] == DEVICE_ID):
         return "wrong device"
     if kind == "features":
         for k, rule in FEATURE_REQUIRED.items():
@@ -130,14 +136,23 @@ def validate(kind: str, body) -> str | None:
         if "boot" in body and not (isinstance(body["boot"], str) and 0 < len(body["boot"]) <= 16):
             return "bad boot"
         for k in ("pulseSensor", "motionSensor"):
-            if k in body and body[k] not in SENSOR_STATES:
+            if k in body and not _str_in(body[k], SENSOR_STATES):
+                return f"bad {k}"
+        for k in ("droppedWindows", "publishFailures"):
+            if k in body and not _int(body[k]):
                 return f"bad {k}"
     elif kind == "ack":
-        if not isinstance(body.get("commandId"), str) or body.get("result") not in ACK_RESULTS:
+        if not isinstance(body.get("commandId"), str) or not _str_in(body.get("result"), ACK_RESULTS):
             return "bad commandId/result"
+        if body.get("reason") is not None and not isinstance(body["reason"], str):
+            return "bad reason"
     elif kind == "events":
         if not isinstance(body.get("type"), str):
             return "bad type"
+        if "detail" in body and not isinstance(body["detail"], str):
+            return "bad detail"
+        if body["type"] == "contact" and not (_str_in(body.get("detail"), {"on", "off"}) and _int(body.get("atMs"))):
+            return "bad contact event"
     return None
 
 
@@ -147,24 +162,30 @@ def _reject(reason: str):
         db["rejected"]["last"] = reason
 
 
+def _no_constants(name):
+    raise ValueError(f"{name} is not valid JSON")       # json.loads would otherwise accept NaN/Infinity
+
+
 def on_message(client, userdata, msg):
-    kind = msg.topic.rsplit("/", 1)[-1]
-    if kind not in BAND_TOPICS:
-        return  # our own outgoing commands (and test hooks) echo back on the wildcard subscription
-    if not msg.payload:
-        return  # an empty retained message is how a retained status is cleared
+    # ONE error boundary around parse, validation and storage: no message can stop reception.
+    kind = "?"
     try:
-        body = json.loads(msg.payload)
-    except (ValueError, UnicodeDecodeError):
-        _reject(f"{kind}: not JSON")
-        return
-    why = validate(kind, body)
-    if why:
-        _reject(f"{kind}: {why}")
-        return
-    try:
+        kind = msg.topic.rsplit("/", 1)[-1]
+        if kind not in BAND_TOPICS:
+            return  # our own outgoing commands (and test hooks) echo back on the wildcard subscription
+        if not msg.payload:
+            return  # an empty retained message is how a retained status is cleared
+        try:
+            body = json.loads(msg.payload, parse_constant=_no_constants)
+        except (ValueError, UnicodeDecodeError, RecursionError):
+            _reject(f"{kind}: not JSON")
+            return
+        why = validate(kind, body)
+        if why:
+            _reject(f"{kind}: {why}")
+            return
         _store(kind, body)
-    except Exception as e:  # never let one message stop the MQTT loop
+    except Exception as e:  # anything unexpected is counted, never raised into the MQTT loop
         _reject(f"{kind}: {type(e).__name__}")
 
 
@@ -181,15 +202,16 @@ def _store(kind: str, body: dict):
             if key in db["feature_windows"]:
                 return  # duplicate delivery (QoS 1 can resend) -> ignored
             body["receivedAtMs"] = now_ms()
-            # Link to the open session only if the window's own time falls inside it.
-            sid = active_session["id"]
-            s = db["sessions"].get(sid) if sid else None
-            body["companionSessionId"] = sid if s and body["windowEndMs"] >= s["startedAtMs"] else None
+            # Session association is by the window's own time (see session_windows), so a window
+            # queued offline and delivered after the session ended still belongs to it.
             db["feature_windows"][key] = body
         elif kind == "status":
             db["device"]["status"] = body
             if body.get("boot"):
                 db["device"]["boot"] = body["boot"]   # the band's current boot (it announces it on connect)
+        elif kind == "events" and body["type"] == "contact":
+            # Immediate finger on/off from the band (debounced ~1 s), separate from the 60 s windows.
+            db["device"]["contact"] = {"on": body["detail"] == "on", "atMs": body["atMs"], "boot": body.get("boot")}
         elif kind == "ack":
             cmd = db["commands"].get(body.get("commandId"))
             if cmd is not None:
@@ -344,6 +366,10 @@ def status():
         windows = plausible_windows(now, boot)       # current boot only
         latest = windows[-1] if windows else None
         rejected = dict(db["rejected"])
+        live = db["device"]["contact"]
+    if live and boot and live.get("boot") not in (None, boot):
+        live = None                                   # an event from a previous boot
+    live_contact = live["on"] if live else None
     online = dev_status.get("online")
     sensors = {"pulse": dev_status.get("pulseSensor"), "motion": dev_status.get("motionSensor")}
     missing = [k for k, v in sensors.items() if v == "missing"]
@@ -357,12 +383,15 @@ def status():
         state = "stale"
     elif missing:
         state = "sensor_missing"      # the band says a sensor is gone: no reading can be trusted
+    elif live_contact is False:
+        state = "contact_required"    # immediate: from the band's contact event, not the 60 s window
     elif latest is None:
         state = "collecting"
     elif age > READING_MAX_AGE_MS:
         state = "reading_stale"
     elif "no_contact" in problems:
-        state = "contact_required"
+        # finger is back (live) but no clean 60 s window yet → wait; otherwise ask for contact
+        state = "settling" if live_contact else "contact_required"
     elif problems == ["vibration_overlap"]:
         state = "vibration_overlap"   # cue just played; pulse is withheld, see CONTRACT §4
     elif problems:
@@ -380,10 +409,19 @@ def status():
         "readingEndMs": latest["windowEndMs"] if latest else None,
         "readingAgeMs": age,
         "sensors": sensors,
+        "contact": live_contact,          # immediate finger on/off (None until the band reports it)
         "boot": boot,
         "rejectedMessages": rejected["count"],
         "lastRejectReason": rejected["last"],
     }
+
+
+def session_windows(s: dict) -> list[dict]:
+    """Windows that belong to a session, by the band's own timestamps (whenever they arrived):
+    ending after the session started and starting before it ended (or it is still open)."""
+    start, end = s["startedAtMs"], s.get("endedAtMs")
+    return [w for w in db["feature_windows"].values()
+            if w["windowEndMs"] > start and (end is None or w["windowStartMs"] < end)]
 
 
 @app.get("/api/companion/reviewer/sessions")
@@ -391,7 +429,7 @@ def reviewer_sessions():
     with lock:
         out = []
         for s in db["sessions"].values():
-            linked = [w for w in db["feature_windows"].values() if w.get("companionSessionId") == s["id"]]
+            linked = session_windows(s)
             usable = [w for w in linked if is_clean(w)]
             # Vibration policy (Phase 1): cues are frequent during reps, so in-session windows are
             # mostly vibration-overlapped and are NOT used as pulse readings. The comparison is

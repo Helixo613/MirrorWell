@@ -4,10 +4,10 @@
 # traceback, and (c) its summary line shows exactly the expected number of checks.
 #
 #   suite                     program                                    expected
-#   1 core unit tests         firmware/host/test_core                    35 passed, 0 failed
-#   2 backend status checks   backend-sample/backend_checks.py           19/19
+#   1 core unit tests         firmware/host/test_core                    48 passed, 0 failed
+#   2 backend status checks   backend-sample/backend_checks.py           26/26
 #   3 integration             backend-sample/run_integration.py          13/13
-#   4 firmware scenarios      firmware/host/firmware_scenarios.py        22/22
+#   4 firmware scenarios      firmware/host/firmware_scenarios.py        23/23
 #
 # Needs: g++, make, libmosquitto-dev, mosquitto + mosquitto-clients, python3 with
 #        fastapi uvicorn paho-mqtt httpx.  (Debian/Ubuntu:
@@ -50,7 +50,7 @@ run_suite() {
 echo "== build host programs"
 make -C "$ROOT/firmware/host" -B >"$LOGS/build.txt" 2>&1 || { cat "$LOGS/build.txt"; die "build failed"; }
 
-run_suite "1. core unit tests" "$LOGS/1-core-unit-tests.txt" '^35 passed, 0 failed$' "$ROOT/firmware/host/test_core"
+run_suite "1. core unit tests" "$LOGS/1-core-unit-tests.txt" '^48 passed, 0 failed$' "$ROOT/firmware/host/test_core"
 
 if port_open 1883; then echo "   (using the MQTT broker already on :1883)"
 else mosquitto -p 1883 >"$LOGS/mosquitto.txt" 2>&1 & PIDS+=($!); wait_port 1883 || die "broker did not start"; fi
@@ -64,7 +64,7 @@ stop_backend() { kill "$1" 2>/dev/null; wait "$1" 2>/dev/null; }
 
 # 2. Backend status rules, on a separate device id and port so the simulated band can't interfere.
 start_backend 8001 cb-check; B2=$BACKEND
-run_suite "2. backend status checks" "$LOGS/2-backend-checks.txt" '^19/19 backend checks passed$' \
+run_suite "2. backend status checks" "$LOGS/2-backend-checks.txt" '^26/26 backend checks passed$' \
   env BACKEND_URL=http://127.0.0.1:8001 DEVICE_ID=cb-check python3 "$ROOT/backend-sample/backend_checks.py"
 stop_backend $B2
 
@@ -78,7 +78,7 @@ run_suite "3. integration" "$LOGS/3-integration.txt" '^13/13 checks passed$' pyt
 
 # 4. Firmware scenarios need a fresh backend (integration leaves windows in memory).
 stop_backend $B1; start_backend 8000 cb-01; B1=$BACKEND; PIDS+=($B1); sleep 3
-run_suite "4. firmware scenarios" "$LOGS/4-firmware-scenarios.txt" '^22/22 firmware checks passed$' python3 "$ROOT/firmware/host/firmware_scenarios.py"
+run_suite "4. firmware scenarios" "$LOGS/4-firmware-scenarios.txt" '^23/23 firmware checks passed$' python3 "$ROOT/firmware/host/firmware_scenarios.py"
 
 echo; printf '%s\n' "${SUMMARY[@]}"
 if [ $FAILED = 0 ]; then echo "ALL SUITES PASSED (logs in $LOGS)"; else echo "SOME SUITES FAILED (logs in $LOGS)"; fi

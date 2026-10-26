@@ -6,6 +6,42 @@
 #include "../calm_band/sim_sources.h"
 
 using namespace calm;
+
+// Fake MAX30102 with the datasheet's FIFO behaviour: 32 slots, write/read pointers, rollover on
+// (oldest sample overwritten when full), OVF_COUNTER counts overwritten samples (saturates at
+// 31) and resets to 0 when a complete sample is popped; reading FIFO_DATA pops samples.
+struct FakeMax30102 : PulseBus {
+  uint32_t slot[32] = {}; uint8_t wr = 0, rd = 0, ovf = 0; int count = 0;
+  bool connected = true; int cutAfterBytes = -1;   // ≥0: next burst stops after this many bytes
+  uint32_t nextValue = 100000;
+  void produce(int k) {                            // the sensor takes k new samples
+    for (int i = 0; i < k; i++) {
+      if (count == 32) { rd = (rd + 1) & 31; count--; if (ovf < 31) ovf++; }   // rollover
+      slot[wr] = nextValue++; wr = (wr + 1) & 31; count++;
+    }
+  }
+  bool read8(uint8_t reg, uint8_t* v) override {
+    if (!connected) return false;
+    if (reg == 0x04) *v = wr; else if (reg == 0x05) *v = ovf; else if (reg == 0x06) *v = rd; else *v = 0;
+    return true;
+  }
+  int readBytes(uint8_t reg, uint8_t* buf, int n) override {
+    if (!connected || reg != 0x07) return -1;
+    int limit = cutAfterBytes >= 0 ? cutAfterBytes : n; cutAfterBytes = -1;
+    int got = 0;
+    while (got < n && got < limit) {
+      if (got % 6 == 0) { if (!count) break; }
+      int inSample = got % 6;
+      uint32_t ir = slot[rd];
+      uint8_t byte = inSample < 3 ? 0x01 : (uint8_t)(ir >> (8 * (5 - inSample)));
+      buf[got++] = byte;
+      if (got % 6 == 0) { rd = (rd + 1) & 31; count--; ovf = 0; }   // complete sample popped
+    }
+    return got;
+  }
+};
+struct Collected { uint32_t t[256]; float ir[256]; int n = 0; };
+static void collect(void* ctx, uint32_t t, float ir) { Collected* c = (Collected*)ctx; if (c->n < 256) { c->t[c->n] = t; c->ir[c->n] = ir; c->n++; } }
 static int fails = 0, passes = 0;
 #define CHECK(cond, ...) do { if (cond) { passes++; printf("PASS  "); } else { fails++; printf("FAIL  "); } printf(__VA_ARGS__); printf("\n"); } while (0)
 
@@ -179,6 +215,67 @@ int main() {
     CmdDecision d = g.check(b, strlen(b), true, now);
     CHECK(d.result == CmdResult::Accepted && CommandGate::stillValid(d, now + 50) && !CommandGate::stillValid(d, now + 51),
           "a command accepted 50 ms before expiry is refused if the start is later than its expiry");
+  }
+  // 9. MAX30102 FIFO reader against a datasheet-behaving fake
+  {
+    FakeMax30102 f; Collected c;
+    f.produce(7);
+    FifoResult r = drainMax30102(f, 1000, 10, collect, &c);
+    bool order = c.n == 7 && c.t[0] == 940 && c.t[6] == 1000 && c.ir[0] == 100000 && c.ir[6] == 100006;
+    CHECK(r.ok && r.samples == 7 && r.lost == 0 && order && f.count == 0, "normal read: 7 samples, oldest first, newest stamped now");
+    f.produce(40);                                            // reader late by 400 ms: 8 overwritten
+    Collected c2; r = drainMax30102(f, 2000, 10, collect, &c2);
+    CHECK(r.ok && r.samples == 32 && r.lost == 8 && c2.ir[0] == 100007 + 8 && c2.t[0] == 2000 - 310 && f.ovf == 0,
+          "overflow: 32 newest delivered, 8 reported lost (counter reset after the pop)");
+    f.produce(25); f.cutAfterBytes = 6 * 11 + 3;              // burst cut mid-sample
+    Collected c3; r = drainMax30102(f, 3000, 10, collect, &c3);
+    bool partial = !r.ok && r.samples == 11 && f.count == 14;
+    Collected c4; FifoResult r2 = drainMax30102(f, 3010, 10, collect, &c4);
+    CHECK(partial && r2.ok && r2.samples == 14 && c4.ir[0] == c3.ir[10] + 1,
+          "partial burst: 11 complete samples kept, ok=false, the rest read next time with nothing skipped");
+    f.connected = false;
+    Collected c5; r = drainMax30102(f, 4000, 10, collect, &c5);
+    CHECK(!r.ok && r.samples == 0, "disconnected: read fails (not mistaken for an empty FIFO)");
+    f.connected = true; f.produce(3);
+    Collected c6; r = drainMax30102(f, 5000, 10, collect, &c6);
+    CHECK(r.ok && r.samples == 3, "reconnected: reads resume");
+    f.produce(0); Collected c7; r = drainMax30102(f, 6000, 10, collect, &c7);
+    CHECK(r.ok && r.samples == 0, "genuinely empty FIFO: ok with 0 samples");
+  }
+  // 10. Sensor health: repeated failures → missing; paced retries; recovery
+  {
+    SensorHealth h(5, 5000); h.begin(true, 0);
+    bool flipped = false;
+    for (int i = 0; i < 4; i++) flipped |= h.report(false, 100 + i);
+    bool stillOk = h.ok() && !flipped;
+    h.report(true, 200);
+    for (int i = 0; i < 4; i++) h.report(false, 300 + i);
+    bool notYet = h.ok();
+    bool f5 = h.report(false, 400);
+    CHECK(stillOk && notYet && f5 && !h.ok(), "5 failures IN A ROW flip to missing; a success resets the count");
+    bool early = h.retryDue(3000), due = h.retryDue(5400), again = h.retryDue(5500);
+    CHECK(!early && due && !again, "retry paced: none before 5 s, one at 5 s, not again immediately");
+    CHECK(h.recovered() && h.ok() && !h.recovered(), "recovery flips back to ok once");
+    SensorHealth h2(5, 5000); h2.begin(false, 0);
+    CHECK(!h2.ok() && h2.retryDue(5000), "missing at startup → retried after 5 s");
+  }
+  // 11. Recovery requires a clean window: resetPulse marks a gap for one full window
+  {
+    Band band(c); SimPulse p; SimMotion m; uint32_t t = 1; Window w{};
+    run(band, p, m, t, 70000, true, &w);
+    band.resetPulse(t);
+    run(band, p, m, t, 15001, true, &w);
+    bool gap = w.timingGap && w.quality >= 0;
+    run(band, p, m, t, 60000, true, &w);
+    CHECK(gap && !w.timingGap && w.hasPulse, "after sensor recovery: windows covering it are gaps, then clean again");
+  }
+  // 12. Immediate contact: debounced 1 s, independent of the 60 s window
+  {
+    ContactTracker ct(1000);
+    bool c1 = ct.update(0, true), c2 = ct.update(999, true), c3 = ct.update(1000, true), onAfter = ct.on();
+    bool b1 = ct.update(1500, false), b2 = ct.update(1900, true), b3 = ct.update(2400, false), b4 = ct.update(3400, false);
+    CHECK(!c1 && !c2 && c3 && onAfter, "finger on reported after 1 s");
+    CHECK(!b1 && !b2 && !b3 && b4 && !ct.on(), "a 0.4 s blip is ignored; off reported after 1 s steady");
   }
   // 8. Outbox: bounded, oldest dropped, order kept
   {

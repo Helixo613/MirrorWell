@@ -48,6 +48,8 @@ Optional parts: a 100 µF 16 V capacitor across the motor module's VCC and GND (
 - **No valid clock, no data.** Nothing is published without an NTP-valid timestamp, and commands are rejected as `no_clock`.
 - **Command rules:** the command must be one valid JSON object with `commandId`, `pattern`, `issuedAtMs` and `expiresAtMs`. It is rejected as `malformed`, `duplicate`, `no_clock`, `bad_time`, `expired` (including anything issued more than 5 s ago), `bad_pattern` or `bad_duration` (over 1500 ms). Every command ID is remembered, so a re-delivered command can never vibrate later. Commands are never queued for later.
 - **Motor timing doesn't depend on the network:** a 2 ms `esp_timer` callback (it runs in a timer task) steps the vibration pattern and forces the motor off after about 1.5 s of continuous on-time, even if `loop()` is stuck in a TLS handshake. It's software timing, not an electrical cut-off. A command's expiry is re-checked right before the motor starts, and acks go out after the start.
+- **Sensor failures are detected and retried:** every I2C read is checked; repeated failures mark the sensor `missing` in status, it is re-initialised every 5 s, and after the pulse sensor recovers no window is clean until a full window has passed.
+- **Immediate finger contact:** a `contact` on/off event (debounced 1 s) is sent as soon as the finger moves, separate from the 60 s windows.
 - **Sensor sampling doesn't depend on the network:** a separate task reads the sensors every 10 ms. It reads the MAX30102's 32-sample FIFO directly, reports overflow as lost samples (`timingGap`), and stamps motion readings with their real read time (missed slots lower `motionCoverage`).
 - **No publishing inside the MQTT callback:** commands are copied into a queue there, then handled and acknowledged in `loop()` (arduino-mqtt can deadlock otherwise).
 - **Vibration patterns** run on the band itself and are capped at 1.5 s: `rep_pulse`, `ease_off`, `session_complete`, `breath_in`, `breath_out`. The band acknowledges each command as `accepted`, `executed`, `rejected` or `stopped`.
@@ -61,24 +63,25 @@ Optional parts: a 100 µF 16 V capacitor across the motor module's VCC and GND (
   - **BENCH**: leave `WIFI_SSID` empty to print readings to Serial with no network
   - **Replay**: the `SIM_PULSE=1` build
 
-## Test results (re-run 26 Oct 2026, after the second review)
+## Test results (re-run 26 Oct 2026, after the third review)
 
 | Test | Result | Output |
 |---|---|---|
-| Core unit tests (`host/test_core`) | **35/35 pass** | `results/1-core-unit-tests.txt` |
-| Backend status rules (old reading, own commands, offline, vibration, timing gap, missing motion, future clock, pre/post pulse, previous boot, sensors missing after reboot, 15 kinds of malformed message) | **19/19 pass** | `results/2-backend-status-checks.txt` |
+| Core unit tests (`host/test_core`), incl. a datasheet-behaving fake MAX30102 (overflow, partial read, disconnect, reconnect), sensor health/retry, contact debounce | **48/48 pass** | `results/1-core-unit-tests.txt` |
+| Backend status rules, incl. wrong-type and non-finite messages, immediate contact, late-delivered windows | **26/26 pass** | `results/2-backend-status-checks.txt` |
 | Integration checks with the **simulated ESP32** | **13/13 pass** | `results/3-integration-with-simulated-esp32.txt` |
-| Firmware scenarios: movement, contact, STOP, motor flag, clock loss, network drop, broken/old/oversized commands, motion sensor loss | **22/22 pass** | `results/4-firmware-scenarios.txt` |
-| ESP32 compile, Wokwi/simulated-pulse build | **pass**: 914,317 B flash (69%), 115,988 B RAM (35%) | `build/wokwi/` |
-| ESP32 compile, real-sensor build | **pass**: 912,353 B flash (69%) | — |
-| Real ESP32 binary on an **emulated ESP32** (QEMU 9.0.0), BENCH mode | **pass**: one reading per second, no timing gaps. QEMU has no MPU6050, so each one correctly says `motionValid:false`, quality 0.50 | `results/5-qemu-esp32-boot-log.txt` |
-| Motor + sensor self-tests on the emulated ESP32 | **pass**: with `loop()` blocked for 3 s, the motor pattern ended at +1503 ms, and 300/300 pulse samples and 96/96 motion slots were collected | `results/6-qemu-motor-and-sensor-selftest-log.txt` |
+| Firmware scenarios, incl. contact "off" event within 2 s | **23/23 pass** | `results/4-firmware-scenarios.txt` |
+| ESP32 compile, Wokwi/simulated-pulse build | **pass**: 914,781 B flash (69%), 116,028 B RAM (35%) | `build/wokwi/` |
+| ESP32 compile, real-sensor build | **pass**: 913,509 B flash (69%), 116,076 B RAM (35%) | — |
+| Real ESP32 binary on an **emulated ESP32** (QEMU 9.0.0), BENCH mode | **pass**: one reading per second, no timing gaps; `motionValid:false`, quality 0.50 (QEMU has no MPU6050) | `results/5-qemu-esp32-boot-log.txt` |
+| Motor + sensor-task self-tests on the emulated ESP32 | **pass**: with `loop()` blocked for 3 s, the motor pattern ended at +1500 ms, and the sensor task kept its schedule (301 synthetic pulse samples, 96 motion slots). **Timing only:** 0 MPU6050 readings, because QEMU has none; neither sensor's I2C path is tested here | `results/6-qemu-motor-and-sensor-selftest-log.txt` |
 
 Bugs found and fixed while testing:
 - **Sideways arm movement was under-detected** (0.046 g against a 0.05 g threshold). Gravity is now removed separately on each axis, and the same swing reads 0.27 g.
 - **Exuberant ctags generated wrong function declarations** for the sketch. The code moved into `calm_app.cpp`.
 - **The MAX30102 driver forced 400 kHz** on the shared bus. It now uses `I2C_HZ` (100 kHz).
 - **Review fixes (24 Oct):** QoS 1 acks were published inside the MQTT callback (deadlock risk); motor timing depended on `loop()`; a missing motion sensor read as "still, quality 1.0"; command parsing accepted non-JSON and ancient `issuedAtMs`. All four are fixed and tested.
+- **Third review (26 Oct):** pulse-sensor health was set once at boot and never updated (no retry, failed reads looked like an empty FIFO); the backend raised on wrong-type values and accepted NaN. Fixed: checked I2C, health tracking with 5 s retries and a clean-window requirement after recovery, type-first validation, finite numbers only, one error boundary.
 - **Second review (26 Oct):** a command could expire during its own ack; sensor reads ran in the network loop (the pulse driver's 4-sample buffer could overflow, and late motion reads got old timestamps); the backend showed a previous boot's reading as current; malformed telemetry could raise in the MQTT callback. All four are fixed and tested.
 
 ## Not yet verified

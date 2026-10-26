@@ -32,6 +32,19 @@ PASS  full motion data → valid (coverage 0.99)
 PASS  status reports sensor health: {"dev":"cb-01","boot":"b","online":true,"clockValid":true,"droppedWindows":0,"publishFailures":0,"pulseSensor":"ok","motionSensor":"missing"}
 PASS  lost samples → timingGap while in the window, cleared afterwards
 PASS  a command accepted 50 ms before expiry is refused if the start is later than its expiry
+PASS  normal read: 7 samples, oldest first, newest stamped now
+PASS  overflow: 32 newest delivered, 8 reported lost (counter reset after the pop)
+PASS  partial burst: 11 complete samples kept, ok=false, the rest read next time with nothing skipped
+PASS  disconnected: read fails (not mistaken for an empty FIFO)
+PASS  reconnected: reads resume
+PASS  genuinely empty FIFO: ok with 0 samples
+PASS  5 failures IN A ROW flip to missing; a success resets the count
+PASS  retry paced: none before 5 s, one at 5 s, not again immediately
+PASS  recovery flips back to ok once
+PASS  missing at startup → retried after 5 s
+PASS  after sensor recovery: windows covering it are gaps, then clean again
+PASS  finger on reported after 1 s
+PASS  a 0.4 s blip is ignored; off reported after 1 s steady
 PASS  outbox keeps newest 120, drops 5 oldest, FIFO order
 
-35 passed, 0 failed
+48 passed, 0 failed

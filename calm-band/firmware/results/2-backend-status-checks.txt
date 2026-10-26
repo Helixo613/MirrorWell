@@ -1,5 +1,5 @@
 PASS  outgoing command does not refresh 'last heard'  — state stale, lastHeard None
-PASS  10-minute-old reading → reading_stale, no pulse  — reading_stale, age 600472 ms
+PASS  10-minute-old reading → reading_stale, no pulse  — reading_stale, age 600501 ms
 PASS  fresh clean reading → usable with a pulse value  — usable
 PASS  reading overlapping a vibration → vibration_overlap, no pulse  — vibration_overlap ['vibration_overlap']
 PASS  timing gap → poor_quality  — ['timing_gap']
@@ -17,5 +17,12 @@ PASS  first reading from the new boot → usable  — usable
 PASS  15 malformed messages rejected and counted  — 15 rejected, last: events: bad type
 PASS  state unchanged by malformed messages  — usable
 PASS  reception still works after malformed messages  — 66.0 bpm
+PASS  9 wrong-type / non-finite / deeply nested messages rejected, none raised  — 9 rejected
+PASS  status still serialisable and unchanged (no NaN stored)  — usable 66.0
+PASS  sensor health not overwritten by bad status  — {'pulse': 'ok', 'motion': 'ok'}
+PASS  finger off event → contact_required at once, though the last window was clean  — contact_required
+PASS  finger back but no clean window yet → settling (not usable)  — settling
+PASS  contact event from an older boot ignored; clean window → usable  — usable
+PASS  late-delivered window linked to its session by timestamp  — 12 linked
 
-19/19 backend checks passed
+26/26 backend checks passed

@@ -187,6 +187,58 @@ pub("features", w)
 st = status()
 check("reception still works after malformed messages", st["pulseRateBpm"] == 66.0, f"{st['pulseRateBpm']} bpm")
 
+# 12. Values of the wrong TYPE where a set is expected, and non-finite numbers
+before = st["rejectedMessages"]
+raw = [("status", '{"online": true, "pulseSensor": []}'),
+       ("status", '{"online": true, "motionSensor": {}}'),
+       ("ack", '{"commandId": "x", "result": []}'),
+       ("ack", '{"commandId": "x", "result": "executed", "reason": 5}'),
+       ("events", '{"type": "contact", "detail": [], "atMs": 1}'),
+       ("features", json.dumps({**window(now() + 95), "boot": "new1"}).replace('"pulseRateBpm": 70.0', '"pulseRateBpm": NaN')),
+       ("features", json.dumps({**window(now() + 95), "boot": "new1"}).replace('"pulseRateBpm": 70.0', '"pulseRateBpm": Infinity')),
+       ("features", json.dumps({**window(now() + 95), "boot": "new1"}).replace('"pulseRateBpm": 70.0', '"pulseRateBpm": 1e999')),
+       ("features", '[' * 5000 + ']' * 5000)]
+for kind, text in raw:
+    subprocess.run(["mosquitto_pub", "-t", f"calmband/{DEV}/{kind}", "-q", "1", "-m", text], check=True)
+time.sleep(0.8)
+r = httpx.get(f"{B}/api/companion/status")
+st = r.json()
+check("9 wrong-type / non-finite / deeply nested messages rejected, none raised",
+      r.status_code == 200 and st["rejectedMessages"] - before == 9, f"{st['rejectedMessages'] - before} rejected")
+check("status still serialisable and unchanged (no NaN stored)", st["state"] == "usable" and st["pulseRateBpm"] == 66.0,
+      f"{st['state']} {st['pulseRateBpm']}")
+check("sensor health not overwritten by bad status", st["sensors"] == {"pulse": "ok", "motion": "ok"}, str(st["sensors"]))
+
+# 13. Immediate contact, separate from the 60 s window
+pub("events", {"dev": DEV, "boot": "new1", "type": "contact", "detail": "off", "atMs": now()})
+st = status()
+check("finger off event → contact_required at once, though the last window was clean",
+      st["state"] == "contact_required" and st["contact"] is False and st["pulseRateBpm"] is None, st["state"])
+pub("events", {"dev": DEV, "boot": "new1", "type": "contact", "detail": "on", "atMs": now()})
+w = window(now() + 100, contact=False, quality=0.0, pulseRateBpm=None); w["boot"] = "new1"
+pub("features", w)
+st = status()
+check("finger back but no clean window yet → settling (not usable)", st["state"] == "settling" and st["contact"] is True,
+      st["state"])
+pub("events", {"dev": DEV, "boot": "old0", "type": "contact", "detail": "off", "atMs": now()})
+w = window(now() + 110); w["boot"] = "new1"
+pub("features", w)
+st = status()
+check("contact event from an older boot ignored; clean window → usable", st["state"] == "usable", st["state"])
+
+# 14. A window delivered late (queued offline) still belongs to its session, by its own time
+sid2 = f"cs-{uuid.uuid4().hex[:8]}"
+t0 = now() - 100_000
+httpx.post(f"{B}/api/companion/sessions", json={"companionSessionId": sid2, "startedAtMs": t0})
+httpx.post(f"{B}/api/companion/sessions/{sid2}/end", json={"localSessionId": "l2", "endReason": "completed",
+           "endedAtMs": t0 + 70_000, "exercises": []})
+late = window(t0 + 65_000, motorActive=True); late["boot"] = "new1"
+pub("features", late)                         # arrives AFTER the session ended
+time.sleep(0.5)
+s3 = next(x for x in httpx.get(f"{B}/api/companion/reviewer/sessions").json() if x["companionSessionId"] == sid2)
+check("late-delivered window linked to its session by timestamp", s3["featureWindows"] >= 1 and s3["vibrationOverlapWindows"] >= 1,
+      f"{s3['featureWindows']} linked")
+
 pub("status", None, retain=True)             # leave no retained state behind
 print(f"\n{sum(results)}/{len(results)} backend checks passed")
 sys.exit(0 if all(results) else 1)

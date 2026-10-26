@@ -12,7 +12,7 @@ import paho.mqtt.client as mqtt
 
 B, DEV = "http://127.0.0.1:8000", "cb-01"
 results = []
-features, acks = [], []
+features, acks, events = [], [], []
 lock = threading.Lock()
 
 
@@ -22,10 +22,12 @@ def check(name, ok, detail=""):
 
 
 def on_msg(c, u, m):
-    if not (m.topic.endswith("/features") or m.topic.endswith("/ack")):
+    if not (m.topic.endswith("/features") or m.topic.endswith("/ack") or m.topic.endswith("/events")):
         return                       # cmd/sim/status echoes (some tests send deliberately broken text)
     body = json.loads(m.payload)
     with lock:
+        if m.topic.endswith("/events"):
+            events.append((time.time(), body))
         if m.topic.endswith("/features"):
             features.append((time.time() * 1000, body))
         elif m.topic.endswith("/ack"):
@@ -92,7 +94,15 @@ check("status shows poor_quality while moving", st["state"] == "poor_quality", s
 sim({"moving": False}); time.sleep(5.5)
 
 # 3. Contact loss on the live band → null pulse, then recovers when the finger returns
-sim({"contact": False}); time.sleep(5.5)
+t_off = time.time()
+sim({"contact": False}); time.sleep(2.5)
+with lock:
+    offs = [t for (t, e) in events if e.get("type") == "contact" and e.get("detail") == "off" and t > t_off]
+st = httpx.get(f"{B}/api/companion/status").json()
+check("finger removed → contact 'off' event within 2 s, status contact_required at once",
+      bool(offs) and offs[0] - t_off < 2.0 and st["state"] == "contact_required" and st["contact"] is False,
+      f"event after {offs[0] - t_off:.1f} s, state {st['state']}" if offs else "no event")
+time.sleep(3.0)
 f = latest_feature(time.time() * 1000 - 800)
 check("finger removed → contact false, pulseRateBpm null", f and f["contact"] is False and f["pulseRateBpm"] is None)
 sim({"contact": True}); time.sleep(6)

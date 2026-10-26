@@ -5,7 +5,7 @@
 // SAME code the Linux simulation (host/) runs through the integration tests.
 //
 // Modes:   LIVE   (default)              feature windows + commands
-//          RECORD (hold STOP at power-on) raw 100 Hz pulse streamed over MQTT
+//          RECORD (hold STOP at power-on) raw 100 Hz pulse over MQTT, plus the normal windows
 //          BENCH  (no Wi-Fi configured)   sensor values printed to Serial, no network
 //          Replay = SIM_PULSE build: synthetic pulse, windows labelled origin "replay"
 //
@@ -64,12 +64,16 @@ static char boot[12];
 static char tFeatures[48], tStatus[48], tEvents[48], tCmd[48], tAck[48], tRaw[48];
 static char playingId[48] = "";
 static bool clockValid = false, recordMode = false, benchMode = false;
-static volatile bool mpuOk = false, pulseOk = SIM_PULSE, sensorHealthChanged = false;
+static SensorHealth pulseHealthT(10, 5000);  // 10 failed reads in a row (~0.1 s) → missing; retry every 5 s
+static SensorHealth motionHealthT(32, 5000); // 32 failed reads in a row (~1 s) → missing; retry every 5 s
+static volatile bool sensorHealthChanged = false;
+static ContactTracker contactT(1000);        // immediate finger on/off, debounced 1 s
+static volatile bool contactChanged = false, contactOn = false;
 static uint32_t publishFailures = 0, lastReconnect = 0;
 static volatile bool stopPressed = false;
 static volatile uint32_t lastStopIsr = 0;
 static volatile uint32_t pulseLost = 0, motionMissed = 0;   // totals, for Serial diagnostics
-static volatile uint32_t pulseAdded = 0, motionSlots = 0;    // counters used by SENSOR_SELFTEST
+static volatile uint32_t pulseAdded = 0, motionSlots = 0, motionMeasured = 0;  // SENSOR_SELFTEST counters
 
 // Commands received in the MQTT callback, handled later in loop().
 static const int kCmdSlots = 4;
@@ -172,38 +176,37 @@ static void addPulse(uint32_t t, float ir) {
   if (recordMode) recordRaw(t, ir);
 }
 
+static void pulseSink(void*, uint32_t t, float ir) {
+  addPulse(t, ir);
+  if (contactT.update(t, ir >= cfg.contactIrMin)) { contactOn = contactT.on(); contactChanged = true; }
+}
+
 #if !SIM_PULSE
-// Read the MAX30102's 32-sample hardware FIFO directly. Registers: 0x04 write pointer,
-// 0x05 overflow counter, 0x06 read pointer, 0x07 data (LED mode 2: red then IR, 3 bytes each).
-static uint8_t maxReg(uint8_t reg) { return pulseSensor.readRegister8(0x57, reg); }
-static void drainPulseFifo(uint32_t now) {
-  uint8_t wr = maxReg(0x04), ovf = maxReg(0x05), rd = maxReg(0x06);
-  int n = (wr - rd) & 31;
-  if (ovf) n = 32;                                         // FIFO full and rolled over
-  const int per = 6, maxBatch = 20;                        // 20 × 6 = 120 B, under Wire's 128 B
-  uint32_t spacing = 1000 / cfg.pulseHz;
-  uint32_t tOldest = now - (uint32_t)(n > 0 ? n - 1 : 0) * spacing;
-  if (ovf) {                                               // samples older than the FIFO are gone
-    xSemaphoreTake(bandLock, portMAX_DELAY);
-    band->notePulseLoss(tOldest - spacing, ovf);
-    xSemaphoreGive(bandLock);
-    pulseLost += ovf;
+// MAX30102 register access with every I2C transaction checked (a failed read is an error, never
+// a zero that looks like an empty FIFO). The FIFO logic itself is drainMax30102() in calm_core,
+// unit-tested against a datasheet-behaving fake.
+struct WirePulseBus : PulseBus {
+  bool read8(uint8_t reg, uint8_t* v) override {
+    Wire.beginTransmission(0x57); Wire.write(reg);
+    if (Wire.endTransmission(false) != 0) return false;
+    if (Wire.requestFrom(0x57, 1) != 1) return false;
+    *v = Wire.read();
+    return true;
   }
-  int done = 0;
-  while (done < n) {
-    int k = n - done < maxBatch ? n - done : maxBatch;
-    Wire.beginTransmission(0x57); Wire.write(0x07);
-    if (Wire.endTransmission(false) != 0) return;
-    if (Wire.requestFrom(0x57, k * per) != k * per) return;
-    for (int i = 0; i < k; i++) {
-      uint32_t r = 0, ir = 0;
-      for (int b = 0; b < 3; b++) r = (r << 8) | Wire.read();
-      for (int b = 0; b < 3; b++) ir = (ir << 8) | Wire.read();
-      (void)r;
-      addPulse(tOldest + (uint32_t)(done + i) * spacing, (float)(ir & 0x3FFFF));
-    }
-    done += k;
+  int readBytes(uint8_t reg, uint8_t* buf, int n) override {
+    Wire.beginTransmission(0x57); Wire.write(reg);
+    if (Wire.endTransmission(false) != 0) return -1;
+    int got = Wire.requestFrom(0x57, n);
+    for (int i = 0; i < got; i++) buf[i] = Wire.read();
+    return got;
   }
+};
+static WirePulseBus pulseBus;
+static bool pulseInit() {
+  if (!pulseSensor.begin(Wire, I2C_HZ)) return false;
+  // 400 samples/s averaged by 4 → 100 samples/s; IR + red LEDs; 411 µs pulse width (18-bit).
+  pulseSensor.setup(60, 4, 2, 400, 411, 4096);
+  return true;
 }
 #endif
 
@@ -211,7 +214,6 @@ static void sensorTask(void*) {
   // Motion schedule kept in microseconds (64-bit: no wrap) so 32 Hz has no rounding drift.
   const uint64_t motionPeriodUs = 1000000ULL / cfg.motionHz;
   uint64_t nextMotionUs = (uint64_t)esp_timer_get_time();
-  uint32_t mpuFailStreak = 0, lastMpuRetry = 0;
 #if SIM_PULSE
   uint32_t nextPulse = millis();
 #endif
@@ -222,9 +224,28 @@ static void sensorTask(void*) {
 
     // Pulse.
 #if SIM_PULSE
-    while ((int32_t)(now - nextPulse) >= 0) { addPulse(nextPulse, simPulse.sample(nextPulse)); nextPulse += 1000 / cfg.pulseHz; }
+    while ((int32_t)(now - nextPulse) >= 0) { pulseSink(nullptr, nextPulse, simPulse.sample(nextPulse)); nextPulse += 1000 / cfg.pulseHz; }
 #else
-    if (pulseOk) drainPulseFifo(now);
+    if (pulseHealthT.ok()) {
+      FifoResult r = drainMax30102(pulseBus, now, 1000 / cfg.pulseHz, pulseSink, nullptr);
+      if (r.lost) {                                        // samples overwritten before we read them
+        uint32_t tOldest = now - (uint32_t)(r.samples > 0 ? r.samples - 1 : 0) * (1000 / cfg.pulseHz);
+        xSemaphoreTake(bandLock, portMAX_DELAY);
+        band->notePulseLoss(tOldest - 1000 / cfg.pulseHz, r.lost);
+        xSemaphoreGive(bandLock);
+        pulseLost += r.lost;
+      }
+      if (!r.ok) {                                         // failed transaction: a gap, and maybe "missing"
+        xSemaphoreTake(bandLock, portMAX_DELAY); band->notePulseLoss(now, 1); xSemaphoreGive(bandLock);
+      }
+      if (pulseHealthT.report(r.ok, now)) sensorHealthChanged = true;
+    } else if (pulseHealthT.retryDue(now) && pulseInit()) {
+      pulseHealthT.recovered();
+      xSemaphoreTake(bandLock, portMAX_DELAY);
+      band->resetPulse(now);                               // restart beat detection; next windows are gaps
+      xSemaphoreGive(bandLock);
+      sensorHealthChanged = true;
+    }
 #endif
 
     // Motion: one reading per 32 Hz slot, stamped with the time it was actually read.
@@ -239,18 +260,18 @@ static void sensorTask(void*) {
       nextMotionUs += motionPeriodUs;
       motionSlots++;
       float ax, ay, az;
-      if (mpuOk) {
-        if (mpuRead(&ax, &ay, &az)) {
+      if (motionHealthT.ok()) {
+        bool ok = mpuRead(&ax, &ay, &az);
+        if (ok) {
+          motionMeasured++;
           xSemaphoreTake(bandLock, portMAX_DELAY);
           band->addMotionSample(now, ax, ay, az);
           xSemaphoreGive(bandLock);
-          mpuFailStreak = 0;
-        } else if (++mpuFailStreak >= 32) {                // ~1 s of failed reads → sensor lost
-          mpuOk = false; lastMpuRetry = now; sensorHealthChanged = true;
         }
-      } else if (now - lastMpuRetry > 5000) {              // try to bring a lost sensor back
-        lastMpuRetry = now;
-        if (mpuInit()) { mpuOk = true; mpuFailStreak = 0; sensorHealthChanged = true; }
+        if (motionHealthT.report(ok, now)) sensorHealthChanged = true;   // ~1 s of failures → missing
+      } else if (motionHealthT.retryDue(now) && mpuInit()) {           // try to bring it back
+        motionHealthT.recovered();
+        sensorHealthChanged = true;
       }
     }
   }
@@ -266,8 +287,12 @@ static bool pub(const char* topic, const char* msg, bool retain = false, int qos
 static void sendAck(const char* id, const char* result, const char* reason) {
   char b[256]; if (buildAck(cfg, boot, id, result, reason, epochMs(), b, sizeof b)) pub(tAck, b);
 }
-static const char* pulseHealth() { return SIM_PULSE ? "simulated" : (pulseOk ? "ok" : "missing"); }
-static const char* motionHealth() { return mpuOk ? "ok" : "missing"; }
+static const char* pulseHealth() { return SIM_PULSE ? "simulated" : (pulseHealthT.ok() ? "ok" : "missing"); }
+static const char* motionHealth() { return motionHealthT.ok() ? "ok" : "missing"; }
+static void sendContact() {
+  if (!contactT.known() || !clockValid) return;
+  char b[192]; if (buildEvent(cfg, boot, "contact", contactOn ? "on" : "off", epochMs(), b, sizeof b)) pub(tEvents, b);
+}
 static void sendStatus(bool online) {
   char b[320];
   if (buildStatus(cfg, boot, online, clockValid, outbox.dropped(), publishFailures, pulseHealth(), motionHealth(), b, sizeof b))
@@ -325,6 +350,7 @@ static void connectMqtt() {
   }
   mqtt.subscribe(tCmd, 1);
   sendStatus(true);
+  sendContact();              // current finger state, in case a change happened while offline
   int n = 0;  // flush windows queued while offline, oldest first, original timestamps unchanged
   while (!outbox.empty() && pub(tFeatures, outbox.front())) { outbox.pop(); n++; }
   Serial.printf("[band] MQTT connected (boot %s), flushed %d queued windows\n", boot, n);
@@ -352,18 +378,16 @@ void setup() {
   snprintf(tAck, 48, "calmband/%s/ack", DEVICE_ID);           snprintf(tRaw, 48, "calmband/%s/raw", DEVICE_ID);
 
   Wire.begin(PIN_SDA, PIN_SCL, I2C_HZ);
-  mpuOk = mpuInit();
+  motionHealthT.begin(mpuInit(), millis());
 #if !SIM_PULSE
-  pulseOk = pulseSensor.begin(Wire, I2C_HZ);
-  if (pulseOk) {
-    // 400 samples/s averaged by 4 → 100 samples/s; IR + red LEDs; 411 µs pulse width (18-bit).
-    pulseSensor.setup(60, 4, 2, 400, 411, 4096);
-  } else {
-    Serial.println("[band] MAX30102 not found — check wiring");
-  }
+  pulseHealthT.begin(pulseInit(), millis());
+  if (!pulseHealthT.ok()) Serial.println("[band] MAX30102 not found — check wiring (retrying every 5 s)");
+#else
+  pulseHealthT.begin(true, millis());
 #endif
   Serial.printf("[band] Calm Band %s boot %s mode %s, MPU6050 %s, pulse %s\n", DEVICE_ID, boot,
-                recordMode ? "RECORD" : "LIVE", mpuOk ? "ok" : "MISSING", SIM_PULSE ? "simulated" : (pulseOk ? "MAX30102" : "MISSING"));
+                recordMode ? "RECORD" : "LIVE", motionHealthT.ok() ? "ok" : "MISSING",
+                SIM_PULSE ? "simulated" : (pulseHealthT.ok() ? "MAX30102" : "MISSING"));
 
   // Motor pattern timer: independent of loop() and of any blocking network call.
   esp_timer_create_args_t ta = {};
@@ -402,19 +426,20 @@ void setup() {
 
 #if SENSOR_SELFTEST
   // Test build only: block this task for 3 s (as a stuck network call would) and check that the
-  // sensor task kept sampling on its own: ~300 pulse samples and ~96 motion slots expected.
+  // sensor TASK kept running on schedule. This shows timing only: in QEMU the pulse is synthetic
+  // (SIM_PULSE) and there is no MPU6050, so it does not test either sensor's I2C path.
   {
     delay(500);
-    uint32_t p0 = pulseAdded, m0 = motionSlots, miss0 = motionMissed, lost0 = pulseLost, t0 = millis();
+    uint32_t p0 = pulseAdded, m0 = motionSlots, mm0 = motionMeasured, miss0 = motionMissed, lost0 = pulseLost, t0 = millis();
     delay(3000);
-    uint32_t dt = millis() - t0, p = pulseAdded - p0, m = motionSlots - m0;
+    uint32_t dt = millis() - t0, p = pulseAdded - p0, m = motionSlots - m0, mm = motionMeasured - mm0;
     uint32_t miss = motionMissed - miss0, lost = pulseLost - lost0;
-    Serial.printf("[selftest] during a %lu ms stall: %lu pulse samples (expected ~%lu), %lu motion slots (expected ~%lu), "
-                  "%lu motion slots missed, %lu pulse samples lost\n", (unsigned long)dt, (unsigned long)p,
-                  (unsigned long)(dt * cfg.pulseHz / 1000), (unsigned long)m, (unsigned long)(dt * cfg.motionHz / 1000),
-                  (unsigned long)miss, (unsigned long)lost);
+    Serial.printf("[selftest] during a %lu ms stall: %lu synthetic pulse samples (expected ~%lu), %lu motion read slots "
+                  "scheduled on time (expected ~%lu), %lu successful MPU6050 readings, %lu slots missed, %lu pulse samples lost\n",
+                  (unsigned long)dt, (unsigned long)p, (unsigned long)(dt * cfg.pulseHz / 1000), (unsigned long)m,
+                  (unsigned long)(dt * cfg.motionHz / 1000), (unsigned long)mm, (unsigned long)miss, (unsigned long)lost);
     bool ok = p >= dt * cfg.pulseHz / 1000 * 95 / 100 && m >= dt * cfg.motionHz / 1000 * 95 / 100 && miss == 0 && lost == 0;
-    Serial.printf("[selftest] SENSORS %s\n", ok ? "PASS" : "FAIL");
+    Serial.printf("[selftest] SENSOR TASK TIMING %s\n", ok ? "PASS" : "FAIL");
   }
 #endif
 
@@ -461,9 +486,10 @@ void loop() {
   // 2. Sensor health changes (detected by the sensor task) are reported from here.
   if (sensorHealthChanged) {
     sensorHealthChanged = false;
-    Serial.printf("[band] MPU6050 %s\n", mpuOk ? "back" : "stopped answering");
+    Serial.printf("[band] sensors: pulse %s, motion %s\n", pulseHealth(), motionHealth());
     sendStatus(true);
   }
+  if (contactChanged) { contactChanged = false; sendContact(); }
 
   // 3. Vibration runs on the motor timer. Here we only pass its on/off edges to the window
   //    logic and report a pattern that finished.
@@ -485,7 +511,7 @@ void loop() {
   // 4. Feature windows (LIVE). Offline → queue with original timestamps.
   Window w;
   bool ready = false;
-  if (!recordMode) {
+  {  // windows are made in RECORD mode too, so raw pulse comes with time-matched motion + quality
     xSemaphoreTake(bandLock, portMAX_DELAY);
     ready = band->poll(now, clockValid, epochMs(), &w);
     xSemaphoreGive(bandLock);

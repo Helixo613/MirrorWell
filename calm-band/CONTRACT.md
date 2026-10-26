@@ -37,7 +37,9 @@ Window rules (from `calm_core.cpp`):
 - **quality** = validBeatFraction with contact, else 0; capped at 0.5 when there is no pulse value, when moving, or when `motionValid` is false.
 - **motorActive** = the motor was on at any point in the window. Quality is **not** reduced for this on the band; the backend withholds the pulse value for these windows (§4, vibration policy).
 - **timingGap** = a full second inside the window had < 80 % of the expected pulse samples, had no data, or had samples **known to be lost** (MAX30102 FIFO overflow).
-- **Acquisition on the ESP32** runs in its own FreeRTOS task (core 1, priority 3, above `loop()`), woken every 10 ms, which never touches the network. It drains the MAX30102's 32-sample hardware FIFO directly (bypassing the driver's 4-sample buffer). Samples are stamped back from the read time at 10 ms spacing, and the FIFO overflow counter is reported as lost samples. Motion is read once per 32 Hz slot and stamped with the **actual read time**; missed slots are skipped (they lower `motionCoverage`) and never back-filled with late readings. Checked on the emulated ESP32 (`SENSOR_SELFTEST`): with `loop()` blocked for 3 s, 300/300 pulse samples and 96/96 motion slots arrived, with 0 lost and 0 missed. The real FIFO path needs the real MAX30102; QEMU can't emulate it.
+- **Acquisition on the ESP32** runs in its own FreeRTOS task (core 1, priority 3, above `loop()`), woken every 10 ms, which never touches the network. It drains the MAX30102's 32-sample hardware FIFO directly (bypassing the driver's 4-sample buffer). Samples are stamped back from the read time at 10 ms spacing, and the FIFO overflow counter is reported as lost samples. Motion is read once per 32 Hz slot and stamped with the **actual read time**; missed slots are skipped (they lower `motionCoverage`) and never back-filled with late readings. The FIFO logic (`drainMax30102` in `calm_core`) is unit-tested on Linux against a fake MAX30102 that follows the datasheet: 32 slots, rollover, an overflow counter that saturates at 31 and resets when a sample is popped. The tests cover a normal read, overflow (8 samples lost and reported), a burst cut mid-sample (complete samples kept, the rest read next time), disconnect (a failed read is an error, not an empty FIFO) and reconnect.
+- **Sensor health and recovery:** every I2C transaction is checked. 10 failed MAX30102 reads in a row (~0.1 s), or 32 failed MPU6050 reads (~1 s), mark that sensor `missing` in status. A missing sensor (including one absent at power-on) is re-initialised every 5 s. After the pulse sensor recovers, beat detection restarts and a gap is recorded, so no window is clean until a full window has passed since recovery.
+- **Emulator evidence is timing only:** in the `SENSOR_SELFTEST` QEMU build, with `loop()` blocked for 3 s, the sensor task produced 301 synthetic pulse samples (the pulse is simulated) and ran 96 of 96 motion read slots on time. It made **0 successful MPU6050 readings**, because QEMU has no MPU6050 (so the windows say `motionValid:false`). This shows the task keeps its schedule; it does **not** test either physical sensor's I2C path.
 - **Clock:** nothing is published until NTP has set the clock (`time > 1 700 000 000`). In BENCH mode only, a fixed clock (1 760 000 000 s) is seeded and windows are printed to Serial, never published.
 
 ## 3. MQTT
@@ -83,7 +85,11 @@ Broker: any MQTT 3.1.1 broker. Real: EMQX Cloud, port 8883, TLS with CA certific
 
 ```json
 {"dev":"cb-01","boot":"91ce996b","type":"button","detail":"stop","atMs":1760000041000}
+{"dev":"cb-01","boot":"91ce996b","type":"contact","detail":"off","atMs":1760000052000}
 ```
+
+- `button / stop`: STOP was pressed.
+- `contact / on|off`: the **immediate** finger state from single samples (IR ≥ 50 000), debounced: it's reported once the new state has held for **1 s**, so it arrives about 1–2 s after the change. It is re-sent on every MQTT connect. This is separate from the 60 s window's `contact` field, which needs ≥ 90 % of the window.
 
 ### 3.4 Command (backend → band)
 
@@ -137,7 +143,7 @@ Patterns run locally on the band; only start, finish and stop cross the network.
 {"dev":"cb-01","boot":"91ce996b","t0":123456,"atMs":1760000040000,"hz":100,"ir":[120034,119987, …25 values]}
 ```
 
-4 messages a second. `t0` is the device's milliseconds-since-boot for the first sample. No feature windows are produced in this mode.
+4 messages a second. `t0` is the device's milliseconds-since-boot for the first sample. The normal feature windows are produced in this mode too, so a recording has time-matched motion (`motionRms_g`, `moving`, `motionValid`) and quality metadata alongside the raw pulse.
 
 ## 4. Backend sample HTTP API (`backend-sample/backend/app.py`, port 8000)
 
@@ -146,7 +152,7 @@ Patterns run locally on the band; only start, finish and stop cross the network.
 | `POST /api/companion/sessions` | `{"companionSessionId":"cs-…","startedAtMs":…}`; opens the session that new windows are linked to |
 | `POST /api/companion/sessions/{id}/events` | One of: `{"type":"exercise_state","seq":1,"atMs":…,"exerciseId":"EX_SMILE","state":"DEMO\|REPS\|REST"}`; `{"type":"rep","seq":2,"atMs":…,"repIndex":0,"peakEffortIndex":0.7,"durationMs":1500}`; `{"type":"ease_off","seq":3,"atMs":…,"active":true}`. Response `{"ok":true,"command":<id or null>}`, or `{"ok":true,"duplicate":true}` for a repeated `seq` |
 | `POST /api/companion/sessions/{id}/end` | `{"localSessionId":…,"endReason":"completed\|user_stopped\|red_flag_stopped\|quality_abandoned","endedAtMs":…,"exercises":[{"exerciseId","repsCompleted","meanSymmetryIndex","meanEffortIndex","easeOffCount","lowQualityFramePct"}]}`; also sends `session_complete` |
-| `GET /api/companion/status` | `{"device","state","problems":[…],"pulseRateBpm":<number or null>,"online","lastHeardMs","readingEndMs","readingAgeMs","sensors":{"pulse","motion"},"boot","rejectedMessages","lastRejectReason"}`. See the status rules below. Pulse is given **only** when `state` is `usable` |
+| `GET /api/companion/status` | `{"device","state","problems":[…],"pulseRateBpm":<number or null>,"online","lastHeardMs","readingEndMs","readingAgeMs","sensors":{"pulse","motion"},"contact":<true/false/null>,"boot","rejectedMessages","lastRejectReason"}`. See the status rules below. Pulse is given **only** when `state` is `usable` |
 | `GET /api/companion/reviewer/sessions` | Per session: state, event count, summary, linked windows, `usableWindows` (clean), `vibrationOverlapWindows`, `prePulseBpm`, `postPulseBpm`, command and executed counts |
 | `POST /api/companion/_test/command` | **Test only:** `{"pattern","sessionId"?,"ttlMs"?,"commandId"?,"issuedAtMs"?}` publishes a command |
 | `GET /api/companion/_test/command/{id}` | **Test only:** the command plus all its acks |
@@ -154,7 +160,7 @@ Patterns run locally on the band; only start, finish and stop cross the network.
 
 Event → vibration mapping: `rep` → `rep_pulse`; `ease_off` with `active:true` → `ease_off`; `active:false` → nothing; session end → `session_complete`. Command time-to-live is **3000 ms** (`CMD_TTL_MS`).
 
-A window is linked to the open session when its `windowEndMs ≥` the session's `startedAtMs`. Storage is **in memory**; it resets when the backend restarts.
+**Session association is by the band's own timestamps, not by arrival time:** a window belongs to a session when it ends after `startedAtMs` and starts before `endedAtMs` (or the session is still open). A window queued while offline and delivered after the session ended still counts for that session. The "before" and "after" readings are chosen the same way (§ vibration policy). Storage is **in memory**; it resets when the backend restarts.
 
 **Status rules**, checked in this order (first match wins):
 
@@ -165,14 +171,15 @@ A window is linked to the open session when its `windowEndMs ≥` the session's 
 | `sensor_missing` | the band's latest status reports `pulseSensor` or `motionSensor` as `"missing"` |
 | `collecting` | connected, but no reading yet |
 | `reading_stale` | the newest reading ended more than **30 s** ago, judged by the band's `windowEndMs`, not by when it arrived (a queued window flushed after an outage is real but not current) |
-| `contact_required` | the newest reading has no finger contact |
+| `contact_required` | the band's latest `contact` event says **off** (immediate), or the newest window has no contact and there is no "on" event |
+| `settling` | the finger is back (latest `contact` event says **on**) but the newest window still has no contact. A clean reading needs up to 60–75 s more |
 | `vibration_overlap` | the only problem is `motorActive` (a cue just played) |
 | `poor_quality` | any other problem: `no_pulse`, `low_quality` (< 0.8), `timing_gap`, `motion_unavailable`, `moving`, `no_clock` |
 | `usable` | none of the above; this is the only state that returns `pulseRateBpm` |
 
 Only readings from the **current boot** are used: the boot ID in the band's latest status, or before any status, the newest reading's boot. Older boots' readings stay stored and still count in session history; they're just never shown as the current reading. Readings dated more than 5 s in the future (a device clock error) are ignored.
 
-**Message validation:** every band message is checked before it changes any state. A `features` message must be a JSON object with `dev` (this device), `boot` (1–16 characters), `seq` (whole number ≥ 0), `windowStartMs` < `windowEndMs` (whole numbers), `contact` (bool) and `quality` (number 0–1). The optional fields in §3.1 must have their documented types (numbers, bools, or null where §3.1 allows it). `status` needs a bool `online`; `ack` needs a string `commandId` and a known `result`; `events` needs a string `type`. Invalid messages, and anything that is not JSON, are dropped and counted in `rejectedMessages` (with `lastRejectReason`). They can't raise inside the MQTT callback, so reception carries on. `problems` lists every reason the newest reading is not clean, using the same rule as `usableWindows`.
+**Message validation:** every band message is checked before it changes any state. A `features` message must be a JSON object with `dev` (this device), `boot` (1–16 characters), `seq` (whole number ≥ 0), `windowStartMs` < `windowEndMs` (whole numbers), `contact` (bool) and `quality` (number 0–1). The optional fields in §3.1 must have their documented types (numbers, bools, or null where §3.1 allows it). Numbers must be finite: `NaN`, `Infinity` and overflowing values like `1e999` are rejected. Types are checked before set membership, so a list or object where a word is expected is rejected rather than raising. `status` needs a bool `online` (plus `pulseSensor` / `motionSensor` from the allowed words, and whole-number counters); `ack` needs a string `commandId`, a known `result` and a string-or-null `reason`; `events` needs a string `type` (a `contact` event needs `detail` "on"/"off" and a whole-number `atMs`). Parsing, validation and storage all sit inside one error boundary in the MQTT callback. Invalid messages, and anything that is not JSON, are dropped and counted in `rejectedMessages` (with `lastRejectReason`). They can't raise inside the MQTT callback, so reception carries on. `problems` lists every reason the newest reading is not clean, using the same rule as `usableWindows`.
 
 **Vibration policy (Phase 1):** cues are frequent during reps (one every few seconds), so almost every 60 s window inside a session overlaps a vibration. Those windows are stored and counted (`vibrationOverlapWindows`) but **not** used as pulse readings. The comparison pulse is the last clean window ending in the 5 minutes before the session (`prePulseBpm`) and the first clean window starting in the 5 minutes after it (`postPulseBpm`). Once real hardware data exists, measure how long the motor actually disturbs the MAX30102 signal; only then consider using in-session windows with a margin around each cue cut out. Synthetic data cannot answer that question.
 
@@ -196,16 +203,18 @@ Environment variables: `MQTT_HOST` (127.0.0.1), `MQTT_PORT` (1883), `DEVICE_ID` 
 
 **`backend-sample/fake_band.py`** is the older Python stand-in (no STOP or motion). Use `calm_band_sim` instead.
 
-## 6. Expected test results (re-run 26 Oct 2026, after the second review)
+## 6. Expected test results (re-run 26 Oct 2026, after the third review)
 
 | Test | Command | Expected |
 |---|---|---|
-| 1. Core unit tests | `cd firmware/host && make && ./test_core` | 35 passed, 0 failed |
-| 2. Backend status rules | own backend: `DEVICE_ID=cb-check uvicorn app:app --port 8001`, then `BACKEND_URL=http://127.0.0.1:8001 DEVICE_ID=cb-check python3 backend-sample/backend_checks.py` | 19/19 |
+| 1. Core unit tests | `cd firmware/host && make && ./test_core` | 48 passed, 0 failed |
+| 2. Backend status rules | own backend: `DEVICE_ID=cb-check uvicorn app:app --port 8001`, then `BACKEND_URL=http://127.0.0.1:8001 DEVICE_ID=cb-check python3 backend-sample/backend_checks.py` | 26/26 |
 | 3. Integration (band ↔ broker ↔ backend) | broker + backend + `calm_band_sim` (fast windows), then `python3 backend-sample/run_integration.py` | 13/13 |
-| 4. Firmware scenarios | **fresh** backend + same simulator, then `python3 firmware/host/firmware_scenarios.py` | 22/22 |
-| ESP32 compile | see `firmware/README.md` | Wokwi/sim build 914,317 B (69 % flash); real-sensor build 912,353 B; RAM 35 % |
-| Emulated ESP32 (QEMU 9.0.0, BENCH build) | see `firmware/README.md` | boots, prints one reading per second with no timing gaps (35 in ~50 s this run), `motionValid:false` and quality ≤ 0.5 because QEMU has no MPU6050 |
-| Emulated ESP32, `MOTOR_SELFTEST=1 SENSOR_SELFTEST=1` | see `firmware/README.md` | `RESULT PASS` (6 motor edges, off at ~+1500 ms while `loop()` is blocked for 3 s) and `SENSORS PASS` (300 pulse, 96 motion, 0 lost during a 3 s block) |
+| 4. Firmware scenarios | **fresh** backend + same simulator, then `python3 firmware/host/firmware_scenarios.py` | 23/23 |
+| ESP32 compile (re-measured 26 Oct) | see `firmware/README.md` | Wokwi/sim build 914,781 B (69 % flash); real-sensor build 913,509 B (69 %); RAM 116,076 B (35 %) |
+| Emulated ESP32 (QEMU 9.0.0, BENCH build) | see `firmware/README.md` | boots, prints one reading per second with no timing gaps (43 in ~50 s this run), `motionValid:false` and quality ≤ 0.5 because QEMU has no MPU6050 |
+| Emulated ESP32, `MOTOR_SELFTEST=1 SENSOR_SELFTEST=1` | see `firmware/README.md` | `RESULT PASS` (6 motor edges, off at ~+1500 ms while `loop()` is blocked for 3 s) and `SENSOR TASK TIMING PASS` (~300 synthetic pulse samples, 96 motion slots on schedule, 0 MPU6050 readings because QEMU has none) |
 
 `scripts/run_all_tests.sh` runs suites 1–4. A suite counts as passed only if its process exits 0, its log has no `FAIL` line and no Python traceback, **and** its summary shows exactly the expected count. Otherwise the script prints `SOME SUITES FAILED` and exits 1. If a tool or Python package is missing, it exits 2 before running anything.
+
+**Not verified by any of this:** either physical sensor's I2C path, real pulse quality, motor interference with the pulse signal, Wi-Fi/TLS to EMQX, and Wokwi. These need the real parts or network access.

@@ -119,6 +119,9 @@ class Band {
   // Samples the sensor produced but that never reached us (e.g. FIFO overflow while the reader
   // was late). Every window that covers tMs is then marked timingGap.
   void notePulseLoss(uint32_t tMs, uint16_t count);
+  // After the pulse sensor was lost and re-initialised: restart beat detection and mark a gap,
+  // so no window is clean until one full window has passed since recovery.
+  void resetPulse(uint32_t tMs);
   // Call often. Returns true when a new window is ready in *out. epochNowMs must be valid
   // (clockValid) for a window to be produced; until then nothing is emitted.
   bool poll(uint32_t tMs, bool clockValid, int64_t epochNowMs, Window* out);
@@ -140,6 +143,62 @@ class Band {
   Bucket& bucket(uint32_t tMs);
   void detectBeat(uint32_t tMs, float ir);
 };
+
+// ---------------------------------------------------------------- immediate finger contact
+// Debounced contact state from single samples (not the 60 s window): reports a change once the
+// new state has held for holdMs. Used for the fast "finger on / off" status.
+class ContactTracker {
+ public:
+  explicit ContactTracker(uint32_t holdMs = 1000) : holdMs_(holdMs) {}
+  // Returns true when the debounced state changed; the new state is then on().
+  bool update(uint32_t tMs, bool rawContact);
+  bool on() const { return on_; }
+  bool known() const { return known_; }
+ private:
+  uint32_t holdMs_, since_ = 0;
+  bool on_ = false, known_ = false, cand_ = false, candSet_ = false;
+};
+
+// ---------------------------------------------------------------- sensor health
+// Turns individual I2C results into "ok" / "missing", and paces re-initialisation attempts.
+class SensorHealth {
+ public:
+  SensorHealth(uint16_t failLimit, uint32_t retryMs) : failLimit_(failLimit), retryMs_(retryMs) {}
+  void begin(bool ok, uint32_t tMs) { ok_ = ok; streak_ = 0; lastTry_ = tMs; }
+  // Result of one access. Returns true if this flipped the sensor to missing.
+  bool report(bool success, uint32_t tMs);
+  // While missing: true at most once per retryMs (time to try re-initialising).
+  bool retryDue(uint32_t tMs);
+  // Re-initialisation succeeded. Returns true (state changed).
+  bool recovered() { bool was = ok_; ok_ = true; streak_ = 0; return !was; }
+  bool ok() const { return ok_; }
+ private:
+  uint16_t failLimit_, streak_ = 0;
+  uint32_t retryMs_, lastTry_ = 0;
+  bool ok_ = false;
+};
+
+// ---------------------------------------------------------------- MAX30102 FIFO reader
+// Register access with every I2C transaction checked, so a failed read is never mistaken for
+// a valid zero (an "empty FIFO").
+struct PulseBus {
+  virtual bool read8(uint8_t reg, uint8_t* value) = 0;
+  // Burst read from one register; returns the number of bytes actually received (−1 = error).
+  virtual int readBytes(uint8_t reg, uint8_t* buf, int n) = 0;
+  virtual ~PulseBus() {}
+};
+struct FifoResult {
+  bool ok;          // every transaction succeeded
+  int samples;      // samples delivered to the sink
+  uint16_t lost;    // overflow counter (samples overwritten before we read them; saturates at 31)
+};
+typedef void (*PulseSink)(void* ctx, uint32_t tMs, float ir);
+// Drains the 32-sample FIFO (LED mode 2: red then IR, 3 bytes each, 18-bit). Registers:
+// 0x04 write pointer, 0x05 overflow counter, 0x06 read pointer, 0x07 data. The newest sample is
+// stamped nowMs and older ones spacingMs apart. Lost samples are reported, not invented.
+// On a partial burst the complete samples received are delivered and ok is false; the rest stay
+// in the FIFO for the next call.
+FifoResult drainMax30102(PulseBus& bus, uint32_t nowMs, uint32_t spacingMs, PulseSink sink, void* ctx);
 
 // ---------------------------------------------------------------- messages (JSON text)
 // Each returns the number of bytes written (0 if the buffer was too small).

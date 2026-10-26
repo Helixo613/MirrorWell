@@ -24,6 +24,7 @@ static Band* band;
 static CommandGate gate(cfg);
 static HapticPlayer player;
 static Outbox outbox;
+static ContactTracker contact(1000);
 static SimPulse simPulse;
 static SimMotion simMotion;
 static mosquitto* mq;
@@ -132,6 +133,10 @@ static void onConnect(mosquitto*, void*, int rc) {
   mosquitto_subscribe(mq, nullptr, topicCmd, 1);
   mosquitto_subscribe(mq, nullptr, topicSim, 1);
   sendStatus(true);
+  if (contact.known() && clockValid) {   // current finger state, in case a change happened offline
+    char b[256]; size_t k = buildEvent(cfg, boot, "contact", contact.on() ? "on" : "off", epochMs(), b, sizeof b);
+    pub(topicEvents, b, k);
+  }
   // Flush windows queued while offline, oldest first, with their ORIGINAL timestamps.
   int n = 0;
   while (!outbox.empty()) {
@@ -177,7 +182,15 @@ int main() {
   bool wasMotor = false;
   while (true) {
     uint32_t t = nowT();
-    while ((int32_t)(t - nextPulse) >= 0) { band->addPulseSample(nextPulse, simPulse.sample(nextPulse)); nextPulse += 1000 / cfg.pulseHz; }
+    while ((int32_t)(t - nextPulse) >= 0) {
+      float ir = simPulse.sample(nextPulse);
+      band->addPulseSample(nextPulse, ir);
+      if (contact.update(nextPulse, ir >= cfg.contactIrMin) && clockValid) {   // immediate finger on/off
+        char b[256]; size_t k = buildEvent(cfg, boot, "contact", contact.on() ? "on" : "off", epochMs(), b, sizeof b);
+        pub(topicEvents, b, k);
+      }
+      nextPulse += 1000 / cfg.pulseHz;
+    }
     while ((int32_t)(t - nextMotion) >= 0) {
       float ax, ay, az; simMotion.sample(nextMotion, &ax, &ay, &az);
       if (motionSensorOk) band->addMotionSample(nextMotion, ax, ay, az);   // failed sensor → no samples
