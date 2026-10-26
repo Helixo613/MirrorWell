@@ -254,6 +254,7 @@ CmdDecision CommandGate::check(const char* json, size_t len, bool clockValid, in
     if (dur->i < 1 || dur->i > (int64_t)cfg_.maxPatternMs) { d.pattern = Pattern::None; d.reason = "bad_duration"; return d; }
     d.durationMs = (uint32_t)dur->i;
   }
+  d.expiresAtMs = exp->i;
   d.result = CmdResult::Accepted;
   d.reason = nullptr;
   return d;
@@ -312,6 +313,11 @@ void Band::addMotionSample(uint32_t t, float ax, float ay, float az) {
   if (dev > b.motionMax) b.motionMax = dev;
 }
 
+void Band::notePulseLoss(uint32_t t, uint16_t count) {
+  Bucket& b = bucket(t);
+  b.lost = (uint16_t)(b.lost + count);
+}
+
 void Band::setMotor(bool on, uint32_t t) {
   if (on == motor_) return;
   if (on) motorSince_ = t;
@@ -347,6 +353,7 @@ bool Band::poll(uint32_t t, bool clockValid, int64_t epochNow, Window* out) {
     motionSq += b.motionSq;
     if (b.motionMax > motionMax) motionMax = b.motionMax;
     if (s < lastSec && b.pulseN < cfg_.pulseHz * 8 / 10) w.timingGap = true;
+    if (b.lost) w.timingGap = true;                    // samples known to be lost in this second
   }
   w.contact = pulseN > 0 && (float)contactN / pulseN >= cfg_.contactFractionMin;
   // Motion is only judged when enough samples arrived. A missing or failed MPU6050 must never

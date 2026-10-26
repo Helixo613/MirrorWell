@@ -186,7 +186,8 @@ check("motion sensor lost → window motionValid false, motion null, quality ≤
 check("motion sensor lost → status reports motionSensor missing",
       any(s.get("motionSensor") == "missing" for s in status_msgs))
 st = httpx.get(f"{B}/api/companion/status").json()
-check("backend does not call it usable", st["state"] == "poor_quality" and "motion_unavailable" in st["problems"], st["state"])
+check("backend does not call it usable", st["state"] == "sensor_missing" and st["pulseRateBpm"] is None
+      and "motion_sensor_missing" in st["problems"], st["state"])
 sim({"motionSensor": True}); time.sleep(6)
 f = latest_feature(time.time() * 1000 - 800)
 check("motion sensor back → motionValid true again", f and f.get("motionValid") is True)

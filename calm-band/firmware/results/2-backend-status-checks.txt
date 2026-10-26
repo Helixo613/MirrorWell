@@ -1,13 +1,21 @@
 PASS  outgoing command does not refresh 'last heard'  — state stale, lastHeard None
-PASS  10-minute-old reading → reading_stale, no pulse  — reading_stale, age 600488 ms
+PASS  10-minute-old reading → reading_stale, no pulse  — reading_stale, age 600472 ms
 PASS  fresh clean reading → usable with a pulse value  — usable
 PASS  reading overlapping a vibration → vibration_overlap, no pulse  — vibration_overlap ['vibration_overlap']
 PASS  timing gap → poor_quality  — ['timing_gap']
-PASS  missing motion data → poor_quality + motion_unavailable, sensor shown missing  — ['low_quality', 'motion_unavailable'] sensors {'pulse': 'ok', 'motion': 'missing'}
+PASS  missing motion data → sensor_missing + motion_unavailable, sensor shown missing  — ['motion_sensor_missing', 'low_quality', 'motion_unavailable'] sensors {'pulse': 'ok', 'motion': 'missing'}
 PASS  future-dated window ignored; latest real one used  — usable
 PASS  online:false → offline, no pulse even with a fresh clean reading  — offline
 PASS  back online → usable again  — usable
 PASS  in-session vibration windows counted, not used as readings  — 3 overlap, 0 usable
 PASS  pre- and post-session clean pulse reported  — pre 80.0 post 74.0
+PASS  (setup) old boot reading is usable before the reboot  — usable
+PASS  new boot with both sensors missing → sensor_missing, no pulse (old boot's 70 bpm not shown)  — sensor_missing ['pulse_sensor_missing', 'motion_sensor_missing'] boot new1
+PASS  new boot, sensors ok, no reading from it yet → collecting (old readings ignored)  — collecting
+PASS  old boot's readings kept as history  — 3 windows
+PASS  first reading from the new boot → usable  — usable
+PASS  15 malformed messages rejected and counted  — 15 rejected, last: events: bad type
+PASS  state unchanged by malformed messages  — usable
+PASS  reception still works after malformed messages  — 66.0 bpm
 
-11/11 backend checks passed
+19/19 backend checks passed

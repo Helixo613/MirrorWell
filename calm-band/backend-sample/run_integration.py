@@ -98,14 +98,16 @@ check("session ended with whitelisted summary", s["state"] == "ended" and s["end
 check("pulse windows linked to the session", s["featureWindows"] >= 2, f"{s['featureWindows']} windows, {s['usableWindows']} usable")
 check("haptic commands executed during session", s["hapticExecuted"] >= 3, f"{s['hapticExecuted']}/{s['hapticCommands']}")
 
-# 10. Contact lost -> status says so and reports NO pulse value (missing != calm)
-nocontact = {"schema": 1, "dev": "cb-01", "boot": "ncboot", "seq": 1, "windowStartMs": 0,
-             "windowEndMs": int(time.time() * 1000) + 2_000, "clockValid": True, "contact": False, "quality": 0.0,
-             "pulseRateBpm": None}
-subprocess.run(["mosquitto_pub", "-t", "calmband/cb-01/features", "-m", json.dumps(nocontact), "-q", "1"], check=True)
-time.sleep(0.5)
+# 10. Contact lost on the band -> status says so and reports NO pulse value (missing != calm)
+def sim(payload):
+    subprocess.run(["mosquitto_pub", "-t", "calmband/cb-01/sim", "-m", json.dumps(payload), "-q", "1"], check=True)
+
+sim({"contact": False})
+time.sleep(6.5)                         # one full 5 s test window without contact
 st = httpx.get(f"{B}/api/companion/status").json()
 check("contact loss -> contact_required, no value shown", st["state"] == "contact_required" and st["pulseRateBpm"] is None, json.dumps(st))
+sim({"contact": True})
+time.sleep(6.5)
 
 print(f"\n{sum(ok for _, ok in results)}/{len(results)} checks passed")
 sys.exit(0 if all(ok for _, ok in results) else 1)

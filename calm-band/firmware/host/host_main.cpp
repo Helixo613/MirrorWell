@@ -81,10 +81,14 @@ static void handleCommand(const char* payload, size_t len) {
     if (d.commandId[0]) sendAck(d.commandId, "rejected", d.reason);
     return;
   }
-  sendAck(d.commandId, "accepted", nullptr);
-  if (player.playing() && playingId[0]) sendAck(playingId, "stopped", "replaced");
+  // Re-check expiry and start the motor with no network call in between; acks go out after.
+  if (!CommandGate::stillValid(d, epochMs())) { sendAck(d.commandId, "rejected", "expired"); return; }
+  bool replacing = player.playing();
+  char replacedId[48]; snprintf(replacedId, sizeof replacedId, "%s", playingId);
   player.start(d.pattern, nowT(), d.durationMs);
   snprintf(playingId, sizeof playingId, "%s", d.commandId);
+  sendAck(d.commandId, "accepted", nullptr);
+  if (replacing && replacedId[0]) sendAck(replacedId, "stopped", "replaced");
   printf("[band] BUZZ %s (cap %u ms)\n", patternName(d.pattern), d.durationMs);
 }
 

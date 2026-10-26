@@ -97,11 +97,14 @@ pub("status", {"dev": DEV, "boot": "chk", "online": True, "clockValid": True, "d
 pub("features", window(now() + 30, motionValid=False, motionCoverage=0.0, motionRms_g=None, motionMax_g=None,
                        moving=None, quality=0.5))
 st = status()
-check("missing motion data → poor_quality + motion_unavailable, sensor shown missing",
-      st["state"] == "poor_quality" and "motion_unavailable" in st["problems"] and st["sensors"]["motion"] == "missing",
+check("missing motion data → sensor_missing + motion_unavailable, sensor shown missing",
+      st["state"] == "sensor_missing" and "motion_unavailable" in st["problems"] and st["sensors"]["motion"] == "missing"
+      and st["pulseRateBpm"] is None,
       f"{st['problems']} sensors {st['sensors']}")
 
 # 7. A window dated in the future (device clock error) is ignored
+pub("status", {"dev": DEV, "boot": "chk", "online": True, "clockValid": True, "pulseSensor": "ok",
+               "motionSensor": "ok"}, retain=True)
 pub("features", window(now() + 30_000 + 600_000, contact=False, quality=0.0, pulseRateBpm=None))
 pub("features", window(now() + 40))
 st = status()
@@ -139,6 +142,50 @@ check("in-session vibration windows counted, not used as readings",
       s["vibrationOverlapWindows"] == 3 and s["usableWindows"] == 0, f"{s['vibrationOverlapWindows']} overlap, {s['usableWindows']} usable")
 check("pre- and post-session clean pulse reported", s["prePulseBpm"] == 80.0 and s["postPulseBpm"] == 74.0,
       f"pre {s['prePulseBpm']} post {s['postPulseBpm']}")
+
+# 10. The band reboots and reports both sensors missing: the previous boot's recent readings
+#     must not be shown as current (they stay stored as history).
+old_boot_windows = s["featureWindows"]
+pub("features", window(now() + 60))          # a fresh, clean reading from the OLD boot "chk"
+st = status()
+check("(setup) old boot reading is usable before the reboot", st["state"] == "usable", st["state"])
+pub("status", {"dev": DEV, "boot": "new1", "online": True, "clockValid": True, "droppedWindows": 0,
+               "publishFailures": 0, "pulseSensor": "missing", "motionSensor": "missing"}, retain=True)
+st = status()
+check("new boot with both sensors missing → sensor_missing, no pulse (old boot's 70 bpm not shown)",
+      st["state"] == "sensor_missing" and st["pulseRateBpm"] is None and st["boot"] == "new1",
+      f"{st['state']} {st['problems']} boot {st['boot']}")
+pub("status", {"dev": DEV, "boot": "new1", "online": True, "clockValid": True, "pulseSensor": "ok",
+               "motionSensor": "ok"}, retain=True)
+st = status()
+check("new boot, sensors ok, no reading from it yet → collecting (old readings ignored)",
+      st["state"] == "collecting" and st["pulseRateBpm"] is None, st["state"])
+s2 = next(x for x in httpx.get(f"{B}/api/companion/reviewer/sessions").json() if x["companionSessionId"] == sid)
+check("old boot's readings kept as history", s2["featureWindows"] == old_boot_windows, f"{s2['featureWindows']} windows")
+w = window(now() + 70); w["boot"] = "new1"
+pub("features", w)
+st = status()
+check("first reading from the new boot → usable", st["state"] == "usable" and st["pulseRateBpm"] == 70.0, st["state"])
+
+# 11. Malformed telemetry is rejected without stopping reception
+before = st["rejectedMessages"]
+bad = ["{}", "[]", '"text"', "5", "null", "not json at all", '{"dev":"%s","boot":"new1","seq":"7"}' % DEV,
+       json.dumps({**window(now() + 80), "boot": "new1", "quality": "high"}),
+       json.dumps({**window(now() + 80), "boot": "new1", "contact": None}),
+       json.dumps({**window(now() + 80), "boot": "new1", "windowEndMs": 5, "windowStartMs": 10}),
+       json.dumps({**window(now() + 80), "dev": "someone-else"})]
+for text in bad:
+    subprocess.run(["mosquitto_pub", "-t", f"calmband/{DEV}/features", "-q", "1", "-m", text], check=True)
+for kind, text in (("status", "{}"), ("status", '{"online":"yes"}'), ("ack", "[]"), ("events", "{}")):
+    subprocess.run(["mosquitto_pub", "-t", f"calmband/{DEV}/{kind}", "-q", "1", "-m", text], check=True)
+st = status(0.8)
+check("15 malformed messages rejected and counted", st["rejectedMessages"] - before == 15,
+      f"{st['rejectedMessages'] - before} rejected, last: {st['lastRejectReason']}")
+check("state unchanged by malformed messages", st["state"] == "usable" and st["boot"] == "new1", st["state"])
+w = window(now() + 90, pulseRateBpm=66.0); w["boot"] = "new1"
+pub("features", w)
+st = status()
+check("reception still works after malformed messages", st["pulseRateBpm"] == 66.0, f"{st['pulseRateBpm']} bpm")
 
 pub("status", None, retain=True)             # leave no retained state behind
 print(f"\n{sum(results)}/{len(results)} backend checks passed")

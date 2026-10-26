@@ -26,7 +26,7 @@ pip install fastapi uvicorn paho-mqtt httpx
 ./scripts/run_all_tests.sh
 ```
 
-Expected output: `33 passed, 0 failed`, `11/11 backend checks passed`, `13/13 checks passed`, `22/22 firmware checks passed`, and finally `ALL SUITES PASSED`. The script checks exit codes, `FAIL` lines, Python tracebacks and the exact counts, so it can't report success when a suite crashed. Logs go to `test-logs/`. The script uses ports 1883, 8000 and 8001, and it reuses an MQTT broker that's already running on 1883.
+Expected output: `35 passed, 0 failed`, `19/19 backend checks passed`, `13/13 checks passed`, `22/22 firmware checks passed`, and finally `ALL SUITES PASSED`. The script checks exit codes, `FAIL` lines, Python tracebacks and the exact counts, so it can't report success when a suite crashed. Logs go to `test-logs/`. The script uses ports 1883, 8000 and 8001, and it reuses an MQTT broker that's already running on 1883.
 
 ## Running pieces by hand
 

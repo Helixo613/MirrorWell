@@ -30,6 +30,8 @@ PASS  no MPU6050 data → motionValid false, motion fields null, quality capped 
 PASS  half the motion samples → not valid (coverage 0.50)
 PASS  full motion data → valid (coverage 0.99)
 PASS  status reports sensor health: {"dev":"cb-01","boot":"b","online":true,"clockValid":true,"droppedWindows":0,"publishFailures":0,"pulseSensor":"ok","motionSensor":"missing"}
+PASS  lost samples → timingGap while in the window, cleared afterwards
+PASS  a command accepted 50 ms before expiry is refused if the start is later than its expiry
 PASS  outbox keeps newest 120, drops 5 oldest, FIFO order
 
-33 passed, 0 failed
+35 passed, 0 failed

@@ -29,6 +29,10 @@
 #ifndef MOTOR_SELFTEST
 #define MOTOR_SELFTEST 0
 #endif
+// SENSOR_SELFTEST 1: test build that checks the sensor task keeps sampling while loop() is blocked.
+#ifndef SENSOR_SELFTEST
+#define SENSOR_SELFTEST 0
+#endif
 
 #define MPU6050_ADDR 0x68
 #define I2C_HZ 100000      // 100 kHz: tolerant of the 30 cm sensor wires in the desk-hub layout

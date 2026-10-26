@@ -85,6 +85,7 @@ struct CmdDecision {
   const char* reason;
   Pattern pattern;
   uint32_t durationMs;  // cap for this command: min(maxDurationMs, Config::maxPatternMs)
+  int64_t expiresAtMs;  // re-checked with stillValid() immediately before the motor starts
   char commandId[48];
 };
 
@@ -96,6 +97,8 @@ class CommandGate {
   // expired → bad_pattern → bad_duration. A seen id is remembered even when rejected, so a
   // re-delivery can never buzz later.
   CmdDecision check(const char* json, size_t len, bool clockValid, int64_t nowEpochMs);
+  // Last check, done with NO network call between it and starting the motor.
+  static bool stillValid(const CmdDecision& d, int64_t nowEpochMs) { return nowEpochMs <= d.expiresAtMs; }
  private:
   Config cfg_;
   static const int kSeen = 32;
@@ -113,6 +116,9 @@ class Band {
   void addPulseSample(uint32_t tMs, float ir);
   void addMotionSample(uint32_t tMs, float axG, float ayG, float azG);
   void setMotor(bool on, uint32_t tMs);
+  // Samples the sensor produced but that never reached us (e.g. FIFO overflow while the reader
+  // was late). Every window that covers tMs is then marked timingGap.
+  void notePulseLoss(uint32_t tMs, uint16_t count);
   // Call often. Returns true when a new window is ready in *out. epochNowMs must be valid
   // (clockValid) for a window to be produced; until then nothing is emitted.
   bool poll(uint32_t tMs, bool clockValid, int64_t epochNowMs, Window* out);
@@ -121,7 +127,7 @@ class Band {
   // Per-second buckets cover the window; beats are kept with their own times.
   static const int kSec = 64;       // ≥ windowMs/1000 + slack
   static const int kBeats = 256;
-  struct Bucket { uint32_t sec; uint16_t pulseN, contactN, motionN; float motionSq, motionMax; uint16_t motorMs; };
+  struct Bucket { uint32_t sec; uint16_t pulseN, contactN, motionN, lost; float motionSq, motionMax; uint16_t motorMs; };
   Config cfg_;
   Bucket b_[kSec];
   uint32_t beats_[kBeats]; int beatHead_ = 0, beatCount_ = 0;

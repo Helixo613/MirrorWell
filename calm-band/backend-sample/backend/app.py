@@ -54,7 +54,8 @@ db = {
     "sessions": {},        # companionSessionId -> session dict
     "feature_windows": {}, # (device, boot, seq) -> window   (unique key = duplicate guard)
     "commands": {},        # commandId -> command + acks
-    "device": {"lastHeardMs": None, "status": None},
+    "device": {"lastHeardMs": None, "status": None, "boot": None},
+    "rejected": {"count": 0, "last": None},   # band messages that failed validation
 }
 active_session: dict = {"id": None}
 
@@ -71,17 +72,108 @@ def on_connect(client, userdata, flags, rc, props=None):
     client.subscribe(f"calmband/{DEVICE_ID}/#", qos=1)
 
 
+# ---------------------------------------------------------------- message validation
+# Every band message is checked BEFORE it touches state. A bad message is counted and dropped;
+# it can never raise inside the MQTT callback (which would stop reception).
+SENSOR_STATES = {"ok", "missing", "simulated"}
+ACK_RESULTS = {"accepted", "executed", "rejected", "stopped"}
+
+
+def _int(v):
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
+def _num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+FEATURE_REQUIRED = {"dev": str, "boot": str, "seq": _int, "windowStartMs": _int, "windowEndMs": _int,
+                    "contact": bool, "quality": _num}
+FEATURE_OPTIONAL = {"schema": _int, "origin": str, "clockValid": bool, "validBeatFraction": _num,
+                    "validIbis": _int, "motionValid": bool, "motionCoverage": _num, "motorActive": bool,
+                    "timingGap": bool,
+                    # may be null:
+                    "pulseRateBpm": (_num, None), "pulseRateSdBpm": (_num, None),
+                    "motionRms_g": (_num, None), "motionMax_g": (_num, None), "moving": (bool, None)}
+
+
+def _ok(value, rule) -> bool:
+    if isinstance(rule, tuple):
+        return value is None or _ok(value, rule[0])
+    if rule in (str, bool):
+        return isinstance(value, rule)
+    return rule(value)
+
+
+def validate(kind: str, body) -> str | None:
+    """Returns why the message is invalid, or None if it can be used."""
+    if not isinstance(body, dict):
+        return "not an object"
+    if "dev" in body and body["dev"] != DEVICE_ID:
+        return "wrong device"
+    if kind == "features":
+        for k, rule in FEATURE_REQUIRED.items():
+            if k not in body or not _ok(body[k], rule):
+                return f"bad or missing {k}"
+        for k, rule in FEATURE_OPTIONAL.items():
+            if k in body and not _ok(body[k], rule):
+                return f"bad {k}"
+        if not body["boot"] or len(body["boot"]) > 16 or body["seq"] < 0:
+            return "bad boot/seq"
+        if body["windowEndMs"] <= body["windowStartMs"]:
+            return "window ends before it starts"
+        if not 0 <= body["quality"] <= 1:
+            return "quality out of range"
+    elif kind == "status":
+        if not isinstance(body.get("online"), bool):
+            return "bad or missing online"
+        if "boot" in body and not (isinstance(body["boot"], str) and 0 < len(body["boot"]) <= 16):
+            return "bad boot"
+        for k in ("pulseSensor", "motionSensor"):
+            if k in body and body[k] not in SENSOR_STATES:
+                return f"bad {k}"
+    elif kind == "ack":
+        if not isinstance(body.get("commandId"), str) or body.get("result") not in ACK_RESULTS:
+            return "bad commandId/result"
+    elif kind == "events":
+        if not isinstance(body.get("type"), str):
+            return "bad type"
+    return None
+
+
+def _reject(reason: str):
+    with lock:
+        db["rejected"]["count"] += 1
+        db["rejected"]["last"] = reason
+
+
 def on_message(client, userdata, msg):
-    try:
-        body = json.loads(msg.payload)
-    except ValueError:
-        return
     kind = msg.topic.rsplit("/", 1)[-1]
     if kind not in BAND_TOPICS:
         return  # our own outgoing commands (and test hooks) echo back on the wildcard subscription
+    if not msg.payload:
+        return  # an empty retained message is how a retained status is cleared
+    try:
+        body = json.loads(msg.payload)
+    except (ValueError, UnicodeDecodeError):
+        _reject(f"{kind}: not JSON")
+        return
+    why = validate(kind, body)
+    if why:
+        _reject(f"{kind}: {why}")
+        return
+    try:
+        _store(kind, body)
+    except Exception as e:  # never let one message stop the MQTT loop
+        _reject(f"{kind}: {type(e).__name__}")
+
+
+def _store(kind: str, body: dict):
     with lock:
         if kind == "status" and body.get("online") is False:
-            db["device"]["status"] = body          # Last Will / clean offline: not "heard from"
+            prev = db["device"]["status"] or {}
+            # Last Will / clean offline: not "heard from". Keep the last known sensor health.
+            db["device"]["status"] = {**{k: prev[k] for k in ("pulseSensor", "motionSensor") if k in prev}, **body}
             return
         db["device"]["lastHeardMs"] = now_ms()
         if kind == "features":
@@ -96,6 +188,8 @@ def on_message(client, userdata, msg):
             db["feature_windows"][key] = body
         elif kind == "status":
             db["device"]["status"] = body
+            if body.get("boot"):
+                db["device"]["boot"] = body["boot"]   # the band's current boot (it announces it on connect)
         elif kind == "ack":
             cmd = db["commands"].get(body.get("commandId"))
             if cmd is not None:
@@ -224,11 +318,20 @@ def is_clean(w: dict) -> bool:
     return not quality_problems(w)
 
 
-def plausible_windows(now: int) -> list[dict]:
-    """Windows ordered by acquisition time, without ones dated in the future (clock errors)."""
+def plausible_windows(now: int, boot: str | None = None) -> list[dict]:
+    """Windows ordered by acquisition time, without ones dated in the future (clock errors).
+    With boot, only that boot's windows (older boots stay stored as history)."""
     ws = [w for w in db["feature_windows"].values()
-          if isinstance(w.get("windowEndMs"), int) and w["windowEndMs"] <= now + FUTURE_TOLERANCE_MS]
+          if w["windowEndMs"] <= now + FUTURE_TOLERANCE_MS and (boot is None or w["boot"] == boot)]
     return sorted(ws, key=lambda w: w["windowEndMs"])
+
+
+def current_boot(now: int) -> str | None:
+    """The boot the band announced in its latest status; before any status, the newest window's."""
+    if db["device"]["boot"]:
+        return db["device"]["boot"]
+    ws = plausible_windows(now)
+    return ws[-1]["boot"] if ws else None
 
 
 @app.get("/api/companion/status")
@@ -237,9 +340,13 @@ def status():
     with lock:
         heard = db["device"]["lastHeardMs"]
         dev_status = db["device"]["status"] or {}
-        windows = plausible_windows(now)
+        boot = current_boot(now)
+        windows = plausible_windows(now, boot)       # current boot only
         latest = windows[-1] if windows else None
+        rejected = dict(db["rejected"])
     online = dev_status.get("online")
+    sensors = {"pulse": dev_status.get("pulseSensor"), "motion": dev_status.get("motionSensor")}
+    missing = [k for k, v in sensors.items() if v == "missing"]
     connected = online is not False and heard is not None and now - heard < STALE_AFTER_MS
     age = now - latest["windowEndMs"] if latest else None
     problems = quality_problems(latest) if latest else []
@@ -248,6 +355,8 @@ def status():
         state = "offline"
     elif not connected:
         state = "stale"
+    elif missing:
+        state = "sensor_missing"      # the band says a sensor is gone: no reading can be trusted
     elif latest is None:
         state = "collecting"
     elif age > READING_MAX_AGE_MS:
@@ -263,14 +372,17 @@ def status():
     return {
         "device": DEVICE_ID,
         "state": state,
-        "problems": problems if latest else [],
+        "problems": ([f"{k}_sensor_missing" for k in missing] + problems) if latest or missing else [],
         # Missing data is reported as missing — never converted into a calm estimate.
         "pulseRateBpm": latest.get("pulseRateBpm") if state == "usable" else None,
         "online": online,
         "lastHeardMs": heard,
         "readingEndMs": latest["windowEndMs"] if latest else None,
         "readingAgeMs": age,
-        "sensors": {"pulse": dev_status.get("pulseSensor"), "motion": dev_status.get("motionSensor")},
+        "sensors": sensors,
+        "boot": boot,
+        "rejectedMessages": rejected["count"],
+        "lastRejectReason": rejected["last"],
     }
 
 

@@ -162,6 +162,24 @@ int main() {
     char st[300]; buildStatus(c, "b", true, true, 0, 0, "ok", "missing", st, sizeof st);
     CHECK(strstr(st, "\"motionSensor\":\"missing\"") != nullptr, "status reports sensor health: %s", st);
   }
+  // 7c. Lost samples (sensor FIFO overflow) mark the covering windows as timing gaps
+  {
+    Band band(c); SimPulse p; SimMotion m; uint32_t t = 1; Window w{};
+    run(band, p, m, t, 30000, true, &w);
+    band.notePulseLoss(t, 12);
+    run(band, p, m, t, 30001, true, &w);
+    bool gapNow = w.timingGap;
+    run(band, p, m, t, 60000, true, &w);               // the loss has left the 60 s window
+    CHECK(gapNow && !w.timingGap, "lost samples → timingGap while in the window, cleared afterwards");
+  }
+  // 7d. Expiry re-check right before the motor starts
+  {
+    CommandGate g; int64_t now = 1'760'000'000'000LL; char b[200];
+    snprintf(b, sizeof b, "{\"commandId\":\"e1\",\"pattern\":\"rep_pulse\",\"issuedAtMs\":%lld,\"expiresAtMs\":%lld}", (long long)now, (long long)(now + 50));
+    CmdDecision d = g.check(b, strlen(b), true, now);
+    CHECK(d.result == CmdResult::Accepted && CommandGate::stillValid(d, now + 50) && !CommandGate::stillValid(d, now + 51),
+          "a command accepted 50 ms before expiry is refused if the start is later than its expiry");
+  }
   // 8. Outbox: bounded, oldest dropped, order kept
   {
     static Outbox o;

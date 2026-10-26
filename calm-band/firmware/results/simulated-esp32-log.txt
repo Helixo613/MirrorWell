@@ -1,19 +1,19 @@
 [band] simulated ESP32 cb-01: window 5000 ms, hop 1000 ms, broker 127.0.0.1:1883
-[band] connected (boot 0bb99b17)
+[band] connected (boot 62135bd0)
 [band] BUZZ rep_pulse (cap 1500 ms)
 [band] BUZZ ease_off (cap 1500 ms)
-[band] reject expired 0ffa0298
+[band] reject expired c4397188
 [band] BUZZ rep_pulse (cap 1500 ms)
-[band] reject duplicate fixed-1b
+[band] reject duplicate fixed-ce
 [band] BUZZ session_complete (cap 1500 ms)
 [band] BUZZ session_complete (cap 1500 ms)
 [band] STOP pressed — vibration stopped
 [band] BUZZ rep_pulse (cap 1500 ms)
-[band] reject no_clock 3f3dad7e
+[band] reject no_clock f5f1c3a6
 [band] simulating network loss for 6000 ms
 [band] network back — reconnecting (6 windows queued)
-[band] connected (boot 0bb99b17), flushed 6 queued windows
-[band] reject malformed raw-bef5
+[band] connected (boot 62135bd0), flushed 6 queued windows
+[band] reject malformed raw-75ce
 [band] reject malformed 
-[band] reject bad_time 364856f6
-[band] reject bad_duration raw-551e
+[band] reject bad_time 1656c4d6
+[band] reject bad_duration raw-1b65
