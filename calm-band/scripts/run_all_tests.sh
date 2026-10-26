@@ -5,7 +5,7 @@
 #
 #   suite                     program                                    expected
 #   1 core unit tests         firmware/host/test_core                    48 passed, 0 failed
-#   2 backend status checks   backend-sample/backend_checks.py           26/26
+#   2 backend status checks   backend-sample/backend_checks.py           33/33
 #   3 integration             backend-sample/run_integration.py          13/13
 #   4 firmware scenarios      firmware/host/firmware_scenarios.py        23/23
 #
@@ -64,7 +64,7 @@ stop_backend() { kill "$1" 2>/dev/null; wait "$1" 2>/dev/null; }
 
 # 2. Backend status rules, on a separate device id and port so the simulated band can't interfere.
 start_backend 8001 cb-check; B2=$BACKEND
-run_suite "2. backend status checks" "$LOGS/2-backend-checks.txt" '^26/26 backend checks passed$' \
+run_suite "2. backend status checks" "$LOGS/2-backend-checks.txt" '^33/33 backend checks passed$' \
   env BACKEND_URL=http://127.0.0.1:8001 DEVICE_ID=cb-check python3 "$ROOT/backend-sample/backend_checks.py"
 stop_backend $B2
 

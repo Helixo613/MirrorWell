@@ -68,7 +68,7 @@ Optional parts: a 100 µF 16 V capacitor across the motor module's VCC and GND (
 | Test | Result | Output |
 |---|---|---|
 | Core unit tests (`host/test_core`), incl. a datasheet-behaving fake MAX30102 (overflow, partial read, disconnect, reconnect), sensor health/retry, contact debounce | **48/48 pass** | `results/1-core-unit-tests.txt` |
-| Backend status rules, incl. wrong-type and non-finite messages, immediate contact, late-delivered windows | **26/26 pass** | `results/2-backend-status-checks.txt` |
+| Backend status rules, incl. wrong-type and non-finite messages, immediate contact, contact restored with no new window, late-delivered windows | **33/33 pass** | `results/2-backend-status-checks.txt` |
 | Integration checks with the **simulated ESP32** | **13/13 pass** | `results/3-integration-with-simulated-esp32.txt` |
 | Firmware scenarios, incl. contact "off" event within 2 s | **23/23 pass** | `results/4-firmware-scenarios.txt` |
 | ESP32 compile, Wokwi/simulated-pulse build | **pass**: 914,781 B flash (69%), 116,028 B RAM (35%) | `build/wokwi/` |

@@ -39,6 +39,9 @@ READING_MAX_AGE_MS = int(os.environ.get("READING_MAX_AGE_MS", "30000"))
 # A window whose end time is further than this in the future is a clock error and is ignored.
 FUTURE_TOLERANCE_MS = int(os.environ.get("FUTURE_TOLERANCE_MS", "5000"))
 USABLE_QUALITY = 0.8
+# The band reports contact changes after they have held for 1 s, so a finger-off period really
+# began up to this long before the "off" event's time.
+CONTACT_DEBOUNCE_MS = int(os.environ.get("CONTACT_DEBOUNCE_MS", "1000"))
 # Pre/post-session pulse: the last clean window ending before the session (within this long)
 # and the first clean window starting after it.
 PRE_POST_WINDOW_MS = int(os.environ.get("PRE_POST_WINDOW_MS", "300000"))
@@ -56,6 +59,9 @@ db = {
     "feature_windows": {}, # (device, boot, seq) -> window   (unique key = duplicate guard)
     "commands": {},        # commandId -> command + acks
     "device": {"lastHeardMs": None, "status": None, "boot": None, "contact": None},
+    # Finger-off periods from the band's contact events, in band time: [{"boot","offMs","onMs"}]
+    # (onMs None while still off). Any window overlapping one is not a clean reading.
+    "contactLoss": [],
     "rejected": {"count": 0, "last": None},   # band messages that failed validation
 }
 active_session: dict = {"id": None}
@@ -211,7 +217,15 @@ def _store(kind: str, body: dict):
                 db["device"]["boot"] = body["boot"]   # the band's current boot (it announces it on connect)
         elif kind == "events" and body["type"] == "contact":
             # Immediate finger on/off from the band (debounced ~1 s), separate from the 60 s windows.
-            db["device"]["contact"] = {"on": body["detail"] == "on", "atMs": body["atMs"], "boot": body.get("boot")}
+            on = body["detail"] == "on"
+            db["device"]["contact"] = {"on": on, "atMs": body["atMs"], "boot": body.get("boot")}
+            losses = db["contactLoss"]
+            open_loss = next((x for x in reversed(losses) if x["onMs"] is None and x["boot"] == body.get("boot")), None)
+            if not on and open_loss is None:
+                losses.append({"boot": body.get("boot"), "offMs": body["atMs"] - CONTACT_DEBOUNCE_MS, "onMs": None})
+                del losses[:-200]                     # bounded history
+            elif on and open_loss is not None:
+                open_loss["onMs"] = body["atMs"]      # restored: only windows starting after this are clean
         elif kind == "ack":
             cmd = db["commands"].get(body.get("commandId"))
             if cmd is not None:
@@ -333,7 +347,22 @@ def quality_problems(w: dict) -> list[str]:
         p.append("vibration_overlap")
     if not w.get("clockValid", True):
         p.append("no_clock")
+    if overlaps_contact_loss(w):
+        p.append("contact_interrupted")
     return p
+
+
+def overlaps_contact_loss(w: dict) -> bool:
+    """True if the finger was off at any point the window covers (per the band's contact
+    events). So after the finger returns, only a window that STARTS after the restoration
+    counts — an older clean window can't come back as the current reading."""
+    for x in db["contactLoss"]:
+        if x["boot"] is not None and w.get("boot") != x["boot"]:
+            continue
+        on = x["onMs"] if x["onMs"] is not None else float("inf")
+        if w["windowStartMs"] < on and w["windowEndMs"] > x["offMs"]:
+            return True
+    return False
 
 
 def is_clean(w: dict) -> bool:
@@ -367,6 +396,12 @@ def status():
         latest = windows[-1] if windows else None
         rejected = dict(db["rejected"])
         live = db["device"]["contact"]
+        problems = quality_problems(latest) if latest else []   # under the lock: reads contactLoss
+        # Current reading must START after the latest finger restoration (validator rule): a clean
+        # window from before a removal is history, never "current" again.
+        restored = [x["onMs"] for x in db["contactLoss"] if x["onMs"] is not None and x["boot"] in (None, boot)]
+        if latest and restored and latest["windowStartMs"] < max(restored) and "contact_interrupted" not in problems:
+            problems.append("before_contact_restored")
     if live and boot and live.get("boot") not in (None, boot):
         live = None                                   # an event from a previous boot
     live_contact = live["on"] if live else None
@@ -375,7 +410,6 @@ def status():
     missing = [k for k, v in sensors.items() if v == "missing"]
     connected = online is not False and heard is not None and now - heard < STALE_AFTER_MS
     age = now - latest["windowEndMs"] if latest else None
-    problems = quality_problems(latest) if latest else []
     # Order matters: connectivity first, then whether the reading is current, then its quality.
     if online is False:
         state = "offline"
@@ -389,9 +423,10 @@ def status():
         state = "collecting"
     elif age > READING_MAX_AGE_MS:
         state = "reading_stale"
-    elif "no_contact" in problems:
-        # finger is back (live) but no clean 60 s window yet → wait; otherwise ask for contact
-        state = "settling" if live_contact else "contact_required"
+    elif "no_contact" in problems or "contact_interrupted" in problems or "before_contact_restored" in problems:
+        # finger is back (live) but no clean window that started after it returned → wait;
+        # otherwise ask for contact
+        state = "settling" if live_contact or "no_contact" not in problems else "contact_required"
     elif problems == ["vibration_overlap"]:
         state = "vibration_overlap"   # cue just played; pulse is withheld, see CONTRACT §4
     elif problems:

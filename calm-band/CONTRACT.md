@@ -89,7 +89,7 @@ Broker: any MQTT 3.1.1 broker. Real: EMQX Cloud, port 8883, TLS with CA certific
 ```
 
 - `button / stop`: STOP was pressed.
-- `contact / on|off`: the **immediate** finger state from single samples (IR ≥ 50 000), debounced: it's reported once the new state has held for **1 s**, so it arrives about 1–2 s after the change. It is re-sent on every MQTT connect. This is separate from the 60 s window's `contact` field, which needs ≥ 90 % of the window.
+- `contact / on|off`: the **immediate** finger state from single samples (IR ≥ 50 000), debounced: it's reported once the new state has held for **1 s**. **Target:** the status page shows the change within about 2 s; that's a target, not a guarantee, because debounce, network delay and how often the page polls all add up. It is re-sent on every MQTT connect. This is separate from the 60 s window's `contact` field, which needs ≥ 90 % of the window.
 
 ### 3.4 Command (backend → band)
 
@@ -172,10 +172,12 @@ Event → vibration mapping: `rep` → `rep_pulse`; `ease_off` with `active:true
 | `collecting` | connected, but no reading yet |
 | `reading_stale` | the newest reading ended more than **30 s** ago, judged by the band's `windowEndMs`, not by when it arrived (a queued window flushed after an outage is real but not current) |
 | `contact_required` | the band's latest `contact` event says **off** (immediate), or the newest window has no contact and there is no "on" event |
-| `settling` | the finger is back (latest `contact` event says **on**) but the newest window still has no contact. A clean reading needs up to 60–75 s more |
+| `settling` | the finger is back (latest `contact` event says **on**) but there is no clean window that **started after** the finger returned. A window that overlaps any finger-off period, or started before the latest restoration, is never shown as current (an older clean value stays in history). A clean reading needs up to 60–75 s more |
 | `vibration_overlap` | the only problem is `motorActive` (a cue just played) |
 | `poor_quality` | any other problem: `no_pulse`, `low_quality` (< 0.8), `timing_gap`, `motion_unavailable`, `moving`, `no_clock` |
 | `usable` | none of the above; this is the only state that returns `pulseRateBpm` |
+
+**Finger-off periods:** each `contact` off → on pair is stored as a finger-off period, starting 1 s before the "off" event (the debounce) and ending at the "on" event. Any window overlapping such a period gets the problem `contact_interrupted`, so it is not clean anywhere: not in the status, not as a before/after reading, and not in `usableWindows` (and so not as input to future ML predictions). For the live status, the newest window must also start after the latest restoration (`before_contact_restored` otherwise).
 
 Only readings from the **current boot** are used: the boot ID in the band's latest status, or before any status, the newest reading's boot. Older boots' readings stay stored and still count in session history; they're just never shown as the current reading. Readings dated more than 5 s in the future (a device clock error) are ignored.
 
@@ -203,12 +205,12 @@ Environment variables: `MQTT_HOST` (127.0.0.1), `MQTT_PORT` (1883), `DEVICE_ID` 
 
 **`backend-sample/fake_band.py`** is the older Python stand-in (no STOP or motion). Use `calm_band_sim` instead.
 
-## 6. Expected test results (re-run 26 Oct 2026, after the third review)
+## 6. Expected test results (re-run 26 Oct 2026, after the fourth review)
 
 | Test | Command | Expected |
 |---|---|---|
 | 1. Core unit tests | `cd firmware/host && make && ./test_core` | 48 passed, 0 failed |
-| 2. Backend status rules | own backend: `DEVICE_ID=cb-check uvicorn app:app --port 8001`, then `BACKEND_URL=http://127.0.0.1:8001 DEVICE_ID=cb-check python3 backend-sample/backend_checks.py` | 26/26 |
+| 2. Backend status rules | own backend: `DEVICE_ID=cb-check uvicorn app:app --port 8001`, then `BACKEND_URL=http://127.0.0.1:8001 DEVICE_ID=cb-check python3 backend-sample/backend_checks.py` | 33/33 |
 | 3. Integration (band ↔ broker ↔ backend) | broker + backend + `calm_band_sim` (fast windows), then `python3 backend-sample/run_integration.py` | 13/13 |
 | 4. Firmware scenarios | **fresh** backend + same simulator, then `python3 firmware/host/firmware_scenarios.py` | 23/23 |
 | ESP32 compile (re-measured 26 Oct) | see `firmware/README.md` | Wokwi/sim build 914,781 B (69 % flash); real-sensor build 913,509 B (69 %); RAM 116,076 B (35 %) |

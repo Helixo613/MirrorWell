@@ -214,14 +214,15 @@ pub("events", {"dev": DEV, "boot": "new1", "type": "contact", "detail": "off", "
 st = status()
 check("finger off event → contact_required at once, though the last window was clean",
       st["state"] == "contact_required" and st["contact"] is False and st["pulseRateBpm"] is None, st["state"])
-pub("events", {"dev": DEV, "boot": "new1", "type": "contact", "detail": "on", "atMs": now()})
+on_at = now()
+pub("events", {"dev": DEV, "boot": "new1", "type": "contact", "detail": "on", "atMs": on_at})
 w = window(now() + 100, contact=False, quality=0.0, pulseRateBpm=None); w["boot"] = "new1"
 pub("features", w)
 st = status()
 check("finger back but no clean window yet → settling (not usable)", st["state"] == "settling" and st["contact"] is True,
       st["state"])
 pub("events", {"dev": DEV, "boot": "old0", "type": "contact", "detail": "off", "atMs": now()})
-w = window(now() + 110); w["boot"] = "new1"
+w = window(now() + 110); w["boot"] = "new1"; w["windowStartMs"] = on_at + 1   # starts after the restoration
 pub("features", w)
 st = status()
 check("contact event from an older boot ignored; clean window → usable", st["state"] == "usable", st["state"])
@@ -238,6 +239,51 @@ time.sleep(0.5)
 s3 = next(x for x in httpx.get(f"{B}/api/companion/reviewer/sessions").json() if x["companionSessionId"] == sid2)
 check("late-delivered window linked to its session by timestamp", s3["featureWindows"] >= 1 and s3["vibrationOverlapWindows"] >= 1,
       f"{s3['featureWindows']} linked")
+
+# 15. Contact restored with NO new window: the old pulse must not come back (regression)
+def contact(detail, at):
+    pub("events", {"dev": DEV, "boot": "new1", "type": "contact", "detail": detail, "atMs": at})
+
+def win(start, end, bpm):
+    w = window(end, pulseRateBpm=bpm); w["boot"] = "new1"; w["windowStartMs"] = start
+    return w
+
+T = now()                                     # short windows so every time stays ≤ now + 5 s
+pub("features", win(T - 1000, T + 500, 72.0))
+st = status()
+check("(setup) clean 72 bpm window → usable", st["state"] == "usable" and st["pulseRateBpm"] == 72.0, st["state"])
+contact("off", T + 600)
+st = status()
+check("finger off → contact_required, pulse hidden", st["state"] == "contact_required" and st["pulseRateBpm"] is None, st["state"])
+contact("on", T + 1500)
+st = status()
+check("finger back, no new window → settling, old 72 bpm NOT shown", st["state"] == "settling" and st["pulseRateBpm"] is None,
+      f"{st['state']} {st['pulseRateBpm']} {st['problems']}")
+pub("features", win(T - 500, T + 1600, 73.0))   # clean flags, but started before the restoration
+st = status()
+check("clean window that started before the restoration → still settling", st["state"] == "settling", st["state"])
+pub("features", win(T + 1600, T + 4000, 74.0))
+st = status()
+check("first clean window starting after the restoration → usable, new value", st["state"] == "usable" and st["pulseRateBpm"] == 74.0,
+      f"{st['state']} {st['pulseRateBpm']}")
+contact("off", T + 5200); contact("on", T + 5600)  # brief removal AFTER that window ended (no overlap)
+st = status()
+check("window that ended before a brief removal → settling afterwards (not usable again)",
+      st["state"] == "settling" and st["pulseRateBpm"] is None, st["state"])
+
+# 16. Same eligibility for before/after: a "before" window overlapping a finger-off period is skipped
+sid4 = f"cs-{uuid.uuid4().hex[:8]}"
+base = now() - 500_000
+w = window(base, pulseRateBpm=81.0); w["boot"] = "new1"; pub("features", w)              # clean, early
+w = window(base + 30_000, pulseRateBpm=99.0); w["boot"] = "new1"; pub("features", w)     # clean flags, but…
+contact("off", base + 10_000); contact("on", base + 12_000)                              # …finger was off inside it
+time.sleep(0.4)
+httpx.post(f"{B}/api/companion/sessions", json={"companionSessionId": sid4, "startedAtMs": base + 31_000})
+httpx.post(f"{B}/api/companion/sessions/{sid4}/end", json={"localSessionId": "l4", "endReason": "completed",
+           "endedAtMs": base + 40_000, "exercises": []})
+time.sleep(0.4)
+s4 = next(x for x in httpx.get(f"{B}/api/companion/reviewer/sessions").json() if x["companionSessionId"] == sid4)
+check("'before' pulse skips a window that overlapped a finger-off period", s4["prePulseBpm"] == 81.0, f"pre {s4['prePulseBpm']}")
 
 pub("status", None, retain=True)             # leave no retained state behind
 print(f"\n{sum(results)}/{len(results)} backend checks passed")

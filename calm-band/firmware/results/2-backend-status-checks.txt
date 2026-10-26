@@ -1,5 +1,5 @@
 PASS  outgoing command does not refresh 'last heard'  — state stale, lastHeard None
-PASS  10-minute-old reading → reading_stale, no pulse  — reading_stale, age 600501 ms
+PASS  10-minute-old reading → reading_stale, no pulse  — reading_stale, age 600482 ms
 PASS  fresh clean reading → usable with a pulse value  — usable
 PASS  reading overlapping a vibration → vibration_overlap, no pulse  — vibration_overlap ['vibration_overlap']
 PASS  timing gap → poor_quality  — ['timing_gap']
@@ -23,6 +23,13 @@ PASS  sensor health not overwritten by bad status  — {'pulse': 'ok', 'motion':
 PASS  finger off event → contact_required at once, though the last window was clean  — contact_required
 PASS  finger back but no clean window yet → settling (not usable)  — settling
 PASS  contact event from an older boot ignored; clean window → usable  — usable
-PASS  late-delivered window linked to its session by timestamp  — 12 linked
+PASS  late-delivered window linked to its session by timestamp  — 11 linked
+PASS  (setup) clean 72 bpm window → usable  — usable
+PASS  finger off → contact_required, pulse hidden  — contact_required
+PASS  finger back, no new window → settling, old 72 bpm NOT shown  — settling None ['contact_interrupted']
+PASS  clean window that started before the restoration → still settling  — settling
+PASS  first clean window starting after the restoration → usable, new value  — usable 74.0
+PASS  window that ended before a brief removal → settling afterwards (not usable again)  — settling
+PASS  'before' pulse skips a window that overlapped a finger-off period  — pre 81.0
 
-26/26 backend checks passed
+33/33 backend checks passed

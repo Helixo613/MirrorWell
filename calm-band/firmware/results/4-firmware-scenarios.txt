@@ -1,10 +1,10 @@
-PASS  live window has the agreed fields  — pulse 75.9 bpm, quality 1.0, origin replay
+PASS  live window has the agreed fields  — pulse 75.8 bpm, quality 1.0, origin replay
 PASS  window is 60 s → here 5 s test window; end − start matches
-PASS  movement flagged in the window  — rms 0.2743 g, quality 0.5
+PASS  movement flagged in the window  — rms 0.2744 g, quality 0.5
 PASS  status shows poor_quality while moving  — poor_quality
 PASS  finger removed → contact 'off' event within 2 s, status contact_required at once  — event after 1.0 s, state contact_required
 PASS  finger removed → contact false, pulseRateBpm null
-PASS  finger back → pulse value returns  — 75.9 bpm
+PASS  finger back → pulse value returns  — 76.1 bpm
 PASS  STOP interrupts session_complete  — accepted,stopped
 PASS  window overlapping a vibration has motorActive=true
 PASS  no valid clock → command rejected no_clock
