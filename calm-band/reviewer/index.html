@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calm Band reviewer</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <h1>Calm Band reviewer</h1>
+  <p class="sub">Session detail for a therapist or reviewer. Pulse values here are not shown to the person exercising.</p>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+</header>
+
+<main class="layout">
+  <section class="panel" id="sessions-panel" aria-labelledby="h-sessions">
+    <h2 id="h-sessions">Sessions</h2>
+    <div id="sessions" data-testid="sessions"></div>
+  </section>
+
+  <section class="panel" id="detail-panel" aria-labelledby="h-detail">
+    <h2 id="h-detail">Session detail</h2>
+    <div id="detail" data-testid="detail"><p class="msg">Pick a session from the list.</p></div>
+  </section>
+
+  <section class="panel wide" id="trends-panel" aria-labelledby="h-trends">
+    <h2 id="h-trends">Trends</h2>
+    <div id="trends" data-testid="trends"></div>
+  </section>
+</main>
+
+<div id="tip" class="tip" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

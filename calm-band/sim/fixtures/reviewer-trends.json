@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "utcOffsetMinutes": 330,
+  "days": [
+    {
+      "date": "2026-11-15",
+      "sessions": 1
+    },
+    {
+      "date": "2026-11-16",
+      "sessions": 1
+    }
+  ],
+  "sessions": [
+    {
+      "companionSessionId": "c7d2a1e4-0b6f-4f0e-8a51-6e2f9b3d4c10",
+      "startedAtMs": 1794727800000,
+      "date": "2026-11-15",
+      "meanUsablePulseBpm": null,
+      "readings": 0,
+      "pulseTrend": "insufficient"
+    },
+    {
+      "companionSessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12",
+      "startedAtMs": 1794813600000,
+      "date": "2026-11-16",
+      "meanUsablePulseBpm": 83.5,
+      "readings": 5,
+      "pulseTrend": "settled"
+    }
+  ]
+}
