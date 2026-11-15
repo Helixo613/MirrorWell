@@ -26,3 +26,6 @@ tests/fixtures/replay/
 # Windows Explorer download metadata
 *:Zone.Identifier
 .claude/worktrees/
+
+# Calm Band backend databases (sessions, pulse windows): local only
+*.db

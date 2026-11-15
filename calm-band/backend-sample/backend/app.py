@@ -25,6 +25,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from store import Store, default_path
+
 BROKER_HOST = os.environ.get("MQTT_HOST", "127.0.0.1")
 BROKER_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 DEVICE_ID = os.environ.get("DEVICE_ID", "cb-01")
@@ -53,7 +55,12 @@ HAPTIC_FOR_EVENT = {
     "ease_off": "ease_off",      # mirrors the existing double pulse (safety-relevant cue)
 }
 
-lock = threading.Lock()
+# Re-entrant: MQTT callbacks write while HTTP requests read, all under this one lock, and the
+# SQLite connection is only ever used while holding it (see store.py).
+lock = threading.RLock()
+store = Store(os.environ.get("CALMBAND_DB") or default_path())
+# CONTRACT-UI §2: may the LIVE fields use windows that overlap a band buzz? ("1" yes / "0" no)
+LIVE_USES_CUE_WINDOWS = os.environ.get("CALMBAND_LIVE_USES_CUE_WINDOWS", "1") != "0"
 db = {
     "sessions": {},        # companionSessionId -> session dict
     "feature_windows": {}, # (device, boot, seq) -> window   (unique key = duplicate guard)
@@ -62,6 +69,7 @@ db = {
     # Finger-off periods from the band's contact events, in band time: [{"boot","offMs","onMs"}]
     # (onMs None while still off). Any window overlapping one is not a clean reading.
     "contactLoss": [],
+    "band_events": [],     # every band `contact` and `button` event: {"type","detail","boot","atMs"}
     "rejected": {"count": 0, "last": None},   # band messages that failed validation
 }
 active_session: dict = {"id": None}
@@ -211,6 +219,7 @@ def _store(kind: str, body: dict):
             # Session association is by the window's own time (see session_windows), so a window
             # queued offline and delivered after the session ended still belongs to it.
             db["feature_windows"][key] = body
+            store.add_window(body)
         elif kind == "status":
             db["device"]["status"] = body
             if body.get("boot"):
@@ -219,21 +228,57 @@ def _store(kind: str, body: dict):
             # Immediate finger on/off from the band (debounced ~1 s), separate from the 60 s windows.
             on = body["detail"] == "on"
             db["device"]["contact"] = {"on": on, "atMs": body["atMs"], "boot": body.get("boot")}
-            losses = db["contactLoss"]
-            open_loss = next((x for x in reversed(losses) if x["onMs"] is None and x["boot"] == body.get("boot")), None)
-            if not on and open_loss is None:
-                losses.append({"boot": body.get("boot"), "offMs": body["atMs"] - CONTACT_DEBOUNCE_MS, "onMs": None})
-                del losses[:-200]                     # bounded history
-            elif on and open_loss is not None:
-                open_loss["onMs"] = body["atMs"]      # restored: only windows starting after this are clean
+            _apply_contact(body)
+            _keep_band_event(body)
+        elif kind == "events" and body["type"] == "button":
+            _keep_band_event(body)
         elif kind == "ack":
             cmd = db["commands"].get(body.get("commandId"))
             if cmd is not None:
                 cmd["acks"].append(body)
+                store.add_ack(body["commandId"], body)
+
+
+def _apply_contact(body: dict):
+    """Update the finger-off periods from one contact event (also used to rebuild them at startup)."""
+    on = body["detail"] == "on"
+    losses = db["contactLoss"]
+    open_loss = next((x for x in reversed(losses) if x["onMs"] is None and x["boot"] == body.get("boot")), None)
+    if not on and open_loss is None:
+        losses.append({"boot": body.get("boot"), "offMs": body["atMs"] - CONTACT_DEBOUNCE_MS, "onMs": None})
+        del losses[:-200]                     # bounded history
+    elif on and open_loss is not None:
+        open_loss["onMs"] = body["atMs"]      # restored: only windows starting after this are clean
+
+
+def _keep_band_event(body: dict):
+    """Every band `contact` and `button` event is kept (CONTRACT-UI §5 timeline), de-duplicated."""
+    at = body.get("atMs")
+    e = {"type": body["type"], "detail": body.get("detail", ""), "boot": body.get("boot") or "",
+         "atMs": at if _int(at) else now_ms()}
+    if any(x["type"] == e["type"] and x["detail"] == e["detail"] and x["boot"] == e["boot"] and x["atMs"] == e["atMs"]
+           for x in db["band_events"][-50:]):
+        return
+    db["band_events"].append(e)
+    store.add_band_event(e)
+
+
+def _load_from_disk():
+    """Fill the in-memory state from the SQLite file (called once at import, before MQTT starts)."""
+    data = store.load()
+    db["sessions"].update(data["sessions"])
+    db["feature_windows"].update(data["windows"])
+    db["commands"].update(data["commands"])
+    db["band_events"] = data["band_events"]
+    for e in db["band_events"]:                 # finger-off periods are rebuilt from the stored events
+        if e["type"] == "contact":
+            _apply_contact(e)
+    active_session["id"] = data["active"]
 
 
 mq.on_connect = on_connect
 mq.on_message = on_message
+_load_from_disk()
 
 
 def publish_command(pattern: str, session_id: str | None, ttl_ms: int = CMD_TTL_MS,
@@ -248,7 +293,9 @@ def publish_command(pattern: str, session_id: str | None, ttl_ms: int = CMD_TTL_
         "expiresAtMs": issued + ttl_ms,
     }
     with lock:
-        db["commands"].setdefault(cmd["commandId"], {**cmd, "acks": []})
+        if cmd["commandId"] not in db["commands"]:
+            db["commands"][cmd["commandId"]] = {**cmd, "acks": []}
+            store.add_command(cmd)
     # Never retained: a stale motor command must not replay to a band that reconnects later.
     mq.publish(f"calmband/{DEVICE_ID}/cmd", json.dumps(cmd), qos=1, retain=False)
     return cmd
@@ -288,11 +335,14 @@ def _startup():
 @app.post("/api/companion/sessions")
 def start_session(body: StartBody):
     with lock:
-        db["sessions"].setdefault(body.companionSessionId, {
-            "id": body.companionSessionId, "startedAtMs": body.startedAtMs, "events": [],
-            "seen": set(), "state": "open", "end": None,
-        })
+        if body.companionSessionId not in db["sessions"]:
+            db["sessions"][body.companionSessionId] = {
+                "id": body.companionSessionId, "startedAtMs": body.startedAtMs, "events": [],
+                "seen": set(), "state": "open", "end": None,
+            }
+            store.add_session(db["sessions"][body.companionSessionId])
         active_session["id"] = body.companionSessionId
+        store.set_active(active_session["id"])
     return {"ok": True}
 
 
@@ -306,6 +356,7 @@ def session_event(sid: str, event: dict):
             return {"ok": True, "duplicate": True}
         s["seen"].add(event.get("seq"))
         s["events"].append(event)
+        store.add_event(sid, event)
     pattern = HAPTIC_FOR_EVENT.get(event.get("type"))
     if event.get("type") == "ease_off" and not event.get("active"):
         pattern = None
@@ -322,8 +373,10 @@ def end_session(sid: str, body: EndBody):
         s["state"] = "ended"
         s["end"] = body.model_dump()
         s["endedAtMs"] = body.endedAtMs
+        store.end_session(s)
         if active_session["id"] == sid:
             active_session["id"] = None
+            store.set_active(None)
     publish_command("session_complete", sid)
     return {"ok": True}
 
