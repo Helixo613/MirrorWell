@@ -12,6 +12,7 @@
 \newunicodechar{±}{\ensuremath{\pm}}
 \usepackage[left=1.18in,right=0.88in,top=0.85in,bottom=0.9in,footskip=0.45in]{geometry}
 \usepackage{setspace}
+\usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage[table]{xcolor}
 \usepackage{array,tabularx,longtable}
@@ -94,11 +95,11 @@ November 2026}
 \pagenumbering{roman}
 \fronttitle{ABSTRACT}\label{abs}
 {\fontsize{14}{18.4}\selectfont\setlength{\parskip}{5pt}
-Facial-exercise programmes are widely recommended for facial weakness, asymmetry and muscle re-education, but they are usually practised alone at home, where effort, tension and stress go unobserved. \textbf{MirrorWell}, an on-device facial-exercise web application, already counts repetitions and detects over-effort from the camera without sending any video off the device. What it cannot see is the body's response: whether the user's pulse rises, whether the arm is still enough for a clean reading, and whether the user needs a gentle, eyes-free cue to ease off.
+Facial-exercise programmes are widely recommended for facial weakness, asymmetry and muscle re-education, but they are usually practised alone at home, where effort, tension and stress go unobserved. \textbf{MirrorWell}, an on-device facial-exercise web application, already counts repetitions and detects over-effort from the camera without sending any video off the device. What it cannot see is the body's response: the pulse, whether the arm is still enough for a clean reading, and whether a gentle, eyes-free cue to ease off is needed.
 
 This project presents the \textbf{Calm Band}, a low-cost Internet of Things (IoT) companion to MirrorWell. An \textbf{ESP32} desk hub reads a \textbf{MAX30102} optical pulse sensor on the fingertip at 100 samples per second and an \textbf{MPU6050} motion sensor on the wrist at 32 samples per second, and drives a \textbf{vibration motor} on the wrist. Every 15 seconds the hub summarises the last 60 seconds into a \textbf{feature window} (finger contact, pulse rate, motion and a quality score) and publishes it over \textbf{MQTT} with TLS to a \textbf{FastAPI} backend. The backend links readings to MirrorWell sessions by their own timestamps, decides whether a reading is fit to show, and turns repetition and ease-off events into short, expiring vibration commands. A physical STOP button cuts the motor instantly, without the network.
 
-Safety and data honesty were treated as first-class requirements: missing data is reported as missing and never as calm, readings that overlap a vibration or a finger removal are withheld, and stale, duplicate, malformed or late commands are rejected on the band itself. The firmware compiles for the ESP32 (69\% of flash, 35\% of RAM) and was validated with \textbf{117 automated checks} across four test suites, all passing, plus two self-tests on an emulated ESP32. A physical prototype then passed every end-to-end test with MirrorWell. An encrypted-broker test and a stress-estimation model trained on the public WESAD dataset form the next phases. The total hardware cost is ₹949–1,449, within the ₹1,500 budget.
+Safety and data honesty were first-class requirements: missing data is reported as missing and never as calm, readings that overlap a vibration or a finger removal are withheld, and stale, duplicate, malformed or late commands are rejected on the band itself. The firmware compiles for the ESP32 (69\% of flash, 35\% of RAM) and was validated with \textbf{117 automated checks} across four test suites, all passing, plus two self-tests on an emulated ESP32. A physical prototype then passed every end-to-end test with MirrorWell; a live band card and a reviewer page were added and tested with a simulated band. An encrypted broker and a WESAD-trained stress model are future work. The hardware cost is ₹949–1,449, within the ₹1,500 budget.
 
 }
 \clearpage
@@ -150,6 +151,12 @@ Safety and data honesty were treated as first-class requirements: missing data i
  & \hspace{1.2em}{\small Resource Usage on the ESP32} & {\small\pageref{sec:6.2}} \\
  & \hspace{1.2em}{\small Emulated-Hardware Results} & {\small\pageref{sec:6.3}} \\
  & \hspace{1.2em}{\small Real Hardware Results} & {\small\pageref{sec:6.hw}} \\
+ & \hspace{1.2em}{\small Data Storage in the Backend} & {\small\pageref{sec:6.store}} \\
+ & \hspace{1.2em}{\small Live Band Card in MirrorWell} & {\small\pageref{sec:6.live}} \\
+ & \hspace{1.2em}{\small Post-Session Summary in Plain Words} & {\small\pageref{sec:6.summary}} \\
+ & \hspace{1.2em}{\small Reviewer and Therapist Page} & {\small\pageref{sec:6.reviewer}} \\
+ & \hspace{1.2em}{\small Experimental Calm Index} & {\small\pageref{sec:6.calm}} \\
+ & \hspace{1.2em}{\small Testing of the New Parts} & {\small\pageref{sec:6.newtests}} \\
  & \hspace{1.2em}{\small Discussion} & {\small\pageref{sec:6.4}} \\
  & \hspace{1.2em}{\small Limitations} & {\small\pageref{sec:6.5}} \\
 \textbf{7} & \textbf{CONCLUSION AND FUTURE SCOPE} & \textbf{\pageref{ch:7}} \\
@@ -179,6 +186,8 @@ Safety and data honesty were treated as first-class requirements: missing data i
 \noindent\makebox[0.09\linewidth][l]{\ref{tab:hardware-bring-up-checks}}Hardware Bring-up Checks\dotfill\pageref{tab:hardware-bring-up-checks}\par
 \noindent\makebox[0.09\linewidth][l]{\ref{tab:bench-mode-pulse-readings}}BENCH-Mode Pulse Readings with a Still Fingertip\dotfill\pageref{tab:bench-mode-pulse-readings}\par
 \noindent\makebox[0.09\linewidth][l]{\ref{tab:end-to-end-results-real-hardware}}End-to-End Results on the Real Hardware\dotfill\pageref{tab:end-to-end-results-real-hardware}\par
+\noindent\makebox[0.09\linewidth][l]{\ref{tab:live-card-messages}}Messages Shown on the Live Card\dotfill\pageref{tab:live-card-messages}\par
+\noindent\makebox[0.09\linewidth][l]{\ref{tab:new-tests}}Automated Tests of the Storage, Live Card, Summary and Reviewer Parts\dotfill\pageref{tab:new-tests}\par
 \noindent\makebox[0.09\linewidth][l]{\ref{tab:bill-of-materials-estimated-prices-octob}}Bill of Materials (estimated prices, October 2026)\dotfill\pageref{tab:bill-of-materials-estimated-prices-octob}\par
 }
 \clearpage
@@ -193,6 +202,12 @@ Safety and data honesty were treated as first-class requirements: missing data i
 \noindent\makebox[0.09\linewidth][l]{\ref{fig:diag_gate}}Command Checks on the Band\dotfill\pageref{fig:diag_gate}\par
 \noindent\makebox[0.09\linewidth][l]{\ref{fig:chart_tests}}Growth of the Automated Test Suites\dotfill\pageref{fig:chart_tests}\par
 \noindent\makebox[0.09\linewidth][l]{\ref{fig:chart_selftest}}Motor Self-Test on the Emulated ESP32\dotfill\pageref{fig:chart_selftest}\par
+\noindent\makebox[0.09\linewidth][l]{\ref{fig:ui_live_cue}}Live Band Card Showing the Heart, Signal Bars and Steadiness During a Cue\dotfill\pageref{fig:ui_live_cue}\par
+\noindent\makebox[0.09\linewidth][l]{\ref{fig:ui_live_moving}}Live Card When the Hand Is Moving\dotfill\pageref{fig:ui_live_moving}\par
+\noindent\makebox[0.09\linewidth][l]{\ref{fig:ui_live_contact}}Live Card When the Finger Is Off the Sensor\dotfill\pageref{fig:ui_live_contact}\par
+\noindent\makebox[0.09\linewidth][l]{\ref{fig:ui_summary}}Post-Session Summary in Plain Words\dotfill\pageref{fig:ui_summary}\par
+\noindent\makebox[0.09\linewidth][l]{\ref{fig:rev_list}}Reviewer Page: Session List, Session Facts and Trends\dotfill\pageref{fig:rev_list}\par
+\noindent\makebox[0.09\linewidth][l]{\ref{fig:rev_timeline}}Reviewer Page: Session Timeline with Gaps, Buzz and Movement Shading and Markers\dotfill\pageref{fig:rev_timeline}\par
 }
 \clearpage
 \fronttitle{LIST OF SYMBOLS AND ABBREVIATIONS}\label{abbr}
@@ -329,7 +344,7 @@ Commercial fitness bands measure heart rate well, but their data is usually lock
 
 \section{System Architecture and Components}\label{sec:3.1}
 
-The system has four layers, shown in Figure 3.1. The \textbf{wearable layer} contains the fingertip pulse sensor, the wrist motion sensor, the wrist vibration motor and the STOP button. The \textbf{desk hub} is an ESP32 microcontroller that samples the sensors, builds feature windows, checks commands and drives the motor. The \textbf{network layer} is an MQTT broker (EMQX Cloud, over TLS on port 8883). The \textbf{application layer} is a FastAPI backend with a PostgreSQL database (Supabase), the MirrorWell web application and a reviewer page.
+The system has four layers, shown in Figure 3.1. The \textbf{wearable layer} contains the fingertip pulse sensor, the wrist motion sensor, the wrist vibration motor and the STOP button. The \textbf{desk hub} is an ESP32 microcontroller that samples the sensors, builds feature windows, checks commands and drives the motor. The \textbf{network layer} is an MQTT broker (EMQX Cloud, over TLS on port 8883). The \textbf{application layer} is a FastAPI backend with a database (SQLite in the demonstration build; PostgreSQL on Supabase is the planned cloud option), the MirrorWell web application and a reviewer page.
 
 
 \begin{figure}[H]\centering\includegraphics[width=6.3in,height=7.4in,keepaspectratio]{diag_arch.png}\caption{Architecture Diagram of the System}\label{fig:diag_arch}\end{figure}
@@ -374,7 +389,7 @@ Microcontroller & ESP32, Arduino-ESP32 core 2.0.17, FreeRTOS & Wi-Fi, TLS and tw
 Firmware libraries & arduino-mqtt 2.5.2, SparkFun MAX3010x & MQTT with QoS 1 publishing; MAX30102 set-up \\ \hline
 Messaging & MQTT 3.1.1, EMQX Cloud, TLS & Light publish/subscribe with delivery guarantees \\ \hline
 Backend & Python, FastAPI, paho-mqtt & Simple asynchronous HTTP API and MQTT client \\ \hline
-Database & Supabase (PostgreSQL) & Hosted relational storage for sessions, events, windows and commands \\ \hline
+Database & SQLite (demo); Supabase (PostgreSQL) planned & Storage for sessions, events, windows, commands and acknowledgements \\ \hline
 Front end & MirrorWell PWA (React, MediaPipe) & Existing application; camera processing stays on the device \\ \hline
 Testing & C++ host build, Mosquitto, Python, QEMU & Run the same firmware logic on Linux and on an emulated ESP32 \\ \hline
 \end{tabular}
@@ -740,6 +755,98 @@ Hotspot interruption & Link lost for about 85 s; band reconnected by itself and 
 
 \textbf{Observations.} Two findings came only from the real parts. First, when the pulse sensor was left face-down on a table with no finger on it, the table reflected enough infrared light to pass the contact threshold (raw IR ≥ 50,000), and the band reported a false pulse of 135–151 BPM. The beat-to-beat spread of these readings was very high (29–39 BPM, against about 6–15 BPM for a real finger), and on one occasion the backend showed the false value as usable. With the sensor face-up and uncovered, the band correctly reported no contact. For the demonstration the sensor is kept face-up; a stricter plausibility check is listed as future work. Second, the measured resting pulse of about 98–100 BPM has not yet been compared with a manual pulse count; an earlier simple test sketch read 72–86 BPM on the same sensor.
 
+\section{Data Storage in the Backend}\label{sec:6.store}
+
+The first version of the backend kept everything in memory, so a restart lost every session. The demonstration build stores its data in \textbf{SQLite}, a file-based database that needs no separate server and is used through Python's standard library. The database has seven tables: \texttt{meta}, \texttt{sessions} (start, end and state), \texttt{session\_events} (the MirrorWell events), \texttt{windows} (the feature windows, each with its \texttt{origin}), \texttt{band\_events} (every finger-contact and button event), \texttt{commands} and \texttt{acks} (every vibration command and each acknowledgement the band sent for it).
+
+The duplicate rules did not change: a window is identified by device, boot and sequence number, and a MirrorWell event by session and sequence number, so a repeated delivery is stored once. After a restart the backend reloads the history, rebuilds the finger-off periods from the stored contact events and restores the active session. The live status rules still use only the current boot of the band, so old data never makes a new reading look current.
+
+The file location is set by the \texttt{CALMBAND\_DB} variable. The simulated band and the real demonstration use \emph{separate} databases (\texttt{calmband-sim.db} and \texttt{calmband-demo.db}), so simulated data can never appear in the demonstration history; the start script for the demo can also rename the demo database with a timestamp to begin from a clean state. Database files are excluded from version control.
+
+\section{Live Band Card in MirrorWell}\label{sec:6.live}
+
+During a session MirrorWell shows a small card beside the camera view. It asks the backend for the band's state every 2 seconds, only while the session screen is open and the companion is switched on, and never in the demonstration mode that uses no band. The card gives sensor feedback \textbf{without showing any raw number}: the person exercising never sees a pulse value. It uses five simple signals instead (Figure~\ref{fig:ui_live_cue}):
+\begin{itemize}\item a \textbf{heart} that beats at the measured pace (the interval between beats is sent, not the rate);
+\item \textbf{signal bars}, from zero to three, showing how clear the sensor signal is;
+\item \textbf{steadiness}, which says ``Steady'' or ``Hold still'' according to the wrist motion sensor;
+\item a \textbf{settling arrow} (falling, level or rising) that compares the recent pulse with the start of the session; and
+\item a \textbf{cue pulse}, a short flash when the band has just buzzed.
+\end{itemize}
+
+\textbf{Measured during wrist cues.} A repetition cue buzzes the band every few seconds, so most 60-second windows overlap a buzz. Such windows are withheld from every summary and index (Chapter~4), but the live card may still show the heart for them, because it is only feedback. When it does, the card prints the words ``measured during wrist cues'' under the heart, so the person can tell it apart from a clean reading. A backend setting can turn this off, in which case the heart is hidden while the band buzzes.
+
+\begin{figure}[H]\centering\includegraphics[width=3.2in,height=2.2in,keepaspectratio]{integrated-live-card-during-cue.png}\caption{Live Band Card Showing the Heart, Signal Bars and Steadiness During a Cue}\label{fig:ui_live_cue}\end{figure}
+
+\textbf{Honest ``why'' messages.} When the data is poor, the card says so in plain words instead of showing a stale or invented value (Table~\ref{tab:live-card-messages}, Figures~\ref{fig:ui_live_moving} and~\ref{fig:ui_live_contact}). The heart is greyed out and the signal bars drop. A missing value is never drawn as a calm one.
+
+\begin{table}[H]
+\centering\small\setstretch{1.0}
+\caption{Messages Shown on the Live Card}\label{tab:live-card-messages}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{\dimexpr 0.26\linewidth-2\tabcolsep-0.4pt\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.74\linewidth-2\tabcolsep-0.4pt\relax}|}
+\hline
+\rowcolor{headgray}\textbf{State} & \textbf{Message} \\ \hline
+\texttt{offline} & The band is off or out of range. \\ \hline
+\texttt{sensor\_missing} & A band sensor is not responding. Check its wires. \\ \hline
+\texttt{collecting} & Getting a first reading. Rest your fingertip on the sensor and keep still for about a minute. \\ \hline
+\texttt{contact\_required} & Rest your fingertip lightly on the sensor. \\ \hline
+\texttt{poor\_quality} (moving) & Keep your hand still for a clearer reading. \\ \hline
+\texttt{poor\_quality} (other) & The reading is not clear yet. Keep your fingertip still and relaxed on the sensor. \\ \hline
+\texttt{usable} & No message; the heart beats \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]\centering\includegraphics[width=2.6in,height=3.3in,keepaspectratio]{ui-live-poor-quality-moving.png}\caption{Live Card When the Hand Is Moving}\label{fig:ui_live_moving}\end{figure}
+
+\begin{figure}[H]\centering\includegraphics[width=2.6in,height=3.3in,keepaspectratio]{ui-live-contact-required.png}\caption{Live Card When the Finger Is Off the Sensor}\label{fig:ui_live_contact}\end{figure}
+
+\section{Post-Session Summary in Plain Words}\label{sec:6.summary}
+
+When a session ends, MirrorWell shows a short summary headed ``From your band'' (Figure~\ref{fig:ui_summary}). The backend writes the sentences, so the wording lives in one place. Each sentence follows a fixed rule: the number of repetitions and ease-off cues; whether the pulse \emph{settled}, stayed about the same or was a little higher at the end; and whether the hand stayed steady for most of the session. The summary contains no pulse numbers and no index, and it never uses words such as stress, anxiety or diagnosis.
+
+The summary \textbf{waits for the clean reading after the session}. The last 60-second window of a session usually overlaps a buzz, so it cannot be used. The first clean window after the session arrives only 60 to 75 seconds after the end. MirrorWell therefore asks again every few seconds, for up to 180 seconds, until the pulse comparison is available. Until then it shows ``waiting''; if no clean reading ever arrives, it says honestly that the band could not get a clear enough pulse reading this time, rather than guessing.
+
+\begin{figure}[H]\centering\includegraphics[width=2.6in,height=3.3in,keepaspectratio]{integrated-summary.png}\caption{Post-Session Summary in Plain Words}\label{fig:ui_summary}\end{figure}
+
+\section{Reviewer and Therapist Page}\label{sec:6.reviewer}
+
+A separate page, served by the backend at \texttt{/reviewer/}, is meant for a therapist or reviewer. It uses the same origin as the backend, with no external script, font or chart library. Unlike MirrorWell, it may show pulse values, and it always shows where they came from. It has three parts:
+\begin{itemize}\item a \textbf{session list} (Figure~\ref{fig:rev_list}) with date, duration, repetitions, ease-off cues, cues, signal share and mean usable pulse;
+\item a \textbf{session timeline} (Figure~\ref{fig:rev_timeline}) drawing the usable pulse as a line that \emph{breaks} wherever there is no usable reading, so gaps are left empty and never joined or filled. Hand movement is shaded, periods when the motor was on are hatched, and a strip underneath colours each window by signal quality. Markers show repetitions, cues (green when executed, red when stopped or rejected, grey when not confirmed), ease-off cues and presses of the STOP button; and
+\item \textbf{trends}: sessions per day and the mean usable pulse of each session.
+\end{itemize}
+Every session carries a \textbf{SIMULATED} badge when its data came from the simulated band (the band marks its own windows as live or replay, and mixed sessions are labelled as mixed), so simulated data cannot be mistaken for a real measurement.
+
+\begin{figure}[H]\centering\includegraphics[width=6.0in,height=4.4in,keepaspectratio]{integrated-reviewer-list.png}\caption{Reviewer Page: Session List, Session Facts and Trends}\label{fig:rev_list}\end{figure}
+
+\begin{figure}[H]\centering\includegraphics[width=6.0in,height=4.4in,keepaspectratio]{integrated-reviewer-timeline.png}\caption{Reviewer Page: Session Timeline with Gaps, Buzz and Movement Shading and Markers}\label{fig:rev_timeline}\end{figure}
+
+\section{Experimental Calm Index}\label{sec:6.calm}
+
+The reviewer page also shows one derived number, the \textbf{calm index}. It compares the pulse at the end of a session with the pulse at its start. Only \emph{clean} windows are used (no buzz, no movement, quality at least 0.8, contact present, no timing gap); the last clean window before the session and the first clean window after it are included, because the windows inside a session are mostly disturbed by cues. With $s$ the first and $e$ the last clean pulse of the session in beats per minute, the index is
+\begin{equation*}
+\text{calm index} = \operatorname{round}\Bigl(100 \times \operatorname{clamp}\bigl(\tfrac{s - e}{15} + 0.5,\ 0,\ 1\bigr)\Bigr).
+\end{equation*}
+A value of 50 means the same pulse as at the start; 100 means a drop of 7.5 BPM or more; 0 means a rise of 7.5 BPM or more. With fewer than two clean readings the value is missing, not zero. The index is always printed with the label \textbf{``experimental: not a medical or stress measure''}. It compares a person only with their own start of that one session, so it cannot be compared between people or sessions. MirrorWell does not show it at all.
+
+\section{Testing of the New Parts}\label{sec:6.newtests}
+
+The new parts were tested automatically at several levels (Table~\ref{tab:new-tests}) and then end to end. The counts below are from the final merged build.
+
+\begin{table}[H]
+\centering\small\setstretch{1.0}
+\caption{Automated Tests of the Storage, Live Card, Summary and Reviewer Parts}\label{tab:new-tests}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{\dimexpr 0.28\linewidth-2\tabcolsep-0.4pt\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.56\linewidth-2\tabcolsep-0.4pt\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.16\linewidth-2\tabcolsep-0.4pt\relax}|}
+\hline
+\rowcolor{headgray}\textbf{Suite} & \textbf{What it covers} & \textbf{Result} \\ \hline
+Backend UI checks & Storage and restart, live, summary, reviewer and trend endpoints, calm index, origin labels & 181 / 181 \\ \hline
+Backend status checks & The original status rules, unchanged by the database & 33 / 33 \\ \hline
+MirrorWell tests & Whole MirrorWell test suite, including the live card and summary & 438 / 438 \\ \hline
+Reviewer page tests & Reviewer page against the example data: list, timeline, trends, empty and error cases, phone and dark layouts & Pass \\ \hline
+\end{tabular}
+\end{table}
+
+The \textbf{integrated run} started the real backend, the real MirrorWell pages and the reviewer page together with the \emph{simulated} band, played a short session and produced the screenshots in Figures~\ref{fig:ui_live_cue}, \ref{fig:ui_summary}, \ref{fig:rev_list} and~\ref{fig:rev_timeline}. All of this testing used the simulated band, whose pulse is synthetic and is labelled as such. \textbf{A real-band session with these new screens is checked at the demonstration}; it was not done before this report was written.
+
 \section{Discussion}\label{sec:6.4}
 
 The results support the design's central idea: that a low-cost IoT companion can be both useful and honest about its data. The strict flags and status rules mean that the user sees a pulse value only when it can be trusted, and the reviewer sees exactly why other readings were withheld. The command rules ensure that a delayed, duplicated or malformed message cannot cause an unexpected vibration, and the local STOP button means the user is always in control.
@@ -756,7 +863,7 @@ The vibration-overlap policy has a cost: frequent rep cues leave few clean windo
 \begin{itemize}\item The physical prototype was tested by the team on one person over two days (Section~\ref{sec:6.hw}). The resting pulse has not been checked against a manual count or a reference device, and how long a buzz disturbs the pulse signal has not yet been measured.
 \item The contact check (raw IR ≥ 50,000) can be passed by a reflective surface: with the sensor face-down on a table it reported a false pulse. Correct handling (sensor face-up, finger resting lightly) avoids this for now.
 \item The encrypted EMQX connection is implemented in the firmware but has not been tested end to end; the simulator, the test backend and the hardware test all used a local broker without TLS.
-\item The sample backend stores data in memory; the Supabase schema is designed but not yet connected.
+\item The backend stores data in a local SQLite file on one laptop; a cloud database is not connected. The new live card, summary and reviewer page were tested with the simulated band; their check with the real band is done at the demonstration. The calm index is experimental and is not a medical or stress measure.
 \item The stress-estimation model is planned, not built.
 \end{itemize}
 
@@ -770,14 +877,19 @@ This project designed and implemented the Calm Band, an IoT companion that adds 
 The firmware compiles for the ESP32 using 69\% of flash and 35\% of RAM, all 117 automated checks pass, and emulator self-tests confirm that sensing and vibration timing are independent of network delays. The physical prototype confirmed these results on real parts: it produced a usable resting pulse with quality up to 1.00, executed every vibration cue from a live MirrorWell session, withheld the pulse when the finger was removed or the band moved, and recovered from an 85-second network loss without losing any data.
 
 
+The demonstration build adds the parts a user and a therapist actually see. MirrorWell now shows a live band card with a heart that beats at the measured pace, signal bars, steadiness and a settling arrow, with no raw numbers and with honest messages when the data is poor, and it ends each session with a summary in plain words. A reviewer page shows each session as a timeline with gaps left empty, marks buzzes, movement, cues and STOP presses, labels simulated data, and offers an experimental calm index. Session data now survives backend restarts in SQLite. These parts passed 181 backend UI checks, the 33 backend checks, 438 MirrorWell tests and the reviewer page tests with the simulated band; the real-band session with these screens is checked at the demonstration.
+
+
 \section{Future Scope}\label{sec:7.2}
 
-\begin{enumerate}\item \textbf{Hardware validation:} compare the band's pulse with a manual count or a reference pulse oximeter, measure how long a buzz disturbs the pulse signal, and add a plausibility check (for example, rejecting windows with a very high beat-to-beat spread) so that a reflective surface cannot pass as a finger.
-\item \textbf{Encrypted broker:} test the full chain over EMQX Cloud with TLS and per-device credentials, and connect the Supabase database.
-\item \textbf{Stress estimation (Phase 2):} train and compare models on WESAD and show an experimental calm/tense estimate from clean before/after readings.
-\item \textbf{Pilot and calibration (Phase 3):} record a small dataset in RECORD mode and adapt the model to the band.
-\item \textbf{Guided breathing (Phase 4):} offer a short breathing exercise with breath\_in/breath\_out cues when the estimate or self-report is high.
-\item \textbf{Phone access and reminders (Phases 5 and 6):} serve the companion over HTTPS for phones, and add session reminders through a messaging bot with adherence tracking.
+\begin{enumerate}\item \textbf{Hardware validation:} compare the band's pulse with a manual count or a reference pulse oximeter, add a plausibility check (for example, rejecting windows with a very high beat-to-beat spread) so that a reflective surface cannot pass as a finger, and measure the motor's interference on the pulse sensor.
+\item \textbf{WESAD-trained stress model:} train logistic regression and random forest models on WESAD with leave-one-subject-out evaluation, and show an experimental estimate only after it is checked.
+\item \textbf{RMSSD in the firmware:} compute this beat-to-beat variability measure on the band itself from the clean beat intervals.
+\item \textbf{Data collection and personal calibration:} record a small dataset in RECORD mode and calibrate the model to each person.
+\item \textbf{Live model scoring:} score the model on live windows during a session, with the same quality rules that apply today.
+\item \textbf{Wearable enclosure and battery:} replace the breadboards with a compact, battery-powered enclosure worn on the wrist.
+\item \textbf{Cloud broker and database:} test the full chain over a cloud MQTT broker with TLS and per-device credentials, give each band a unique MQTT client id, and move storage to a cloud database.
+\item \textbf{Smart reminders:} add session reminders and adherence tracking, and serve the companion over HTTPS for phones.
 \item \textbf{Alternative sensing:} an open-protocol smart ring (such as the Colmi R02) could replace the wired fingertip and wrist sensors while the ESP32 keeps the haptic role, reducing wiring.
 \end{enumerate}
 
