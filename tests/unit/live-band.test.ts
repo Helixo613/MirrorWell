@@ -35,11 +35,45 @@ describe('liveView mapping', () => {
     });
   });
 
-  it('vibration fixture: heart still, reason as given, cue time set', () => {
-    const v = liveView(fx('live-vibration'));
-    expect(v.beatIntervalMs).toBeNull();
-    expect(v.reason).toBe('Pulse paused while the band buzzes.');
+  it('vibration_overlap, reason null, beating heart: heart + "during wrist cues" hint, no reason (not blank, not all-fine)', () => {
+    const f = fx('live-vibration');
+    expect(f.state).toBe('vibration_overlap');
+    expect(f.reason).toBeNull();
+    const v = liveView(f);
+    expect(v.beatIntervalMs).toBe(743);
+    expect(v.reason).toBeNull();
+    expect(v.duringCueHint).toBe(b.duringCues);
+    expect(v.settlingLabel).toBe(b.settling);
     expect(v.cueAtMs).toBe(1794813715020);
+  });
+
+  it('clean-only setting: heart still, reason shown verbatim, no hint', () => {
+    const v = liveView(fx('live-vibration-clean-only'));
+    expect(v.beatIntervalMs).toBeNull();
+    expect(v.reason).toBe('Paused while the band buzzes');
+    expect(v.duringCueHint).toBeNull();
+    expect(v.cueAtMs).toBe(1794813715020);
+  });
+
+  it('settlingDuringCue alone (heart not during a cue) still shows the hint', () => {
+    const v = liveView({
+      state: 'usable',
+      signal: 3,
+      reason: null,
+      heart: { beatIntervalMs: 700, duringCue: false },
+      settling: 'steady',
+      settlingDuringCue: true,
+    });
+    expect(v.duringCueHint).toBe(b.duringCues);
+    expect(v.beatIntervalMs).toBe(700);
+  });
+
+  it('origin and calmIndex in the payload are ignored: never part of the view (no BPM / index in MirrorWell)', () => {
+    const v = liveView(fx('live-vibration'));
+    expect(Object.keys(v).sort()).toEqual(
+      ['beatIntervalMs', 'cueAtMs', 'duringCueHint', 'offline', 'reason', 'settlingLabel', 'signal', 'steadinessLabel'].sort(),
+    );
+    expect(() => liveView({ ...fx('live-usable'), origin: null } as LiveSnapshot)).not.toThrow();
   });
 
   it('the paused reason from the backend is shown verbatim', () => {

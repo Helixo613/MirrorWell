@@ -65,13 +65,15 @@
         if (kind === 'trends') return Promise.resolve({ schema: 1, utcOffsetMinutes: 0, days: [], sessions: [] });
       }
       if (kind === 'sessions') return getJson(FIXDIR + 'reviewer-sessions.json').then(function (a) {
-        if (FORCE_ORIGIN) a.forEach(function (s) { s.origin = FORCE_ORIGIN; });
+        if (FORCE_ORIGIN === 'none') a.forEach(function (s) { delete s.origin; });
+        else if (FORCE_ORIGIN) a.forEach(function (s) { s.origin = FORCE_ORIGIN; });
         return a;
       });
       if (kind === 'trends') return getJson(FIXDIR + 'reviewer-trends.json');
       return getJson(FIXDIR + 'reviewer-timeline.json').then(function (t) {
         if (t.companionSessionId === sid) {
           if (FORCE_ORIGIN === 'mixed') t.windows.forEach(function (w, i) { w.origin = i < t.windows.length / 2 ? 'sim' : 'live'; });
+          else if (FORCE_ORIGIN === 'none') t.windows.forEach(function (w) { delete w.origin; });
           else if (FORCE_ORIGIN) t.windows.forEach(function (w) { w.origin = FORCE_ORIGIN; });
           return t;
         }

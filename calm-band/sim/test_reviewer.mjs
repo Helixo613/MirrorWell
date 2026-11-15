@@ -69,7 +69,7 @@ await run('fixtures=1 desktop light', '?fixtures=1', { width: 1280, height: 900 
   ok((await count(p, '[data-testid=legend]')) === 1, 'legend');
   ok((await p.locator('[data-testid=facts]').innerText()).includes('experimental: not a medical or stress measure'), 'calm index label');
   ok((await count(p, '[data-testid=trend-days]')) === 1 && (await count(p, '[data-testid=trend-pulse]')) === 1, 'trend charts');
-  ok((await count(p, '[data-testid=sim-badge]')) === 0, 'no SIMULATED badge without origin');
+  ok((await count(p, '[data-testid=sim-badge]')) === 2, 'SIMULATED badge on both replay-origin fixture sessions');
   const box = await p.locator('[data-testid=hit]').boundingBox();
   await p.mouse.move(box.x + box.width * 0.4, box.y + 40);
   ok(await p.locator('#tip').isVisible(), 'hover shows window values');
@@ -104,7 +104,7 @@ await run('fixtures=1 mixed origin (per-window origin present, some live)', '?fi
   ok((await p.locator('#tip').innerText()).includes('Origin'), 'tooltip shows per-window origin');
 }, 'reviewer-fixtures-mixed.png');
 
-await run('missing optional fields (default fixtures have no origin/duringCue)', '?fixtures=1&theme=dark', { width: 390, height: 844 }, 'dark', async (p) => {
+await run('missing optional fields (origin stripped)', '?fixtures=1&origin=none&theme=dark', { width: 390, height: 844 }, 'dark', async (p) => {
   ok((await count(p, '[data-testid=sim-badge]')) === 0 && (await count(p, '[data-testid=detail-sim-badge]')) === 0, 'no badge and no crash when origin missing');
   ok((await count(p, '[data-testid=chart] svg')) === 1, 'chart still drawn');
 }, 'reviewer-fixtures-phone-dark-forced.png');
