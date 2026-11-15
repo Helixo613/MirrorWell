@@ -140,8 +140,9 @@ export function App() {
   const liveDemo = import.meta.env.VITE_ENABLE_LIVE_DEMO === 'true';
   const liveV1 = import.meta.env.VITE_ENABLE_LIVE_V1_HARNESS === 'true';
   const captureHarness = import.meta.env.VITE_ENABLE_CAPTURE_HARNESS === 'true';
+  const bandHarness = import.meta.env.VITE_ENABLE_BAND_HARNESS === 'true';
   const debugHud = import.meta.env.VITE_ENABLE_DEBUG_HUD === 'true';
-  const devHarness = import.meta.env.DEV && (liveDemo || liveV1 || captureHarness);
+  const devHarness = import.meta.env.DEV && (liveDemo || liveV1 || captureHarness || bandHarness);
   const showDebugHud = import.meta.env.DEV && debugHud;
 
   if (!devHarness) {
@@ -167,6 +168,10 @@ export function App() {
       ) : liveV1 ? (
         <DevOnly
           loader={() => import('./dev/LiveV1Harness').then((m) => ({ default: m.LiveV1Harness }))}
+        />
+      ) : bandHarness ? (
+        <DevOnly
+          loader={() => import('./dev/BandHarness').then((m) => ({ default: m.BandHarness }))}
         />
       ) : captureHarness ? (
         <DevOnly
