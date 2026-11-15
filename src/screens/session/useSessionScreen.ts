@@ -34,6 +34,7 @@ import {
   companionEnabledAtBuild,
   sameOriginTransport,
 } from '@/companion/companionBridge';
+import { companionSession } from '@/companion/companionSession';
 
 export type SessionScreenPhase =
   | 'loading'
@@ -372,7 +373,12 @@ export function useSessionScreen(): UseSessionScreenResult {
       enabled: companionEnabledAtBuild,
       isDemo,
     });
-    return () => handle.detach();
+    companionSession.set(null);
+    return () => {
+      // Keep the id so the summary screen can fetch the band summary after we unmount.
+      companionSession.set(handle.companionSessionId);
+      handle.detach();
+    };
   }, [isDemo]);
 
   // REST countdown — derived from the event stream (there is no getRestEndsAt). Display-only; the

@@ -16,6 +16,9 @@ import { SessionStopButton } from '@/components/session/SessionStopButton';
 import { StopConfirmDialog } from '@/components/session/StopConfirmDialog';
 import { QualityOfferCard } from '@/components/session/QualityOfferCard';
 import { RedFlagGuidance } from '@/components/session/RedFlagGuidance';
+import { LiveBandCard } from '@/components/session/LiveBandCard';
+import { companionEnabledAtBuild } from '@/companion/companionBridge';
+import { bandCardActive } from '@/companion/liveBand';
 import { strings } from '@/config/strings';
 import { useSessionScreen } from '@/screens/session/useSessionScreen';
 
@@ -96,6 +99,10 @@ export function SessionScreen() {
             />
           ) : null}
         </div>
+
+        <LiveBandCard
+          active={bandCardActive({ enabled: companionEnabledAtBuild, isDemo: s.isDemo, phase: s.phase })}
+        />
 
         <div className="flex min-h-0 flex-1 items-center justify-center [container-type:size]">
           <div className="capture-frame relative overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">

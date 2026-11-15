@@ -6,6 +6,9 @@ import { ScreenShell } from '@/components/layout/ScreenShell';
 import { StickyScreenFooter } from '@/components/layout/StickyScreenFooter';
 import { StaggerFadeIn } from '@/components/motion/StaggerFadeIn';
 import { SummaryExerciseCard } from '@/components/summary/SummaryExerciseCard';
+import { BandSummary } from '@/components/summary/BandSummary';
+import { companionEnabledAtBuild } from '@/companion/companionBridge';
+import { companionSession } from '@/companion/companionSession';
 import { exercises } from '@/config/exercises';
 import { strings } from '@/config/strings';
 import { useSummaryScreen } from '@/hooks/useSummaryScreen';
@@ -132,6 +135,10 @@ export function SummaryScreen() {
             </p>
           </StaggerFadeIn>
         )}
+
+        {companionEnabledAtBuild && !isDemo && companionSession.get() ? (
+          <BandSummary sessionId={companionSession.get() as string} />
+        ) : null}
 
         <p className="text-base leading-relaxed text-muted-foreground">
           {strings.summary.qualityNote}

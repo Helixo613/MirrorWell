@@ -34,7 +34,7 @@ export default defineConfig({
         // chunk for a dynamic import that lives inside a closure. No app chunk references it;
         // without this ignore the precache glob would sweep that orphan into the service worker
         // and ship dev code to users.
-        globIgnores: ['**/{DebugOverlay,DebugHud,LiveDemoView,LiveV1Harness,CaptureHarness}-*.js'],
+        globIgnores: ['**/{DebugOverlay,DebugHud,LiveDemoView,LiveV1Harness,CaptureHarness,BandHarness,mockFixtures}-*.js'],
         // Default 2MiB cap rejects face_landmarker.task (~3.76MB) and every wasm runtime file;
         // raised with headroom above the largest shipped asset.
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,

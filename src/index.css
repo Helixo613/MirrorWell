@@ -129,3 +129,19 @@
     aspect-ratio: 1;
   }
 }
+
+/* Calm Band live card: heartbeat + cue pulse. Duration for the heart comes from the band. */
+@keyframes band-beat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.22); }
+  35% { transform: scale(1); }
+}
+@keyframes band-cue {
+  from { transform: scale(0.6); opacity: 0.9; }
+  to { transform: scale(2.2); opacity: 0; }
+}
+.band-heart-beating { animation-name: band-beat; animation-iteration-count: infinite; animation-timing-function: ease-out; }
+.band-cue-pulse { animation: band-cue 900ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .band-heart-beating, .band-cue-pulse { animation: none; }
+}
