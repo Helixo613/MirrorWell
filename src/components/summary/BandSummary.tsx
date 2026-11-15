@@ -28,7 +28,7 @@ export function BandSummaryView({ view }: { view: SummaryView }) {
   );
 }
 
-/** Fetches the band summary for a finished companion session (every 5 s, up to 90 s). */
+/** Fetches the band summary for a finished companion session (every 5 s, up to 180 s). */
 export function BandSummary({ sessionId }: { sessionId: string }) {
   const [view, setView] = useState<SummaryView>({ status: 'waiting' });
   useEffect(() => {

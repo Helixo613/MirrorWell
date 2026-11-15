@@ -8,7 +8,7 @@ export const companionUi = Object.freeze({
   livePollMs: 2000,
   liveTimeoutMs: 1500,
   summaryPollMs: 5000,
-  summaryMaxWaitMs: 90000,
+  summaryMaxWaitMs: 180000,
 });
 
 export interface LiveSnapshot {

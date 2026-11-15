@@ -203,25 +203,25 @@ describe('summary polling', () => {
     expect(fetchOnce).toHaveBeenCalledTimes(3);
   });
 
-  it('times out at 90 s and shows what is there, exactly as given', async () => {
+  it('times out at 180 s and shows what is there, exactly as given', async () => {
     const fetchOnce = vi.fn().mockResolvedValue(insufficient);
     const views: SummaryView[] = [];
     pollSummary({ fetchOnce, onView: (v) => views.push(v) });
-    await vi.advanceTimersByTimeAsync(89000);
+    await vi.advanceTimersByTimeAsync(179000);
     expect(views.at(-1)).toEqual({ status: 'waiting' });
     await vi.advanceTimersByTimeAsync(2000);
     expect(views.at(-1)).toEqual({ status: 'ready', lines: insufficient.plainWords });
     const calls = fetchOnce.mock.calls.length;
-    expect(calls).toBe(19);
+    expect(calls).toBe(37);
     await vi.advanceTimersByTimeAsync(30000);
     expect(fetchOnce).toHaveBeenCalledTimes(calls);
   });
 
-  it('never available (404 or errors) gives none after 90 s', async () => {
+  it('never available (404 or errors) gives none after 180 s', async () => {
     const fetchOnce = vi.fn().mockRejectedValue(new Error('companion 404'));
     const views: SummaryView[] = [];
     pollSummary({ fetchOnce, onView: (v) => views.push(v) });
-    await vi.advanceTimersByTimeAsync(95000);
+    await vi.advanceTimersByTimeAsync(185000);
     expect(views.at(-1)).toEqual({ status: 'none' });
   });
 

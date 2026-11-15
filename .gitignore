@@ -29,3 +29,5 @@ tests/fixtures/replay/
 
 # Calm Band backend databases (sessions, pulse windows): local only
 *.db
+
+calm-band/sim/screens/test-run/

@@ -12,6 +12,12 @@ function Ok($m)   { Write-Host "  OK    $m" -ForegroundColor Green }
 function Warn($m) { Write-Host "  WARN  $m" -ForegroundColor Yellow }
 function Bad($m)  { Write-Host "  STOP  $m" -ForegroundColor Red }
 
+Write-Host "`n0. Leftovers" -ForegroundColor Cyan
+$sim = Get-CimInstance Win32_Process -Filter "Name LIKE 'python%'" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'sim_band\.py' }
+if ($sim) { Bad "a simulated band (sim_band.py, pid $(($sim | ForEach-Object ProcessId) -join ', ')) is still running - it would fight the real band. Close it (calm-band\sim\start-demo-sim.ps1 -Stop, or end that python process), then run this again."; exit 1 }
+Ok "no simulated band running"
+if ($FreshDb -and (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue)) { Bad "-FreshDb: a backend is already running on 8000 - close the running backend first (its window), then run this again."; exit 1 }
+
 Write-Host "`n1. Network" -ForegroundColor Cyan
 $text = Get-Content $secrets -Raw
 $ssid = [regex]::Match($text, '#define\s+WIFI_SSID\s+"([^"]*)"').Groups[1].Value
@@ -30,7 +36,11 @@ Write-Host "`n2. Broker" -ForegroundColor Cyan
 $svc = Get-Service mosquitto -ErrorAction SilentlyContinue
 if ($svc -and $svc.Status -eq 'Running') { Warn "Mosquitto Windows service is running (localhost only); stopping it needs admin"; Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile','-Command','Stop-Service mosquitto -Force; Set-Service mosquitto -StartupType Manual' }
 $listen = Get-NetTCPConnection -LocalPort 1883 -State Listen -ErrorAction SilentlyContinue
-if ($listen) { Ok "a broker is already listening on 1883 (reusing it)" }
+if ($listen) {
+  $reachable = $listen | Where-Object { $_.LocalAddress -in @('0.0.0.0', '::', $ip) }
+  if ($reachable) { Ok "a broker is already listening on 1883 and the band can reach it (reusing it)" }
+  else { Bad "something is listening on 1883 on $((@($listen | ForEach-Object LocalAddress) | Select-Object -Unique) -join ', ') only - the band cannot reach it. Close it (a simulator broker or the Mosquitto service), then run this again."; exit 1 }
+}
 else {
   Start-Process powershell -ArgumentList '-NoExit','-Command',"& '$mosq' -c '$root\mosquitto-calmband.conf' -v"
   Start-Sleep 2; Ok "broker started in its own window (click Allow if Windows Firewall asks)"
@@ -38,7 +48,7 @@ else {
 
 Write-Host "`n3. Backend" -ForegroundColor Cyan
 $listen8000 = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
-if ($listen8000) { Ok "backend already running on 8000 (reusing it)"; if ($FreshDb) { Warn "-FreshDb ignored: stop the running backend first, then start again" } }
+if ($listen8000) { Ok "backend already running on 8000 (reusing it)" }
 else {
   $beArgs = @('-NoExit','-ExecutionPolicy','Bypass','-File',"$root\start-backend.ps1"); if ($FreshDb) { $beArgs += '-FreshDb' }
   Start-Process powershell -ArgumentList $beArgs

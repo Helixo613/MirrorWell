@@ -1,6 +1,6 @@
 // Reviewer page check. Run from the repo root:  node calm-band/sim/test_reviewer.mjs
 // Serves the repo root on 127.0.0.1:8003, loads /calm-band/reviewer/?fixtures=... with Playwright,
-// asserts no console errors + expected elements, saves screenshots to calm-band/sim/screens/.
+// asserts no console errors + expected elements, saves screenshots to calm-band/sim/screens/test-run/ (git-ignored; never overwrites the tracked screenshots).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +14,7 @@ for (const base of [root, process.env.PLAYWRIGHT_ROOT, path.resolve(root, '..', 
   try { ({ chromium } = createRequire(path.join(base, 'package.json'))('playwright')); break; } catch (e) { /* try next */ }
 }
 if (!chromium) throw new Error('playwright not found: set PLAYWRIGHT_ROOT to a folder whose node_modules has it');
-const shots = path.join(here, 'screens');
+const shots = path.join(here, 'screens', 'test-run');
 fs.mkdirSync(shots, { recursive: true });
 const PORT = 8003;
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
