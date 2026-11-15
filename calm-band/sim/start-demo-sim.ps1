@@ -102,7 +102,7 @@ if (Listening $HttpPort) {
   if ($s.online -and $s.sensors.pulse -ne 'simulated') { Bad "a REAL band is online on this backend - not starting a simulated band next to it (it would take over its MQTT client id)"; exit 1 }
   Ok "backend already running on $HttpPort (reusing it)"
 } else {
-  $envs = @{ MQTT_HOST = '127.0.0.1'; MQTT_PORT = "$MqttPort"; DEVICE_ID = 'cb-01'; MIRRORWELL_DIST = $dist }
+  $envs = @{ MQTT_HOST = '127.0.0.1'; MQTT_PORT = "$MqttPort"; DEVICE_ID = 'cb-01'; MIRRORWELL_DIST = $dist; CALMBAND_DB = (Join-Path $backendDir 'data\calmband-sim.db') }
   Launch 'backend' $py @('-m', 'uvicorn', 'app:app', '--host', '127.0.0.1', '--port', "$HttpPort") $backendDir $envs
   $deadline = (Get-Date).AddSeconds(30); $up = $false
   do { Start-Sleep 1; try { $null = Invoke-RestMethod "$base/api/companion/status"; $up = $true } catch { } } until ($up -or (Get-Date) -gt $deadline)

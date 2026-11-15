@@ -2,7 +2,7 @@
 #   powershell -NoProfile -ExecutionPolicy Bypass -File <this folder>\start-demo.ps1
 # Checks the network, then opens the MQTT broker and the backend in their own windows,
 # waits for the band to report in, and opens MirrorWell in Chrome.
-param([switch]$NoBrowser)
+param([switch]$NoBrowser, [switch]$FreshDb)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $secrets = Join-Path $root 'calm-band\firmware\calm_band\secrets.h'
@@ -38,9 +38,10 @@ else {
 
 Write-Host "`n3. Backend" -ForegroundColor Cyan
 $listen8000 = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
-if ($listen8000) { Ok "backend already running on 8000 (reusing it)" }
+if ($listen8000) { Ok "backend already running on 8000 (reusing it)"; if ($FreshDb) { Warn "-FreshDb ignored: stop the running backend first, then start again" } }
 else {
-  Start-Process powershell -ArgumentList '-NoExit','-ExecutionPolicy','Bypass','-File',"$root\start-backend.ps1"
+  $beArgs = @('-NoExit','-ExecutionPolicy','Bypass','-File',"$root\start-backend.ps1"); if ($FreshDb) { $beArgs += '-FreshDb' }
+  Start-Process powershell -ArgumentList $beArgs
   $deadline = (Get-Date).AddSeconds(20)
   do { Start-Sleep 1; try { $null = Invoke-RestMethod http://127.0.0.1:8000/api/companion/status; $up = $true } catch { $up = $false } } until ($up -or (Get-Date) -gt $deadline)
   if ($up) { Ok "backend up on http://localhost:8000" } else { Bad "backend did not start - look at its window"; exit 1 }

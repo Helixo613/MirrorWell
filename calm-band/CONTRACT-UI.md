@@ -56,6 +56,17 @@ It is a **personal-baseline relaxation indicator** for this one session: it comp
 
 **Pulse trend** (summary and reviewer): `d = end.pulseRateBpm − start.pulseRateBpm`; `d ≤ −3` → `"settled"`, `d ≥ +3` → `"rose"`, otherwise `"steady"`. Fewer than 2 entries in `U` → `"insufficient"`, and `startBpm`, `endBpm` and the calm index are `null`.
 
+**Window origin.** Every feature window carries the band's own `origin` field (`"live"` real sensor, `"replay"` synthetic pulse; CONTRACT.md §3.1). It is stored and returned unchanged. A **session `origin`** summarises the windows of `in` plus the `pre`/`post` windows: all the same value → that value (`live`, `replay`, or `sim` if a source ever sends it); different values → `"mixed"`; no windows at all → `null`. The simulated band sends `"replay"`, so simulated data is never labelled `live`. Reviewer UIs must show the origin next to any pulse number.
+
+**Two sets of windows (buzz-overlap rule).** *Clean windows* (§1 "Usable window") feed the summary, the calm index and trends, **always**. The LIVE fields of `/live` (`heart.beatIntervalMs` and `settling`) may additionally use **buzz windows**: windows whose only problem is `vibration_overlap` (`motorActive:true`, contact, not moving, quality ≥ 0.8, pulse present). This is controlled by the backend setting `CALMBAND_LIVE_USES_CUE_WINDOWS` (default `"1"`):
+
+| Setting | `heart.beatIntervalMs` while `state` is `vibration_overlap` | `settling` | `reason` for `vibration_overlap` |
+|---|---|---|---|
+| `"1"` (default) | from the newest window, `heart.duringCue:true` | `U` also accepts buzz windows; `settlingDuringCue:true` if any window used (the first, or the last two) was `motorActive` | `null` (a pulse is shown) |
+| `"0"` | `null`, `duringCue:false` | clean windows only, `settlingDuringCue:false` | `Paused while the band buzzes` |
+
+`signal` is the same under both settings (the newest window's quality; it is a signal-quality indicator, not a pulse value). `state` is always exactly `/status` `state`.
+
 **Cue.** A command with `sessionId` = the session, `pattern` `rep_pulse` or `ease_off` (not `session_complete`), and at least one ack with `result:"accepted"` (the motor started). Its time is that `accepted` ack's `atMs`.
 
 ## 2. `GET /api/companion/live` (B: live band card)
@@ -73,11 +84,13 @@ Example (`fixtures/live-usable.json`: in a session, before the reps start):
   "state": "usable",
   "signal": 3,
   "reason": null,
-  "heart": { "beatIntervalMs": 719 },
+  "heart": { "beatIntervalMs": 719, "duringCue": false },
   "settling": "steady",
+  "settlingDuringCue": false,
   "steadiness": "steady",
   "cue": { "lastAtMs": null, "countThisSession": 0 },
-  "calmIndex": { "value": 68, "label": "experimental" }
+  "calmIndex": { "value": 68, "label": "experimental" },
+  "origin": "replay"
 }
 ```
 
@@ -89,13 +102,16 @@ Example (`fixtures/live-usable.json`: in a session, before the reps start):
 | `sessionId` | string \| null | active session id, null if none |
 | `state` | string | **exactly** `/api/companion/status` → `state` (same rules, computed the same moment): `offline`, `stale`, `sensor_missing`, `collecting`, `reading_stale`, `contact_required`, `settling`, `vibration_overlap`, `poor_quality`, `usable` |
 | `signal` | 0–3 | `0` if `state` is `offline`, `stale`, `sensor_missing`, `collecting`, `reading_stale` or `contact_required`, **or** the newest current-boot window has `contact:false`. Otherwise from that window's `quality`: `< 0.5` → 1, `< 0.8` → 2, `≥ 0.8` → 3. (Signal is about the sensor signal only. `vibration_overlap` with quality 1.0 is signal 3 but has no pulse.) |
-| `reason` | string \| null | the text from the table below for `state`; `null` only when `state` is `usable` |
-| `heart.beatIntervalMs` | int \| null | `round(60000 / pulseRateBpm)` using `/status`'s `pulseRateBpm`, so **only when `state` is `usable`**; otherwise `null` (no beating heart). During rep cues this is usually `null` (`vibration_overlap`). That's expected; show "paused while the band buzzes" |
-| `settling` | `"settling"` \| `"steady"` \| `"rising"` \| null | needs an active session with ≥ 2 entries in `U`: `d = mean(last 2 of U) − U[0]` (BPM); `d ≤ −3` → `settling`, `d ≥ +3` → `rising`, else `steady`. Otherwise `null` |
+| `reason` | string \| null | the text from the table below for `state`; `null` when `state` is `usable`, or when `state` is `vibration_overlap` and `heart.duringCue` is true (a pulse is being shown) |
+| `heart.beatIntervalMs` | int \| null | `round(60000 / pulseRateBpm)` from `/status`'s `pulseRateBpm` when `state` is `usable`. **Buzz-overlap rule:** with `CALMBAND_LIVE_USES_CUE_WINDOWS="1"` (default) it is also set during `vibration_overlap`, from the newest window (`heart.duringCue:true`). With `"0"`, or in any other state, it is `null` (no beating heart) |
+| `heart.duringCue` | bool | `true` when `beatIntervalMs` came from a window that overlapped a buzz (`motorActive:true`); else `false`. Never `null` |
+| `settlingDuringCue` | bool | `true` when any window used for `settling` (`U[0]` or the last two) was `motorActive`; only possible with the setting `"1"`. Else `false` |
+| `origin` | string \| null | `origin` of the newest current-boot window (`live`, `replay`, ...); `null` if there is none |
+| `settling` | `"settling"` \| `"steady"` \| `"rising"` \| null | needs an active session with ≥ 2 entries in `U` (with the setting `"1"`, `U` may also contain buzz windows, see §1): `d = mean(last 2 of U) − U[0]` (BPM); `d ≤ −3` → `settling`, `d ≥ +3` → `rising`, else `steady`. Otherwise `null` |
 | `steadiness` | `"steady"` \| `"moving"` \| null | `null` if `state` is `offline`, `stale`, `collecting` or `reading_stale`. Otherwise the newest current-boot window's `moving`: `true` → `moving`, `false` → `steady`, `null` (motion sensor data missing) → `null` |
 | `cue.lastAtMs` | int \| null | time of the latest cue of the active session; `null` if none or no active session |
 | `cue.countThisSession` | int | number of cues of the active session; `0` without one |
-| `calmIndex` | object | §1 formula with `start = U[0]`, `end = U[last]` of the active session; `{"value": null, "label": "experimental"}` without an active session or with < 2 entries in `U` |
+| `calmIndex` | object | §1 formula with `start = U[0]`, `end = U[last]` of the active session, **clean windows only whatever the setting**; `{"value": null, "label": "experimental"}` without an active session or with < 2 entries in `U` |
 
 `reason` texts (copy exactly; A owns them, B displays them as given):
 
@@ -108,7 +124,7 @@ Example (`fixtures/live-usable.json`: in a session, before the reps start):
 | `reading_stale` | `Waiting for a fresh reading from the band.` |
 | `contact_required` | `Rest your fingertip lightly on the sensor.` |
 | `settling` | `Finger found. Keep still; a clear reading takes about a minute.` |
-| `vibration_overlap` | `Pulse paused while the band buzzes.` |
+| `vibration_overlap` | setting `"1"`: `null` (heart shown, `duringCue:true`). Setting `"0"`: `Paused while the band buzzes` |
 | `poor_quality` | if `/status` `problems` contains `moving`: `Keep your hand still for a clearer reading.` otherwise: `The reading is not clear yet. Keep your fingertip still and relaxed on the sensor.` |
 | `usable` | `null` |
 
@@ -157,6 +173,7 @@ Example (`fixtures/summary-settled.json`):
 | `steadyPct` | int \| null | among `in` windows with `motionValid:true` and `moving` not null, the share with `moving:false`, × 100, rounded. `null` if there are none |
 | `signalPct` | int \| null | share of `in` windows that are usable, × 100, rounded. **Denominator leaves out windows whose only problem is `vibration_overlap`** (a cue is not a signal fault). `null` if the denominator is 0. `0` is a real value here (windows existed, none usable) |
 | `calmIndex` | object | §1, from this session's `U` |
+| `origin` | string \| null | window origin summary (§1): `live`, `replay`, `sim`, `mixed` or `null` |
 | `plainWords` | string[] | rules below, in this order |
 
 `plainWords`, generated by the backend (the wording lives only there). Add one sentence per rule, in order:
@@ -172,7 +189,7 @@ There are no numbers other than reps/ease-offs, no calm index and no BPM in `pla
 
 ## 4. `GET /api/companion/reviewer/sessions` (extended; C)
 
-Unchanged existing fields (`companionSessionId`, `state`, `events`, `end`, `featureWindows`, `usableWindows`, `vibrationOverlapWindows`, `prePulseBpm`, `postPulseBpm`, `hapticCommands`, `hapticExecuted`) **plus** these new fields, with the same rules as §3: `startedAtMs`, `endedAtMs`, `durationMs`, `reps`, `easeOffs`, `cues`, `pulseTrend` (= `pulse.trend`), `startBpm`, `endBpm`, `signalPct`, `steadyPct`, `calmIndex`. The array is ordered by `startedAtMs` ascending (as today). An empty store returns `[]`.
+Unchanged existing fields (`companionSessionId`, `state`, `events`, `end`, `featureWindows`, `usableWindows`, `vibrationOverlapWindows`, `prePulseBpm`, `postPulseBpm`, `hapticCommands`, `hapticExecuted`) **plus** these new fields, with the same rules as §3: `startedAtMs`, `endedAtMs`, `durationMs`, `reps`, `easeOffs`, `cues`, `pulseTrend` (= `pulse.trend`), `startBpm`, `endBpm`, `signalPct`, `steadyPct`, `calmIndex`, `origin` (§1 session origin). The array is ordered by `startedAtMs` ascending (as today). An empty store returns `[]`.
 
 `prePulseBpm`/`postPulseBpm` (existing) are the `pre`/`post` windows only. `startBpm`/`endBpm` (new) are `U[0]`/`U[last]`, which also use in-session usable windows. They can differ; that's expected.
 
@@ -192,7 +209,7 @@ Example (abridged to one item per list; the full one is `fixtures/reviewer-timel
   "windows": [
     { "boot": "3bd2e0fa", "seq": 6, "windowStartMs": 1794813530000, "windowEndMs": 1794813590000,
       "contact": true, "quality": 0.96, "pulseRateBpm": 86.2, "moving": false, "motionValid": true,
-      "motorActive": false, "timingGap": false, "usable": true, "problems": [], "role": "pre", "reading": "start" }
+      "motorActive": false, "timingGap": false, "origin": "replay", "usable": true, "problems": [], "role": "pre", "reading": "start" }
   ],
   "events": [
     { "source": "band", "type": "contact", "detail": "on", "atMs": 1794813452000, "boot": "3bd2e0fa" },
@@ -208,7 +225,7 @@ Example (abridged to one item per list; the full one is `fixtures/reviewer-timel
 ```
 
 - `range`: `fromMs = S − 300000`, `toMs = (E, or now while open) + 300000`.
-- `windows`: every stored window (any boot) with `windowEndMs > fromMs` and `windowStartMs < toMs`, ordered by `windowEndMs`. `usable` = §1. `problems` = `quality_problems(w)`. `role`: `"in"` if in `in`; `"pre"` if `windowEndMs ≤ S`; otherwise `"post"`. `reading`: `"start"` for `U[0]`, `"end"` for `U[last]` (only when `U` has ≥ 2 entries), else `null`. `pulseRateBpm` is the raw window value even when not usable (the reviewer sees `usable:false` next to it).
+- `windows`: every stored window (any boot) with `windowEndMs > fromMs` and `windowStartMs < toMs`, ordered by `windowEndMs`. `usable` = §1. `problems` = `quality_problems(w)`. `role`: `"in"` if in `in`; `"pre"` if `windowEndMs ≤ S`; otherwise `"post"`. `reading`: `"start"` for `U[0]`, `"end"` for `U[last]` (only when `U` has ≥ 2 entries), else `null`. `origin` is the window's own origin (§1). `pulseRateBpm` is the raw window value even when not usable (the reviewer sees `usable:false` next to it).
 - `events`: the session's MirrorWell events exactly as posted (every posted field kept) plus `"source":"mirrorwell"`, **and** band `events` messages (`contact` and `button`) with `fromMs ≤ atMs ≤ toMs`, as `{"source":"band","type","detail","atMs","boot"}`. All ordered by `atMs`. **A must start storing band `button` events and every `contact` event** (today only the latest contact state and finger-off periods are kept).
 - `commands`: every command with this `sessionId` (including `session_complete`), ordered by `issuedAtMs`, with all acks (`result`, `reason`, `atMs`) in arrival order. `outcome`: `executed` if any ack is executed; else `stopped` if any is stopped; else `rejected` if any is rejected; else `accepted`; with no acks, `no_ack`.
 - Unknown `sid` → 404 `{"detail":"unknown session"}`.
@@ -224,21 +241,21 @@ Example (`fixtures/reviewer-trends.json`):
   "days": [ { "date": "2026-11-15", "sessions": 1 }, { "date": "2026-11-16", "sessions": 1 } ],
   "sessions": [
     { "companionSessionId": "c7d2a1e4-0b6f-4f0e-8a51-6e2f9b3d4c10", "startedAtMs": 1794727800000, "date": "2026-11-15",
-      "meanUsablePulseBpm": null, "readings": 0, "pulseTrend": "insufficient" },
+      "meanUsablePulseBpm": null, "readings": 0, "pulseTrend": "insufficient", "origin": "replay" },
     { "companionSessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12", "startedAtMs": 1794813600000, "date": "2026-11-16",
-      "meanUsablePulseBpm": 83.5, "readings": 5, "pulseTrend": "settled" }
+      "meanUsablePulseBpm": 83.5, "readings": 5, "pulseTrend": "settled", "origin": "replay" }
   ]
 }
 ```
 
 - `date` = the session's `startedAtMs` as a `YYYY-MM-DD` date in the **backend machine's local time zone**; `utcOffsetMinutes` = that zone's current offset (IST = 330).
 - `days`: one entry per date that has ≥ 1 session, ascending; `sessions` = count.
-- `sessions`: every session, by `startedAtMs` ascending. `meanUsablePulseBpm` = mean `pulseRateBpm` of the session's `U`, 1 decimal; `null` if `U` is empty. `readings` = number of entries in `U`. `pulseTrend` as §1.
+- `sessions`: every session, by `startedAtMs` ascending. `meanUsablePulseBpm` = mean `pulseRateBpm` of the session's `U`, 1 decimal; `null` if `U` is empty. `readings` = number of entries in `U`. `pulseTrend` as §1. `origin` = session origin (§1).
 - Empty store → `{"schema":1,"utcOffsetMinutes":…,"days":[],"sessions":[]}`.
 
 ## 7. Persistence (A)
 
-SQLite file at `$CALMBAND_DB`, default `calm-band/backend-sample/backend/data/calmband.db` (git-ignored). It stores sessions (start, end body, state), MirrorWell events, feature windows, band events, commands and acks, so a backend restart keeps history. Duplicate rules stay the same: window key `dev+boot+seq`, event key `session+seq`. Live status logic still reads the current boot only. The existing in-memory behaviour of `/status` must not change; `backend_checks.py` must still pass 33/33 (it uses its own device id and a fresh DB, so A should let `CALMBAND_DB` point at a temp file in tests).
+SQLite file at `$CALMBAND_DB` (the sim launcher uses `calmband-sim.db`, the real-demo scripts `calmband-demo.db`, both under `backend/data/`; `start-demo.ps1 -FreshDb` renames the demo db with a timestamp first; `*.db` is git-ignored). Default `calm-band/backend-sample/backend/data/calmband.db` (git-ignored). It stores sessions (start, end body, state), MirrorWell events, feature windows, band events, commands and acks, so a backend restart keeps history (band `contact` and `button` events are stored individually; the finger-off periods are rebuilt from the stored contact events; the active session is restored). Duplicate rules stay the same: window key `dev+boot+seq`, event key `session+seq`. Live status logic still reads the current boot only. The existing in-memory behaviour of `/status` must not change; `backend_checks.py` must still pass 33/33 (it uses its own device id and a fresh DB, so A should let `CALMBAND_DB` point at a temp file in tests).
 
 ## 8. Fixtures (`calm-band/sim/fixtures/`)
 
@@ -247,7 +264,8 @@ SQLite file at `$CALMBAND_DB`, default `calm-band/backend-sample/backend/data/ca
 | `live-usable.json` | §2, in session, before the reps start (no cues yet) |
 | `live-collecting.json` | §2, band just connected, no session |
 | `live-contact-required.json` | §2, finger off during a session |
-| `live-vibration.json` | §2, cue just played (`vibration_overlap`, heart null) |
+| `live-vibration.json` | §2, cue just played, default setting `"1"` (`vibration_overlap`, heart beating, `duringCue:true`, `reason:null`) |
+| `live-vibration-clean-only.json` | §2, same moment with `CALMBAND_LIVE_USES_CUE_WINDOWS="0"` (heart null, reason `Paused while the band buzzes`) |
 | `live-poor-quality-moving.json` | §2, `poor_quality` because the hand moves |
 | `live-stale.json` | §2, band not heard for 45 s |
 | `summary-settled.json` | §3, full session with pre and post readings |

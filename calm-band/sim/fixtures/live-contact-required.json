@@ -7,9 +7,11 @@
   "signal": 0,
   "reason": "Rest your fingertip lightly on the sensor.",
   "heart": {
-    "beatIntervalMs": null
+    "beatIntervalMs": null,
+    "duringCue": false
   },
-  "settling": "steady",
+  "settling": "settling",
+  "settlingDuringCue": true,
   "steadiness": "steady",
   "cue": {
     "lastAtMs": 1794813745020,
@@ -18,5 +20,6 @@
   "calmIndex": {
     "value": 68,
     "label": "experimental"
-  }
+  },
+  "origin": "replay"
 }

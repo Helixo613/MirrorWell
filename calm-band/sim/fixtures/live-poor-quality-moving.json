@@ -7,9 +7,11 @@
   "signal": 1,
   "reason": "Keep your hand still for a clearer reading.",
   "heart": {
-    "beatIntervalMs": null
+    "beatIntervalMs": null,
+    "duringCue": false
   },
-  "settling": "steady",
+  "settling": "settling",
+  "settlingDuringCue": true,
   "steadiness": "moving",
   "cue": {
     "lastAtMs": 1794813775020,
@@ -18,5 +20,6 @@
   "calmIndex": {
     "value": 68,
     "label": "experimental"
-  }
+  },
+  "origin": "replay"
 }

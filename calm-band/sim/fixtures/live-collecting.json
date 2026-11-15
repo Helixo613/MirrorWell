@@ -7,9 +7,11 @@
   "signal": 0,
   "reason": "Getting a first reading. Rest your fingertip on the sensor and keep still for about a minute.",
   "heart": {
-    "beatIntervalMs": null
+    "beatIntervalMs": null,
+    "duringCue": false
   },
   "settling": null,
+  "settlingDuringCue": false,
   "steadiness": null,
   "cue": {
     "lastAtMs": null,
@@ -18,5 +20,6 @@
   "calmIndex": {
     "value": null,
     "label": "experimental"
-  }
+  },
+  "origin": null
 }
