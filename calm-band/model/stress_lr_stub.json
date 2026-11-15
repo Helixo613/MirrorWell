@@ -1,0 +1,3 @@
+{"modelVersion":"stub-not-trained","type":"logistic_regression","features":["pulseRateBpm","pulseRateSdBpm","relativePulseBpm"],
+ "scalerMean":[80.0,4.0,0.0],"scalerStd":[10.0,2.0,6.0],"coef":[0.6,0.3,0.5],"intercept":-0.2,"threshold":0.5,
+ "trainedOn":"PLACEHOLDER: made-up numbers, not trained on any data","evaluation":{"method":"leave-one-subject-out","balancedAccuracyMean":0.5,"balancedAccuracySd":0.0,"f1Mean":0.5,"f1Sd":0.0},"createdAt":"2026-11-16T05:00:00Z"}

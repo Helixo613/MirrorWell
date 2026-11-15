@@ -1,0 +1,1124 @@
+{
+  "schema": 1,
+  "companionSessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12",
+  "startedAtMs": 1794813600000,
+  "endedAtMs": 1794813840000,
+  "range": {
+    "fromMs": 1794813300000,
+    "toMs": 1794814140000
+  },
+  "windows": [
+    {
+      "boot": "3bd2e0fa",
+      "seq": 1,
+      "windowStartMs": 1794813455000,
+      "windowEndMs": 1794813515000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 94.3,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "pre",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.7316,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 2,
+      "windowStartMs": 1794813470000,
+      "windowEndMs": 1794813530000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 92.2,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "pre",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.6686,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 3,
+      "windowStartMs": 1794813485000,
+      "windowEndMs": 1794813545000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 90.4,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "pre",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.6092,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 4,
+      "windowStartMs": 1794813500000,
+      "windowEndMs": 1794813560000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 88.8,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "pre",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.5535,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 5,
+      "windowStartMs": 1794813515000,
+      "windowEndMs": 1794813575000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 87.4,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "pre",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.5035,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 6,
+      "windowStartMs": 1794813530000,
+      "windowEndMs": 1794813590000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 86.2,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "pre",
+      "reading": "start",
+      "stressEstimate": {
+        "value": 0.4606,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 7,
+      "windowStartMs": 1794813545000,
+      "windowEndMs": 1794813605000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 85.2,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.4252,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 8,
+      "windowStartMs": 1794813560000,
+      "windowEndMs": 1794813620000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 84.3,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.394,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 9,
+      "windowStartMs": 1794813575000,
+      "windowEndMs": 1794813635000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 83.5,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.367,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 10,
+      "windowStartMs": 1794813590000,
+      "windowEndMs": 1794813650000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 82.8,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 11,
+      "windowStartMs": 1794813605000,
+      "windowEndMs": 1794813665000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 82.2,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 12,
+      "windowStartMs": 1794813620000,
+      "windowEndMs": 1794813680000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 81.6,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 13,
+      "windowStartMs": 1794813635000,
+      "windowEndMs": 1794813695000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 81.2,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 14,
+      "windowStartMs": 1794813650000,
+      "windowEndMs": 1794813710000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 80.8,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 15,
+      "windowStartMs": 1794813665000,
+      "windowEndMs": 1794813725000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 80.4,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 16,
+      "windowStartMs": 1794813680000,
+      "windowEndMs": 1794813740000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 80.1,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 17,
+      "windowStartMs": 1794813695000,
+      "windowEndMs": 1794813755000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 79.8,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 18,
+      "windowStartMs": 1794813710000,
+      "windowEndMs": 1794813770000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 79.6,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 19,
+      "windowStartMs": 1794813725000,
+      "windowEndMs": 1794813785000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 79.4,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 20,
+      "windowStartMs": 1794813740000,
+      "windowEndMs": 1794813800000,
+      "contact": true,
+      "quality": 0.45,
+      "pulseRateBpm": 82.2,
+      "moving": true,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "low_quality",
+        "moving",
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 21,
+      "windowStartMs": 1794813755000,
+      "windowEndMs": 1794813815000,
+      "contact": true,
+      "quality": 0.45,
+      "pulseRateBpm": 82.1,
+      "moving": true,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "low_quality",
+        "moving",
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 22,
+      "windowStartMs": 1794813770000,
+      "windowEndMs": 1794813830000,
+      "contact": true,
+      "quality": 0.45,
+      "pulseRateBpm": 81.9,
+      "moving": true,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "low_quality",
+        "moving",
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 23,
+      "windowStartMs": 1794813785000,
+      "windowEndMs": 1794813845000,
+      "contact": true,
+      "quality": 0.45,
+      "pulseRateBpm": 81.8,
+      "moving": true,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "low_quality",
+        "moving",
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 24,
+      "windowStartMs": 1794813800000,
+      "windowEndMs": 1794813860000,
+      "contact": true,
+      "quality": 0.45,
+      "pulseRateBpm": 81.7,
+      "moving": true,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "low_quality",
+        "moving",
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 25,
+      "windowStartMs": 1794813815000,
+      "windowEndMs": 1794813875000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 78.6,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 26,
+      "windowStartMs": 1794813830000,
+      "windowEndMs": 1794813890000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 78.5,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": true,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": false,
+      "problems": [
+        "vibration_overlap"
+      ],
+      "role": "in",
+      "reading": null,
+      "stressEstimate": {
+        "value": null,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 27,
+      "windowStartMs": 1794813845000,
+      "windowEndMs": 1794813905000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 78.5,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "post",
+      "reading": "end",
+      "stressEstimate": {
+        "value": 0.2207,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 28,
+      "windowStartMs": 1794813860000,
+      "windowEndMs": 1794813920000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 78.4,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "post",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.2182,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 29,
+      "windowStartMs": 1794813875000,
+      "windowEndMs": 1794813935000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 78.4,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "post",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.2182,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    },
+    {
+      "boot": "3bd2e0fa",
+      "seq": 30,
+      "windowStartMs": 1794813890000,
+      "windowEndMs": 1794813950000,
+      "contact": true,
+      "quality": 0.96,
+      "pulseRateBpm": 78.3,
+      "moving": false,
+      "motionValid": true,
+      "motorActive": false,
+      "timingGap": false,
+      "origin": "replay",
+      "usable": true,
+      "problems": [],
+      "role": "post",
+      "reading": null,
+      "stressEstimate": {
+        "value": 0.2158,
+        "modelVersion": "stub-not-trained",
+        "label": "experimental: not a medical measure"
+      }
+    }
+  ],
+  "events": [
+    {
+      "source": "band",
+      "type": "contact",
+      "detail": "on",
+      "atMs": 1794813452000,
+      "boot": "3bd2e0fa"
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 1,
+      "type": "exercise_state",
+      "atMs": 1794813600000,
+      "exerciseId": "EX_SMILE",
+      "state": "DEMO"
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 2,
+      "type": "exercise_state",
+      "atMs": 1794813630000,
+      "exerciseId": "EX_SMILE",
+      "state": "REPS"
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 3,
+      "type": "rep",
+      "atMs": 1794813639960,
+      "repIndex": 0,
+      "peakEffortIndex": 0.55,
+      "durationMs": 1800
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 4,
+      "type": "rep",
+      "atMs": 1794813654960,
+      "repIndex": 1,
+      "peakEffortIndex": 0.58,
+      "durationMs": 1900
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 5,
+      "type": "rep",
+      "atMs": 1794813669960,
+      "repIndex": 2,
+      "peakEffortIndex": 0.61,
+      "durationMs": 2000
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 6,
+      "type": "rep",
+      "atMs": 1794813684960,
+      "repIndex": 3,
+      "peakEffortIndex": 0.64,
+      "durationMs": 1800
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 7,
+      "type": "rep",
+      "atMs": 1794813699960,
+      "repIndex": 4,
+      "peakEffortIndex": 0.55,
+      "durationMs": 1900
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 8,
+      "type": "ease_off",
+      "atMs": 1794813701970,
+      "active": true
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 9,
+      "type": "ease_off",
+      "atMs": 1794813705970,
+      "active": false
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 10,
+      "type": "rep",
+      "atMs": 1794813714960,
+      "repIndex": 5,
+      "peakEffortIndex": 0.58,
+      "durationMs": 2000
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 11,
+      "type": "rep",
+      "atMs": 1794813729960,
+      "repIndex": 6,
+      "peakEffortIndex": 0.61,
+      "durationMs": 1800
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 12,
+      "type": "rep",
+      "atMs": 1794813744960,
+      "repIndex": 7,
+      "peakEffortIndex": 0.64,
+      "durationMs": 1900
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 13,
+      "type": "rep",
+      "atMs": 1794813759960,
+      "repIndex": 8,
+      "peakEffortIndex": 0.55,
+      "durationMs": 2000
+    },
+    {
+      "source": "mirrorwell",
+      "seq": 14,
+      "type": "rep",
+      "atMs": 1794813774960,
+      "repIndex": 9,
+      "peakEffortIndex": 0.58,
+      "durationMs": 1800
+    }
+  ],
+  "commands": [
+    {
+      "commandId": "6e6aedec-5c69-5f16-a148-4a44200cb31d",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813640000,
+      "expiresAtMs": 1794813643000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813640020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813640140
+        }
+      ]
+    },
+    {
+      "commandId": "8d30903e-9ff1-5349-ba3b-90c89c20be93",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813655000,
+      "expiresAtMs": 1794813658000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813655020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813655140
+        }
+      ]
+    },
+    {
+      "commandId": "ee8ded8f-5ccf-5979-a9d8-bc580a5e1131",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813670000,
+      "expiresAtMs": 1794813673000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813670020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813670140
+        }
+      ]
+    },
+    {
+      "commandId": "c3efe37e-6f10-50ef-a001-abf63ec11819",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813685000,
+      "expiresAtMs": 1794813688000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813685020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813685140
+        }
+      ]
+    },
+    {
+      "commandId": "d627ea62-1087-545c-b063-7e5a4ad6b992",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813700000,
+      "expiresAtMs": 1794813703000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813700020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813700140
+        }
+      ]
+    },
+    {
+      "commandId": "b2edb78f-c5d3-575c-bde1-55232675c4b5",
+      "pattern": "ease_off",
+      "issuedAtMs": 1794813702000,
+      "expiresAtMs": 1794813705000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813702020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813702360
+        }
+      ]
+    },
+    {
+      "commandId": "c8d68258-ee7d-5aa9-acd2-20b6a6090591",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813715000,
+      "expiresAtMs": 1794813718000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813715020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813715140
+        }
+      ]
+    },
+    {
+      "commandId": "72ffe13a-f71c-5437-8c9a-c866ac057624",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813730000,
+      "expiresAtMs": 1794813733000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813730020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813730140
+        }
+      ]
+    },
+    {
+      "commandId": "30912a44-2315-5754-a6d2-837706bb10f9",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813745000,
+      "expiresAtMs": 1794813748000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813745020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813745140
+        }
+      ]
+    },
+    {
+      "commandId": "f2f1bdaf-fa03-57fc-940c-3c2d38112007",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813760000,
+      "expiresAtMs": 1794813763000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813760020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813760140
+        }
+      ]
+    },
+    {
+      "commandId": "8365e82c-8f0e-53a0-84f6-6669c33420d1",
+      "pattern": "rep_pulse",
+      "issuedAtMs": 1794813775000,
+      "expiresAtMs": 1794813778000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813775020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813775140
+        }
+      ]
+    },
+    {
+      "commandId": "a63756d0-a607-534a-a38c-6d5a0295d837",
+      "pattern": "session_complete",
+      "issuedAtMs": 1794813840000,
+      "expiresAtMs": 1794813843000,
+      "maxDurationMs": 1500,
+      "outcome": "executed",
+      "acks": [
+        {
+          "result": "accepted",
+          "reason": null,
+          "atMs": 1794813840020
+        },
+        {
+          "result": "executed",
+          "reason": null,
+          "atMs": 1794813841520
+        }
+      ]
+    }
+  ],
+  "model": {
+    "modelVersion": "stub-not-trained",
+    "method": "leave-one-subject-out",
+    "balancedAccuracyMean": 0.5,
+    "balancedAccuracySd": 0.0,
+    "label": "experimental: not a medical measure"
+  }
+}

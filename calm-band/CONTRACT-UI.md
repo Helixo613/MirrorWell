@@ -274,5 +274,27 @@ SQLite file at `$CALMBAND_DB` (the sim launcher uses `calmband-sim.db`, the real
 | `reviewer-sessions.json` | §4, the two sessions above |
 | `reviewer-timeline.json` | §5, timeline of the settled session |
 | `reviewer-trends.json` | §6 |
+| `summary-settled-model.json`, `reviewer-sessions-model.json`, `reviewer-timeline-model.json` | §3/§4/§5 with the PLACEHOLDER model (`model/stress_lr_stub.json`) switched on (§7) |
 
 The fixtures are consistent with each other: the settled session appears in the summary, the reviewer list, the timeline and trends with the same numbers.
+
+## 7. Experimental stress estimate (optional; off by default)
+
+Added after the freeze, **additive only**. `GET /api/companion/live` and `/status` do not change and never carry it; MirrorWell (`src/`) does not show it.
+
+**Switch.** Env `CALMBAND_MODEL` = path to a logistic-regression JSON (`model/stress_lr_v1.json` is the real one; `model/stress_lr_stub.json` is a made-up placeholder, `modelVersion: "stub-not-trained"`, for tests only). Unset, a missing file or an invalid file (not 3 features, bad array lengths, std <= 0, wrong type) = **no model**: the backend behaves as before and every field below is `null`.
+
+**Formula** (pure Python, no scikit-learn): `x = [pulseRateBpm, pulseRateSdBpm, relativePulseBpm]`; `score = 1 / (1 + exp(-(intercept + sum(coef[i] * (x[i] - scalerMean[i]) / scalerStd[i]))))`. `relativePulseBpm` = the window's pulse minus `U[0].pulseRateBpm` (the session's baseline, the same start reading as the calm index).
+
+**Which windows are scored.** Only clean windows (§1 `usable`: contact, not moving, no motor, quality >= 0.8, pulse present, plus the other §1 problems) that also have `pulseRateSdBpm`, and only when the session has a baseline. Everything else is `null`, never 0.
+
+**Fields** (all `null` with no model):
+
+| Where | Field | Value |
+|---|---|---|
+| §5 timeline `windows[]` | `stressEstimate` | `{ "value": 0..1 \| null, "modelVersion": string, "label": "experimental: not a medical measure" }` |
+| §5 timeline (top level) | `model` | `{ "modelVersion", "method", "balancedAccuracyMean", "balancedAccuracySd", "label" }` |
+| §3 summary and §4 reviewer sessions | `stressEstimate` | same object plus `scoredWindows` (int); `value` = mean score of the session's own (`in`) scored windows, `null` if none |
+| §3 summary and §4 reviewer sessions | `model` | as above (the leave-one-subject-out balanced accuracy of the model) |
+
+`plainWords` never mention it. The reviewer page shows a thin "Experimental stress estimate" strip under the timeline (empty where `null`), and the model version and LOSO score in Session facts; nothing at all when `model` is `null`; a `PLACEHOLDER MODEL` warning when `modelVersion` is `stub-not-trained`.

@@ -16,7 +16,7 @@ for (const base of [root, process.env.PLAYWRIGHT_ROOT, path.resolve(root, '..', 
 if (!chromium) throw new Error('playwright not found: set PLAYWRIGHT_ROOT to a folder whose node_modules has it');
 const shots = path.join(here, 'screens', 'test-run');
 fs.mkdirSync(shots, { recursive: true });
-const PORT = 8003;
+const PORT = Number(process.env.REVIEWER_TEST_PORT || 8003);
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 
 const server = http.createServer((req, res) => {
@@ -67,6 +67,7 @@ await run('fixtures=1 desktop light', '?fixtures=1', { width: 1280, height: 900 
   ok((await count(p, 'svg polygon.m-ok')) >= 11, 'cue markers');
   ok((await count(p, '.m-ease')) >= 1, 'ease-off marker');
   ok((await count(p, '[data-testid=legend]')) === 1, 'legend');
+  ok((await count(p, '[data-testid=stress-strip]')) === 0 && !(await p.locator('#detail').innerText()).toLowerCase().includes('stress estimate'), 'no model: no stress strip, no stress/model facts');
   ok((await p.locator('[data-testid=facts]').innerText()).includes('experimental: not a medical or stress measure'), 'calm index label');
   ok((await count(p, '[data-testid=trend-days]')) === 1 && (await count(p, '[data-testid=trend-pulse]')) === 1, 'trend charts');
   ok((await count(p, '[data-testid=sim-badge]')) === 2, 'SIMULATED badge on both replay-origin fixture sessions');
@@ -74,6 +75,16 @@ await run('fixtures=1 desktop light', '?fixtures=1', { width: 1280, height: 900 
   await p.mouse.move(box.x + box.width * 0.4, box.y + 40);
   ok(await p.locator('#tip').isVisible(), 'hover shows window values');
 }, 'reviewer-fixtures-desktop-light.png');
+
+await run('fixtures=1&model=1 (placeholder stub model)', '?fixtures=1&model=1', { width: 1280, height: 900 }, 'light', async (p) => {
+  ok((await count(p, '[data-testid=stress-strip]')) === 1, 'stress strip shown');
+  ok((await count(p, '[data-testid=stress-cell]')) >= 5, 'strip has scored cells');
+  ok((await count(p, '[data-testid=placeholder-model]')) === 1, 'PLACEHOLDER MODEL warning shown for the stub');
+  const facts = await p.locator('[data-testid=facts]').innerText();
+  ok(facts.includes('stub-not-trained') && facts.includes('PLACEHOLDER MODEL') && facts.includes('balanced accuracy 0.50'), 'model version + LOSO score in Session facts');
+  ok((await p.locator('#detail').innerText()).includes('Experimental stress estimate'), 'strip title');
+  ok((await count(p, '[data-testid=stress-cell]')) < (await count(p, '[data-testid=chart] .pdot')) + 1, 'gaps: fewer scored cells than windows (nulls stay empty)');
+}, 'reviewer-fixtures-model.png');
 
 await run('fixtures=1 desktop dark', '?fixtures=1', { width: 1280, height: 900 }, 'dark', async (p) => {
   ok((await count(p, '[data-testid=chart] svg')) === 1, 'chart drawn in dark');

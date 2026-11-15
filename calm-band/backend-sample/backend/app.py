@@ -26,6 +26,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import stress_model
 from store import Store, default_path
 
 BROKER_HOST = os.environ.get("MQTT_HOST", "127.0.0.1")
@@ -62,6 +63,9 @@ lock = threading.RLock()
 store = Store(os.environ.get("CALMBAND_DB") or default_path())
 # CONTRACT-UI §2: may the LIVE fields use windows that overlap a band buzz? ("1" yes / "0" no)
 LIVE_USES_CUE_WINDOWS = os.environ.get("CALMBAND_LIVE_USES_CUE_WINDOWS", "1") != "0"
+# Optional experimental stress model (env CALMBAND_MODEL = path to a JSON file). None = no model: every
+# stressEstimate is null and nothing else changes. Tests may replace this global.
+MODEL = stress_model.load(os.environ.get("CALMBAND_MODEL"))
 db = {
     "sessions": {},        # companionSessionId -> session dict
     "feature_windows": {}, # (device, boot, seq) -> window   (unique key = duplicate guard)
@@ -592,6 +596,36 @@ def window_origin(ws: list):
     return next(iter(kinds)) if len(kinds) == 1 else "mixed"
 
 
+def stress_estimate(w: dict, baseline: float | None):
+    """Experimental model score (0-1) for ONE window, or None. Only a clean window with a pulse and a pulse SD
+    (contact, still, no buzz, quality >= 0.8; is_clean) is scored; relativePulseBpm = its pulse minus the
+    session baseline (U[0], the same start reading as the calm index). Caller holds the lock."""
+    if MODEL is None or baseline is None or not is_clean(w):
+        return None
+    sd = w.get("pulseRateSdBpm")
+    if sd is None or w.get("pulseRateBpm") is None:
+        return None
+    return round(stress_model.score(MODEL, w["pulseRateBpm"], sd, w["pulseRateBpm"] - baseline), 4)
+
+
+def stress_block(value):
+    """The stressEstimate object, or None when there is no model."""
+    if MODEL is None:
+        return None
+    return {"value": value, "modelVersion": MODEL["modelVersion"], "label": stress_model.LABEL}
+
+
+def session_stress(inn: list, U: list):
+    """Session-level stressEstimate: the mean score of the session's own clean windows (null if none)."""
+    if MODEL is None:
+        return None
+    base = U[0]["pulseRateBpm"] if U else None
+    vals = [v for v in (stress_estimate(w, base) for w in inn) if v is not None]
+    b = stress_block(round(sum(vals) / len(vals), 4) if vals else None)
+    b["scoredWindows"] = len(vals)
+    return b
+
+
 def session_cues(sid: str) -> list:
     out = []
     for c in db["commands"].values():
@@ -637,6 +671,7 @@ def build_summary(s: dict, now: int):
         "pulse": {"trend": trend, "startBpm": sb, "endBpm": eb},
         "steadyPct": steady, "signalPct": sig, "calmIndex": calm_index(U),
         "origin": window_origin(inn + [w for w in (pre, post) if w]),
+        "stressEstimate": session_stress(inn, U), "model": stress_model.info(MODEL),
         "plainWords": words,
     }
     return summary, (inn, pre, post, U)
@@ -739,6 +774,7 @@ def reviewer_sessions():
                 "pulseTrend": sm["pulse"]["trend"], "startBpm": sm["pulse"]["startBpm"], "endBpm": sm["pulse"]["endBpm"],
                 "signalPct": sm["signalPct"], "steadyPct": sm["steadyPct"], "calmIndex": sm["calmIndex"],
                 "origin": sm["origin"],
+                "stressEstimate": sm["stressEstimate"], "model": sm["model"],
             })
     return out
 
@@ -756,6 +792,7 @@ def reviewer_timeline(sid: str):
         in_keys = {(w["boot"], w["seq"]) for w in inn}
         start_k = (U[0]["boot"], U[0]["seq"]) if len(U) >= 2 else None
         end_k = (U[-1]["boot"], U[-1]["seq"]) if len(U) >= 2 else None
+        base = U[0]["pulseRateBpm"] if U else None
         wins = []
         for w in plausible_windows(now):
             if not (w["windowEndMs"] > fr and w["windowStartMs"] < to):
@@ -770,6 +807,7 @@ def reviewer_timeline(sid: str):
                 "usable": not probs, "problems": probs,
                 "role": "in" if k in in_keys else "pre" if w["windowEndMs"] <= S else "post",
                 "reading": "end" if k == end_k else "start" if k == start_k else None,
+                "stressEstimate": stress_block(stress_estimate(w, base)),
             })
         ev = [{"source": "mirrorwell", **e} for e in s["events"]]
         ev += [{"source": "band", "type": b["type"], "detail": b["detail"], "atMs": b["atMs"], "boot": b["boot"]}
@@ -783,7 +821,8 @@ def reviewer_timeline(sid: str):
                          "expiresAtMs": c["expiresAtMs"], "maxDurationMs": c["maxDurationMs"], "outcome": outcome,
                          "acks": [{"result": a["result"], "reason": a.get("reason"), "atMs": a.get("atMs")} for a in c["acks"]]})
         return {"schema": 1, "companionSessionId": sid, "startedAtMs": S, "endedAtMs": E,
-                "range": {"fromMs": fr, "toMs": to}, "windows": wins, "events": ev, "commands": cmds}
+                "range": {"fromMs": fr, "toMs": to}, "windows": wins, "events": ev, "commands": cmds,
+                "model": stress_model.info(MODEL)}
 
 
 @app.get("/api/companion/reviewer/trends")
