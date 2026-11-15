@@ -2,6 +2,7 @@
 // against models.lock.json (docs/IMPLEMENTATION.md Task 4). Wired to `postinstall`, after
 // copy-wasm.ts. Fails loudly (non-zero exit) on any missing, corrupted, or unexpected file —
 // this is the integrity backstop for assets that are never re-fetched at runtime.
+import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -56,7 +57,7 @@ export function writeLock(): void {
   writeFileSync(LOCK_PATH, JSON.stringify(collectFiles(), null, 2) + '\n');
 }
 
-const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   if (process.argv.includes('--write')) {
     writeLock();

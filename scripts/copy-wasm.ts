@@ -3,6 +3,7 @@
 // that breaks the no-network gate and the offline PWA. Copying it here lets
 // FilesetResolver.forVisionTasks('/wasm') resolve same-origin instead.
 // Wired to `postinstall` so public/wasm/ is always in sync with the installed package version.
+import { pathToFileURL } from 'node:url';
 import { copyFileSync, mkdirSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -18,7 +19,7 @@ export function copyWasm(): string[] {
   return files;
 }
 
-const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   const files = copyWasm();
   console.log(`Copied ${files.length} WASM runtime file(s) to public/wasm/:`, files.join(', '));

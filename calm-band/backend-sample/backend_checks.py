@@ -28,7 +28,7 @@ def check(name, ok, detail=""):
 
 
 def pub(kind, body, retain=False):
-    args = ["mosquitto_pub", "-t", f"calmband/{DEV}/{kind}", "-q", "1"]
+    args = ["mosquitto_pub", "-h", "127.0.0.1", "-t", f"calmband/{DEV}/{kind}", "-q", "1"]
     if retain:
         args.append("-r")
     if body is None:
@@ -175,9 +175,9 @@ bad = ["{}", "[]", '"text"', "5", "null", "not json at all", '{"dev":"%s","boot"
        json.dumps({**window(now() + 80), "boot": "new1", "windowEndMs": 5, "windowStartMs": 10}),
        json.dumps({**window(now() + 80), "dev": "someone-else"})]
 for text in bad:
-    subprocess.run(["mosquitto_pub", "-t", f"calmband/{DEV}/features", "-q", "1", "-m", text], check=True)
+    subprocess.run(["mosquitto_pub", "-h", "127.0.0.1", "-t", f"calmband/{DEV}/features", "-q", "1", "-m", text], check=True)
 for kind, text in (("status", "{}"), ("status", '{"online":"yes"}'), ("ack", "[]"), ("events", "{}")):
-    subprocess.run(["mosquitto_pub", "-t", f"calmband/{DEV}/{kind}", "-q", "1", "-m", text], check=True)
+    subprocess.run(["mosquitto_pub", "-h", "127.0.0.1", "-t", f"calmband/{DEV}/{kind}", "-q", "1", "-m", text], check=True)
 st = status(0.8)
 check("15 malformed messages rejected and counted", st["rejectedMessages"] - before == 15,
       f"{st['rejectedMessages'] - before} rejected, last: {st['lastRejectReason']}")
@@ -199,7 +199,7 @@ raw = [("status", '{"online": true, "pulseSensor": []}'),
        ("features", json.dumps({**window(now() + 95), "boot": "new1"}).replace('"pulseRateBpm": 70.0', '"pulseRateBpm": 1e999')),
        ("features", '[' * 5000 + ']' * 5000)]
 for kind, text in raw:
-    subprocess.run(["mosquitto_pub", "-t", f"calmband/{DEV}/{kind}", "-q", "1", "-m", text], check=True)
+    subprocess.run(["mosquitto_pub", "-h", "127.0.0.1", "-t", f"calmband/{DEV}/{kind}", "-q", "1", "-m", text], check=True)
 time.sleep(0.8)
 r = httpx.get(f"{B}/api/companion/status")
 st = r.json()

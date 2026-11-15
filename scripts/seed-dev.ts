@@ -2,11 +2,12 @@
 // PLATFORM NOTE: 'fake-indexeddb/auto' is imported FIRST and ONLY here, never inside
 // src/dev/seed.ts itself — that file is also imported directly by DebugHud in the browser
 // (Task 8), where it must use the REAL IndexedDB, not this polyfill.
+import { pathToFileURL } from 'node:url';
 import 'fake-indexeddb/auto';
 import { seedDev } from '../src/dev/seed.ts';
 import { inspectDb } from '../src/dev/inspect.ts';
 
-const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   await seedDev();
   // fake-indexeddb is in-memory per-process: a separate `node inspect-db.ts` run afterwards

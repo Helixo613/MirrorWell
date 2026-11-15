@@ -12,7 +12,7 @@
 // SIM_PULSE 1: synthetic pulse waveform instead of the MAX30102 (Wokwi has no MAX30102).
 // Windows are then labelled origin "replay". Set 0 for the real sensor.
 #ifndef SIM_PULSE
-#define SIM_PULSE 1
+#define SIM_PULSE 0
 #endif
 // FAST_WINDOWS 1: 5 s windows every 1 s, for simulation and integration tests. 0 = real 60 s / 15 s.
 #ifndef FAST_WINDOWS
