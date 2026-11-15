@@ -10,7 +10,8 @@ export function BandHarness() {
       <div className="flex h-56 items-center justify-center rounded-2xl border border-border/60 bg-muted text-muted-foreground">
         camera view (placeholder)
       </div>
-      <BandSummary sessionId="harness" />
+      {/* ?sid=<companionSessionId> points the summary at a real backend session (no mock). */}
+      <BandSummary sessionId={new URLSearchParams(location.search).get('sid') ?? 'harness'} />
     </div>
   );
 }
