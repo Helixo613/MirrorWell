@@ -322,6 +322,12 @@ def part_model(F):
     bad.write_text("{not json", encoding="utf-8"); cases["not JSON"] = str(bad)
     check("loader: unset, missing, malformed or invalid model files all give no model",
           all(sm_mod.load(v) is None for v in cases.values()), [k for k, v in cases.items() if sm_mod.load(v) is not None])
+    v1 = HERE.parent / "model" / "stress_lr_v1.json"
+    m1 = sm_mod.load(str(v1)) if v1.exists() else None
+    check("loader: the real model stress_lr_v1.json is valid (3 features, LOSO score present)",
+          m1 is not None and m1["modelVersion"] == "stress_lr_v1" and m1["evaluation"]["balancedAccuracyMean"] is not None)
+    check("loader: a relative path works from the repo root (as in DEMO_NOTES)",
+          sm_mod.load("calm-band/model/stress_lr_stub.json") is not None)
     check("loader: the stub file is valid", sm_mod.load(str(stub)) is not None and sm_mod.load(str(stub))["modelVersion"] == "stub-not-trained")
     # --- model on
     app.MODEL = sm_mod.load(str(stub))
