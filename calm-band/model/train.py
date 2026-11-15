@@ -77,9 +77,11 @@ def main(wdir, out):
         add("threshold rule", "relativePulseBpm", (te.relativePulseBpm.values > th).astype(int))
         th2 = best_threshold(tr.pulseRateBpm.values, ytr)
         add("threshold rule", "pulseRateBpm (no relative)", (te.pulseRateBpm.values > th2).astype(int))
-        for fs, tag in ((F3, "3 features"), (F2, "without relativePulseBpm")):
+        FB = ["pulseRateBpm", "relativePulseBpm"]
+        for fs, tag in ((F3, "3 features"), (F2, "without relativePulseBpm"), (FB, "pulseRateBpm + relativePulseBpm (v1b)")):
             lr = make_pipeline(StandardScaler(), LogisticRegression(class_weight="balanced", max_iter=1000)).fit(tr[fs], ytr)
             add("logistic regression", tag, lr.predict(te[fs]))
+            if fs is FB: continue
             rf = RandomForestClassifier(200, min_samples_leaf=5, class_weight="balanced", random_state=0, n_jobs=-1).fit(tr[fs], ytr)
             add("random forest", tag, rf.predict(te[fs]))
     r = pd.DataFrame(recs)
@@ -116,6 +118,23 @@ def main(wdir, out):
     assert np.allclose(mine, ref, atol=1e-9), (mine, ref)
     print("formula check OK", mine.round(4), ref.round(4))
     print(json.dumps(spec, indent=1))
+    # ---- v1b: no pulse variability (SD slot kept: coef 0, mean 0, std 1) ----
+    FB = ["pulseRateBpm", "relativePulseBpm"]
+    eb = r[(r.model == "logistic regression") & (r.features == "pulseRateBpm + relativePulseBpm (v1b)")]
+    sb = StandardScaler().fit(df[FB]); lb = LogisticRegression(class_weight="balanced", max_iter=1000).fit(sb.transform(df[FB]), df.label)
+    v1b = dict(spec); v1b.update({"modelVersion": "stress_lr_v1b",
+        "scalerMean": [float(sb.mean_[0]), 0.0, float(sb.mean_[1])], "scalerStd": [float(sb.scale_[0]), 1.0, float(sb.scale_[1])],
+        "coef": [float(lb.coef_[0][0]), 0.0, float(lb.coef_[0][1])], "intercept": float(lb.intercept_[0]),
+        "evaluation": {"method": "leave-one-subject-out",
+                       "balancedAccuracyMean": round(eb.bal_acc.mean(), 4), "balancedAccuracySd": round(eb.bal_acc.std(), 4),
+                       "f1Mean": round(eb.f1.mean(), 4), "f1Sd": round(eb.f1.std(), 4)}})
+    json.dump(v1b, open(f"{out}/stress_lr_v1b.json", "w"), indent=1)
+    Xb = sample[F3].values
+    zb = v1b["intercept"] + ((Xb - v1b["scalerMean"]) / v1b["scalerStd"]) @ np.array(v1b["coef"])
+    mb = 1 / (1 + np.exp(-zb)); rb = lb.predict_proba(sb.transform(sample[FB]))[:, 1]
+    assert np.allclose(mb, rb, atol=1e-9), (mb, rb)
+    print("v1b formula check OK", mb.round(4), rb.round(4))
+    print(json.dumps(v1b, indent=1))
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2])

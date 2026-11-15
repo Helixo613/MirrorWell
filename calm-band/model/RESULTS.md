@@ -12,6 +12,7 @@
 | Threshold rule | relativePulseBpm | 0.813 ± 0.144 | 0.716 ± 0.236 |
 | Threshold rule | pulseRateBpm only | 0.727 ± 0.160 | 0.624 ± 0.251 |
 | **Logistic regression (shipped)** | all 3 | **0.803 ± 0.133** | **0.702 ± 0.217** |
+| **Logistic regression (v1b)** | pulseRateBpm + relativePulseBpm | 0.802 � 0.160 | 0.707 � 0.246 |
 | Logistic regression | without relativePulseBpm | 0.787 ± 0.150 | 0.689 ± 0.231 |
 | Random forest (comparison only) | all 3 | 0.804 ± 0.130 | 0.710 ± 0.212 |
 | Random forest | without relativePulseBpm | 0.740 ± 0.135 | 0.637 ± 0.218 |
@@ -29,3 +30,9 @@ Full per-subject numbers: `results_per_subject.csv`; chart: `results.png`.
 - This is a wellbeing/biofeedback signal, **not a medical or diagnostic tool**.
 
 **Files.** `train.py` (reproduces everything; includes a check that the documented formula matches scikit-learn's `predict_proba` on 5 windows), `stress_lr_v1.json` (the exported model). The score is `1 / (1 + exp(-(intercept + Σ coef[i]·(x[i]−scalerMean[i])/scalerStd[i])))`, stress if ≥ 0.5.
+
+## v1b (no pulse variability)
+
+`stress_lr_v1b.json` has the same 3-feature layout as v1, but `pulseRateSdBpm` keeps its slot with coef 0, scalerMean 0, scalerStd 1, so it has no effect. Dropping that feature costs nothing measurable on WESAD: balanced accuracy 0.802 � 0.160 vs 0.803 � 0.133 for v1, F1 0.707 � 0.246 vs 0.702 � 0.217. It is a little less consistent across people (larger SD). The formula check against scikit-learn `predict_proba` passes for v1b as well.
+
+**v1b excludes pulse variability because of the sensor mismatch (WESAD E4 vs MAX30102)**: WESAD's beat-to-beat SD averages about 16 BPM (scaler mean), while our band reads roughly 2�7 BPM, so that feature would be out of range.

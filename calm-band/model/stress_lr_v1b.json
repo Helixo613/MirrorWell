@@ -1,0 +1,35 @@
+{
+ "modelVersion": "stress_lr_v1b",
+ "type": "logistic_regression",
+ "features": [
+  "pulseRateBpm",
+  "pulseRateSdBpm",
+  "relativePulseBpm"
+ ],
+ "scalerMean": [
+  81.46550466393774,
+  0.0,
+  6.055028199583364
+ ],
+ "scalerStd": [
+  15.173945738583367,
+  1.0,
+  13.668255377339166
+ ],
+ "coef": [
+  0.6794235321661829,
+  0.0,
+  1.4683768497563976
+ ],
+ "intercept": -0.1340678563643505,
+ "threshold": 0.5,
+ "trainedOn": "WESAD wrist BVP (Empatica E4), 15 subjects, baseline vs stress",
+ "evaluation": {
+  "method": "leave-one-subject-out",
+  "balancedAccuracyMean": 0.8024,
+  "balancedAccuracySd": 0.1603,
+  "f1Mean": 0.7072,
+  "f1Sd": 0.246
+ },
+ "createdAt": "2026-11-15T23:49:44+00:00"
+}
