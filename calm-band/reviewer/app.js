@@ -71,7 +71,8 @@
       if (kind === 'trends') return getJson(FIXDIR + 'reviewer-trends.json');
       return getJson(FIXDIR + 'reviewer-timeline.json').then(function (t) {
         if (t.companionSessionId === sid) {
-          if (FORCE_ORIGIN) t.windows.forEach(function (w) { w.origin = FORCE_ORIGIN; });
+          if (FORCE_ORIGIN === 'mixed') t.windows.forEach(function (w, i) { w.origin = i < t.windows.length / 2 ? 'sim' : 'live'; });
+          else if (FORCE_ORIGIN) t.windows.forEach(function (w) { w.origin = FORCE_ORIGIN; });
           return t;
         }
         // No fixture timeline for this session: behave like a session with no band readings.
@@ -100,7 +101,7 @@
         el('span', { text: dateTime(s.startedAtMs) }),
         el('span', null,
           s.state === 'open' ? el('span', { class: 'badge open', text: 'OPEN ' }) : null,
-          isSim(s) ? el('span', { class: 'badge', 'data-testid': 'sim-badge', title: 'origin: ' + s.origin, text: 'SIMULATED' }) : null));
+          isSim(s) ? el('span', { class: 'badge', 'data-testid': 'sim-badge', title: 'origin: ' + s.origin, text: s.origin === 'mixed' ? 'SIMULATED (MIXED)' : 'SIMULATED' }) : null));
       var cells = [
         ['Duration', dur(s.durationMs)], ['Reps', s.reps != null ? String(s.reps) : '—'], ['Cues', s.cues != null ? String(s.cues) : '—'],
         ['Ease-offs', s.easeOffs != null ? String(s.easeOffs) : '—'], ['Signal', pct(s.signalPct)],
@@ -149,8 +150,10 @@
     clear(box);
     var s = currentSession(), t = state.timeline;
     if (!s || !t || t.companionSessionId !== state.sid) { box.appendChild(el('p', { class: 'msg', text: 'Pick a session from the list.' })); return; }
+    var winSim = (t.windows || []).some(isSim);
     box.appendChild(el('h3', { style: 'margin-top:0' }, dateTime(s.startedAtMs) + '  ',
-      isSim(s) ? el('span', { class: 'badge', text: 'SIMULATED' }) : null));
+      (isSim(s) || winSim) ? el('span', { class: 'badge', 'data-testid': 'detail-sim-badge', text: 'SIMULATED' }) : null));
+    if (winSim && !isSim(s)) box.appendChild(el('p', { class: 'msg', text: 'Some readings in this session are simulated or replayed, not from the live band. Hover a point to see the origin of each reading.' }));
     var usable = (t.windows || []).filter(function (w) { return w.usable && typeof w.pulseRateBpm === 'number'; });
     if (!t.windows || !t.windows.length) {
       box.appendChild(el('p', { class: 'msg', 'data-testid': 'no-windows', text: 'The band sent no readings during this session, so there is no pulse chart. Reps and cues are still counted in the list.' }));

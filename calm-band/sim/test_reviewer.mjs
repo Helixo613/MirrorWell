@@ -96,6 +96,19 @@ await run('fixtures=1 simulated origin + session with no readings', '?fixtures=1
   ok(!/\b0 bpm|NaN|undefined|null/.test(await p.locator('#detail').innerText()), 'no zeros/NaN/undefined');
 }, 'reviewer-fixtures-sim-nodata.png');
 
+await run('fixtures=1 mixed origin (per-window origin present, some live)', '?fixtures=1&origin=mixed', { width: 1280, height: 900 }, 'light', async (p) => {
+  ok((await count(p, '[data-testid=sim-badge]')) === 2, 'SIMULATED (MIXED) badge on list rows');
+  ok((await count(p, '[data-testid=detail-sim-badge]')) === 1, 'detail badge');
+  const box = await p.locator('[data-testid=hit]').boundingBox();
+  await p.mouse.move(box.x + box.width * 0.3, box.y + 40);
+  ok((await p.locator('#tip').innerText()).includes('Origin'), 'tooltip shows per-window origin');
+}, 'reviewer-fixtures-mixed.png');
+
+await run('missing optional fields (default fixtures have no origin/duringCue)', '?fixtures=1&theme=dark', { width: 390, height: 844 }, 'dark', async (p) => {
+  ok((await count(p, '[data-testid=sim-badge]')) === 0 && (await count(p, '[data-testid=detail-sim-badge]')) === 0, 'no badge and no crash when origin missing');
+  ok((await count(p, '[data-testid=chart] svg')) === 1, 'chart still drawn');
+}, 'reviewer-fixtures-phone-dark-forced.png');
+
 await run('fixtures=empty', '?fixtures=empty', { width: 1280, height: 700 }, 'light', async (p) => {
   ok((await count(p, '[data-testid=empty-sessions]')) === 1, 'empty sessions message');
   ok((await count(p, '[data-testid=empty-trends]')) === 1, 'empty trends message');
