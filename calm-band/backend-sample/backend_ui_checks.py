@@ -92,7 +92,7 @@ def seed(F, until=None, open_sid=None):
         app.active_session["id"] = open_sid
 
 
-CALM_IMPLEMENTED = False       # flipped to True with the calm index (task 5)
+CALM_IMPLEMENTED = True
 
 
 def norm(o):
@@ -153,6 +153,15 @@ def part_a():
     check("trends: one day entry per date, counts add up, dates are YYYY-MM-DD",
           sum(d["sessions"] for d in body["days"]) == 2 and all(len(d["date"]) == 10 for d in body["days"])
           and isinstance(body["utcOffsetMinutes"], int))
+
+    # --- calm index formula (experimental)
+    ci = lambda a, b: app.calm_index([{"pulseRateBpm": a}, {"pulseRateBpm": b}])
+    check("calm index: same pulse -> 50; drop of 7.5 -> 100; rise of 7.5 -> 0; clamps beyond",
+          ci(80, 80)["value"] == 50 and ci(80, 72.5)["value"] == 100 and ci(80, 87.5)["value"] == 0
+          and ci(80, 60)["value"] == 100 and ci(80, 99)["value"] == 0 and ci(86.2, 78.5)["value"] == 100)
+    check("calm index: labelled experimental; null with fewer than 2 readings (never 0)",
+          ci(80, 80)["label"] == "experimental" and app.calm_index([]) == {"value": None, "label": "experimental"}
+          and app.calm_index([{"pulseRateBpm": 80}])["value"] is None)
 
     # --- origin
     code, rows = get("/api/companion/reviewer/sessions")

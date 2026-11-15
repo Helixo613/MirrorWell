@@ -553,7 +553,12 @@ def cue_ok(w: dict) -> bool:
 
 
 def calm_index(U: list) -> dict:
-    return {"value": None, "label": "experimental"}
+    """EXPERIMENTAL personal-baseline indicator (CONTRACT-UI section 1): compares the pulse at the end of
+    the session with the pulse at its start. Not a medical or stress measure. null without 2 usable readings."""
+    if len(U) < 2:
+        return {"value": None, "label": "experimental"}
+    v = (U[0]["pulseRateBpm"] - U[-1]["pulseRateBpm"]) / CALM_SPAN_BPM + 0.5
+    return {"value": rint(100 * max(0.0, min(1.0, v))), "label": "experimental"}
 
 
 def session_scope(s: dict, now: int, ok=None):
