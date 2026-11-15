@@ -18,7 +18,8 @@
       "date": "2026-11-15",
       "meanUsablePulseBpm": null,
       "readings": 0,
-      "pulseTrend": "insufficient"
+      "pulseTrend": "insufficient",
+      "origin": "replay"
     },
     {
       "companionSessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12",
@@ -26,7 +27,8 @@
       "date": "2026-11-16",
       "meanUsablePulseBpm": 83.5,
       "readings": 5,
-      "pulseTrend": "settled"
+      "pulseTrend": "settled",
+      "origin": "replay"
     }
   ]
 }

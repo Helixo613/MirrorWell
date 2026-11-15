@@ -7,9 +7,11 @@
   "signal": 0,
   "reason": "Lost touch with the band. Check it is switched on and nearby.",
   "heart": {
-    "beatIntervalMs": null
+    "beatIntervalMs": null,
+    "duringCue": false
   },
-  "settling": "steady",
+  "settling": "settling",
+  "settlingDuringCue": true,
   "steadiness": null,
   "cue": {
     "lastAtMs": 1794813775020,
@@ -18,5 +20,6 @@
   "calmIndex": {
     "value": 68,
     "label": "experimental"
-  }
+  },
+  "origin": "replay"
 }

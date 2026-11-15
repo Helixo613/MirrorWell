@@ -5,11 +5,13 @@
   "sessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12",
   "state": "vibration_overlap",
   "signal": 3,
-  "reason": "Pulse paused while the band buzzes.",
+  "reason": null,
   "heart": {
-    "beatIntervalMs": null
+    "beatIntervalMs": 743,
+    "duringCue": true
   },
-  "settling": "steady",
+  "settling": "settling",
+  "settlingDuringCue": true,
   "steadiness": "steady",
   "cue": {
     "lastAtMs": 1794813715020,
@@ -18,5 +20,6 @@
   "calmIndex": {
     "value": 68,
     "label": "experimental"
-  }
+  },
+  "origin": "replay"
 }

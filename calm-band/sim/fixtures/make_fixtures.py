@@ -123,13 +123,20 @@ def problems(w):
 def usable(w): return not problems(w)
 def key(w): return (w["boot"], w["seq"])
 
-def scope(s, now):
+def origin_of(ws):
+    kinds = {w.get("origin") or "unknown" for w in ws}
+    return None if not kinds else (next(iter(kinds)) if len(kinds) == 1 else "mixed")
+
+def cue_ok(w): return problems(w) == ["vibration_overlap"]
+
+def scope(s, now, ok=None):
+    ok = ok or usable
     S, E = s["startedAtMs"], s["endedAtMs"]
     ws = sorted([w for w in windows if w["windowEndMs"] <= now], key=lambda w: w["windowEndMs"])
     inn = [w for w in ws if w["windowEndMs"] > S and (E is None or w["windowStartMs"] < E)]
-    pre = [w for w in ws if usable(w) and S - PRE <= w["windowEndMs"] <= S]
-    post = [w for w in ws if E is not None and usable(w) and E <= w["windowStartMs"] <= E + PRE]
-    U = ([pre[-1]] if pre else []) + [w for w in inn if usable(w)] + ([post[0]] if post else [])
+    pre = [w for w in ws if ok(w) and S - PRE <= w["windowEndMs"] <= S]
+    post = [w for w in ws if E is not None and ok(w) and E <= w["windowStartMs"] <= E + PRE]
+    U = ([pre[-1]] if pre else []) + [w for w in inn if ok(w)] + ([post[0]] if post else [])
     U.sort(key=lambda w: w["windowEndMs"])
     return inn, (pre[-1] if pre else None), (post[0] if post else None), U
 
@@ -175,7 +182,8 @@ def summary(sid, now):
             "durationMs": (s["endedAtMs"] - s["startedAtMs"]) if ended else now - s["startedAtMs"],
             "reps": reps, "easeOffs": eo, "cues": len(cues(sid, now)),
             "pulse": {"trend": tr, "startBpm": sb, "endBpm": eb}, "steadyPct": steady, "signalPct": sig,
-            "calmIndex": calm(U), "plainWords": words}, (inn, pre, post, U)
+            "calmIndex": calm(U), "origin": origin_of(inn + [w for w in (pre, post) if w]),
+            "plainWords": words}, (inn, pre, post, U)
 
 NOW = E2 + 130_000
 def reviewer_row(sid):
@@ -190,7 +198,7 @@ def reviewer_row(sid):
             "startedAtMs": s["startedAtMs"], "endedAtMs": s["endedAtMs"], "durationMs": sm["durationMs"],
             "reps": sm["reps"], "easeOffs": sm["easeOffs"], "cues": sm["cues"], "pulseTrend": sm["pulse"]["trend"],
             "startBpm": sm["pulse"]["startBpm"], "endBpm": sm["pulse"]["endBpm"], "signalPct": sm["signalPct"],
-            "steadyPct": sm["steadyPct"], "calmIndex": sm["calmIndex"]}
+            "steadyPct": sm["steadyPct"], "calmIndex": sm["calmIndex"], "origin": sm["origin"]}
 
 def timeline(sid):
     s = sessions[sid]
@@ -206,7 +214,7 @@ def timeline(sid):
         if len(U) >= 2 and key(w) == key(U[0]): reading = "start"
         if len(U) >= 2 and key(w) == key(U[-1]): reading = "end"
         ws.append({k: w[k] for k in ("boot", "seq", "windowStartMs", "windowEndMs", "contact", "quality", "pulseRateBpm",
-                                     "moving", "motionValid", "motorActive", "timingGap")}
+                                     "moving", "motionValid", "motorActive", "timingGap", "origin")}
                   | {"usable": usable(w), "problems": problems(w), "role": role, "reading": reading})
     ev = [{"source": "mirrorwell", **e} for e in s["events"]]
     ev += [{"source": "band", "type": b["type"], "detail": b["detail"], "atMs": b["atMs"], "boot": b["boot"]}
@@ -227,16 +235,17 @@ def trends():
     rows, days = [], {}
     for sid in sorted(sessions, key=lambda k: sessions[k]["startedAtMs"]):
         s = sessions[sid]
-        _, _, _, U = scope(s, NOW)
+        inn, pre, post, U = scope(s, NOW)
         d = datetime.datetime.fromtimestamp(s["startedAtMs"] / 1000, IST).strftime("%Y-%m-%d")
         days[d] = days.get(d, 0) + 1
         rows.append({"companionSessionId": sid, "startedAtMs": s["startedAtMs"], "date": d,
                      "meanUsablePulseBpm": r1(sum(w["pulseRateBpm"] for w in U) / len(U)) if U else None,
-                     "readings": len(U), "pulseTrend": trend(U)[0]})
+                     "readings": len(U), "pulseTrend": trend(U)[0],
+                     "origin": origin_of(inn + [w for w in (pre, post) if w])})
     return {"schema": 1, "utcOffsetMinutes": 330, "days": [{"date": d, "sessions": n} for d, n in sorted(days.items())], "sessions": rows}
 
 # ------------------------------------------------------------ live snapshots
-def live(now, state, latest, session_open=True, status_problems=None, pulse=None):
+def live(now, state, latest, session_open=True, status_problems=None, pulse=None, cue_windows=True):
     sid = SID2 if session_open else None
     sig = 0
     if state not in ("offline", "stale", "sensor_missing", "collecting", "reading_stale", "contact_required") and latest and latest["contact"]:
@@ -250,18 +259,25 @@ def live(now, state, latest, session_open=True, status_problems=None, pulse=None
                "settling": "Finger found. Keep still; a clear reading takes about a minute.",
                "vibration_overlap": "Pulse paused while the band buzzes.",
                "usable": None}
-    if state == "poor_quality":
+    heart_bpm, during = None, False
+    if state == "usable": heart_bpm = pulse
+    elif state == "vibration_overlap" and cue_windows and latest and cue_ok(latest): heart_bpm, during = latest["pulseRateBpm"], True
+    if state == "vibration_overlap":
+        reason = None if during else ("Pulse paused while the band buzzes." if cue_windows else "Paused while the band buzzes")
+    elif state == "poor_quality":
         reason = "Keep your hand still for a clearer reading." if "moving" in (status_problems or []) else \
                  "The reading is not clear yet. Keep your fingertip still and relaxed on the sensor."
     else:
         reason = reasons[state]
-    settling, ci, cue = None, {"value": None, "label": "experimental"}, {"lastAtMs": None, "countThisSession": 0}
+    settling, sdc, ci, cue = None, False, {"value": None, "label": "experimental"}, {"lastAtMs": None, "countThisSession": 0}
     if session_open:
         s = dict(sessions[SID2], endedAtMs=None, state="open")
-        _, _, _, U = scope(s, now)
-        if len(U) >= 2:
-            d = (U[-1]["pulseRateBpm"] + U[-2]["pulseRateBpm"]) / 2 - U[0]["pulseRateBpm"]
+        _, _, _, UL = scope(s, now, (lambda w: usable(w) or cue_ok(w)) if cue_windows else usable)
+        if len(UL) >= 2:
+            d = (UL[-1]["pulseRateBpm"] + UL[-2]["pulseRateBpm"]) / 2 - UL[0]["pulseRateBpm"]
             settling = "settling" if d <= -3 else "rising" if d >= 3 else "steady"
+            sdc = any(w["motorActive"] for w in UL[-2:] + [UL[0]])
+        _, _, _, U = scope(s, now)
         ci = calm(U)
         cs = cues(SID2, now)
         cue = {"lastAtMs": max(cs) if cs else None, "countThisSession": len(cs)}
@@ -269,8 +285,9 @@ def live(now, state, latest, session_open=True, status_problems=None, pulse=None
     if state not in ("offline", "stale", "collecting", "reading_stale") and latest:
         stead = None if latest["moving"] is None else ("moving" if latest["moving"] else "steady")
     return {"schema": 1, "device": "cb-01", "atMs": now, "sessionId": sid, "state": state, "signal": sig, "reason": reason,
-            "heart": {"beatIntervalMs": rint(60000 / pulse) if state == "usable" else None},
-            "settling": settling, "steadiness": stead, "cue": cue, "calmIndex": ci}
+            "heart": {"beatIntervalMs": rint(60000 / heart_bpm) if heart_bpm else None, "duringCue": during},
+            "settling": settling, "settlingDuringCue": sdc, "steadiness": stead, "cue": cue, "calmIndex": ci,
+            "origin": latest["origin"] if latest else None}
 
 def newest(now):
     ws = [w for w in windows if w["boot"] == BOOT and w["windowEndMs"] <= now]
@@ -285,6 +302,7 @@ dump("live-usable.json", live(t, "usable", w, pulse=w["pulseRateBpm"]))
 # vibration: mid-reps
 t = S2 + 121_000; w = newest(t); assert problems(w) == ["vibration_overlap"], problems(w)
 dump("live-vibration.json", live(t, "vibration_overlap", w))
+dump("live-vibration-clean-only.json", live(t, "vibration_overlap", w, cue_windows=False))
 # moving: newest window moving (and motor) -> poor_quality
 t = S2 + 200_500; w = newest(t); assert "moving" in problems(w), problems(w)
 dump("live-poor-quality-moving.json", live(t, "poor_quality", w, status_problems=problems(w)))

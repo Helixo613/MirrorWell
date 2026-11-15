@@ -20,6 +20,7 @@
     "value": 100,
     "label": "experimental"
   },
+  "origin": "replay",
   "plainWords": [
     "You completed 10 reps.",
     "You had 1 ease-off cue.",

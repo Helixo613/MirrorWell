@@ -7,9 +7,11 @@
   "signal": 3,
   "reason": null,
   "heart": {
-    "beatIntervalMs": 719
+    "beatIntervalMs": 719,
+    "duringCue": false
   },
   "settling": "steady",
+  "settlingDuringCue": false,
   "steadiness": "steady",
   "cue": {
     "lastAtMs": null,
@@ -18,5 +20,6 @@
   "calmIndex": {
     "value": 68,
     "label": "experimental"
-  }
+  },
+  "origin": "replay"
 }

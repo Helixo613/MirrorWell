@@ -17,11 +17,12 @@ import os
 import threading
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 import paho.mqtt.client as mqtt
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -440,7 +441,10 @@ def current_boot(now: int) -> str | None:
 
 @app.get("/api/companion/status")
 def status():
-    now = now_ms()
+    return build_status(now_ms())
+
+
+def build_status(now: int) -> dict:
     with lock:
         heard = db["device"]["lastHeardMs"]
         dev_status = db["device"]["status"] or {}
@@ -512,36 +516,306 @@ def session_windows(s: dict) -> list[dict]:
             if w["windowEndMs"] > start and (end is None or w["windowStartMs"] < end)]
 
 
+# ---------------------------------------------------------------- UI / reviewer API (CONTRACT-UI.md)
+CUE_PATTERNS = ("rep_pulse", "ease_off")
+SETTLE_DELTA_BPM = 3
+CALM_SPAN_BPM = 15
+REVIEWER_DIR = Path(os.environ.get("CALMBAND_REVIEWER_DIR") or (Path(__file__).resolve().parents[2] / "reviewer")).resolve()
+NO_SIGNAL_STATES = {"offline", "stale", "sensor_missing", "collecting", "reading_stale", "contact_required"}
+REASONS = {
+    "offline": "The band is off or out of range.",
+    "stale": "Lost touch with the band. Check it is switched on and nearby.",
+    "sensor_missing": "A band sensor is not responding. Check its wires.",
+    "collecting": "Getting a first reading. Rest your fingertip on the sensor and keep still for about a minute.",
+    "reading_stale": "Waiting for a fresh reading from the band.",
+    "contact_required": "Rest your fingertip lightly on the sensor.",
+    "settling": "Finger found. Keep still; a clear reading takes about a minute.",
+    "vibration_overlap": "Pulse paused while the band buzzes.",
+    "usable": None,
+}
+REASON_MOVING = "Keep your hand still for a clearer reading."
+REASON_UNCLEAR = "The reading is not clear yet. Keep your fingertip still and relaxed on the sensor."
+# CALMBAND_LIVE_USES_CUE_WINDOWS=0: while the band buzzes, the live card shows this instead of a pulse
+REASON_BUZZ_CLEAN_ONLY = "Paused while the band buzzes"
+
+
+def rint(x: float) -> int:
+    return int(math.floor(x + 0.5))
+
+
+def r1(x: float) -> float:
+    return math.floor(x * 10 + 0.5) / 10
+
+
+def cue_ok(w: dict) -> bool:
+    """A window whose ONLY problem is the buzz (contact, still, quality >= 0.8, pulse present)."""
+    return quality_problems(w) == ["vibration_overlap"]
+
+
+def calm_index(U: list) -> dict:
+    return {"value": None, "label": "experimental"}
+
+
+def session_scope(s: dict, now: int, ok=None):
+    """(in, pre, post, U) of CONTRACT-UI section 1. `ok` decides which windows count as readings;
+    the default is the clean-window rule. Caller holds the lock."""
+    ok = ok or is_clean
+    S, E = s["startedAtMs"], s.get("endedAtMs")
+    inn = sorted(session_windows(s), key=lambda w: w["windowEndMs"])
+    allw = plausible_windows(now)
+    pre = [w for w in allw if ok(w) and S - PRE_POST_WINDOW_MS <= w["windowEndMs"] <= S]
+    post = [w for w in allw if E is not None and ok(w) and E <= w["windowStartMs"] <= E + PRE_POST_WINDOW_MS]
+    pre1, post1 = (pre[-1] if pre else None), (post[0] if post else None)
+    U = ([pre1] if pre1 else []) + [w for w in inn if ok(w)] + ([post1] if post1 else [])
+    U.sort(key=lambda w: w["windowEndMs"])
+    return inn, pre1, post1, U
+
+
+def pulse_trend(U: list):
+    if len(U) < 2:
+        return "insufficient", None, None
+    a, b = U[0]["pulseRateBpm"], U[-1]["pulseRateBpm"]
+    d = b - a
+    return ("settled" if d <= -SETTLE_DELTA_BPM else "rose" if d >= SETTLE_DELTA_BPM else "steady"), a, b
+
+
+def window_origin(ws: list):
+    """live / replay / sim / mixed, from the windows' own `origin`; None when there are no windows."""
+    kinds = {w.get("origin") or "unknown" for w in ws}
+    if not kinds:
+        return None
+    return next(iter(kinds)) if len(kinds) == 1 else "mixed"
+
+
+def session_cues(sid: str) -> list:
+    out = []
+    for c in db["commands"].values():
+        if c.get("sessionId") == sid and c.get("pattern") in CUE_PATTERNS:
+            acc = [a["atMs"] for a in c["acks"] if a.get("result") == "accepted" and _int(a.get("atMs"))]
+            if acc:
+                out.append(acc[0])
+    return out
+
+
+def build_summary(s: dict, now: int):
+    """The CONTRACT-UI section 3 object plus (in, pre, post, U). Caller holds the lock."""
+    inn, pre, post, U = session_scope(s, now)
+    ended = s["state"] == "ended"
+    if ended:
+        exs = (s["end"] or {}).get("exercises", [])
+        reps = sum(x["repsCompleted"] for x in exs)
+        eo = sum(x["easeOffCount"] for x in exs)
+    else:
+        reps = len({e.get("seq") for e in s["events"] if e.get("type") == "rep"})
+        eo = sum(1 for e in s["events"] if e.get("type") == "ease_off" and e.get("active"))
+    trend, sb, eb = pulse_trend(U)
+    mv = [w for w in inn if w.get("motionValid") and w.get("moving") is not None]
+    steady = rint(100 * sum(1 for w in mv if not w["moving"]) / len(mv)) if mv else None
+    den = [w for w in inn if quality_problems(w) != ["vibration_overlap"]]
+    sig = rint(100 * sum(1 for w in den if is_clean(w)) / len(den)) if den else None
+    words = [
+        "No reps were counted in this session." if reps == 0 else "You completed 1 rep." if reps == 1 else f"You completed {reps} reps.",
+        "No ease-off cues were needed." if eo == 0 else "You had 1 ease-off cue." if eo == 1 else f"You had {eo} ease-off cues.",
+        {"settled": "Your pulse settled as the session went on.", "steady": "Your pulse stayed about the same.",
+         "rose": "Your pulse was a little higher at the end than at the start.",
+         "insufficient": "The band could not get a clear enough pulse reading this time."}[trend],
+    ]
+    if steady is not None:
+        words.append("Your hand stayed steady for most of the session." if steady >= 80
+                     else "Your hand moved quite a bit, which makes pulse readings harder.")
+    summary = {
+        "schema": 1, "companionSessionId": s["id"], "state": s["state"], "startedAtMs": s["startedAtMs"],
+        "endedAtMs": s.get("endedAtMs") if ended else None,
+        "endReason": s["end"]["endReason"] if ended and s["end"] else None,
+        "durationMs": (s["endedAtMs"] - s["startedAtMs"]) if ended else now - s["startedAtMs"],
+        "reps": reps, "easeOffs": eo, "cues": len(session_cues(s["id"])),
+        "pulse": {"trend": trend, "startBpm": sb, "endBpm": eb},
+        "steadyPct": steady, "signalPct": sig, "calmIndex": calm_index(U),
+        "origin": window_origin(inn + [w for w in (pre, post) if w]),
+        "plainWords": words,
+    }
+    return summary, (inn, pre, post, U)
+
+
+@app.get("/api/companion/sessions/{sid}/summary")
+def session_summary(sid: str):
+    now = now_ms()
+    with lock:
+        s = db["sessions"].get(sid)
+        if s is None:
+            raise HTTPException(404, "unknown session")
+        return build_summary(s, now)[0]
+
+
+@app.get("/api/companion/live")
+def live():
+    now = now_ms()
+    with lock:
+        st = build_status(now)
+        state = st["state"]
+        boot = st["boot"]
+        ws = plausible_windows(now, boot)
+        latest = ws[-1] if ws else None
+        sid = active_session["id"]
+        s = db["sessions"].get(sid) if sid else None
+
+        signal = 0
+        if state not in NO_SIGNAL_STATES and latest and latest.get("contact"):
+            q = latest["quality"]
+            signal = 1 if q < 0.5 else 2 if q < USABLE_QUALITY else 3
+
+        # Heart: a clean reading; or, when allowed, one whose only problem is a band buzz.
+        heart_bpm, heart_cue = None, False
+        if state == "usable":
+            heart_bpm = st["pulseRateBpm"]
+        elif state == "vibration_overlap" and LIVE_USES_CUE_WINDOWS and latest and cue_ok(latest):
+            heart_bpm, heart_cue = latest["pulseRateBpm"], True
+        beat = rint(60000 / heart_bpm) if heart_bpm else None
+
+        if state == "poor_quality":
+            reason = REASON_MOVING if "moving" in st["problems"] else REASON_UNCLEAR
+        elif state == "vibration_overlap":
+            reason = None if heart_cue else (REASON_BUZZ_CLEAN_ONLY if not LIVE_USES_CUE_WINDOWS else REASONS[state])
+        else:
+            reason = REASONS[state]
+
+        steadiness = None
+        if state not in ("offline", "stale", "collecting", "reading_stale") and latest:
+            mvg = latest.get("moving")
+            steadiness = None if mvg is None else ("moving" if mvg else "steady")
+
+        settling, settling_cue = None, False
+        calm = {"value": None, "label": "experimental"}
+        cue = {"lastAtMs": None, "countThisSession": 0}
+        if s is not None:
+            ok = (lambda w: is_clean(w) or cue_ok(w)) if LIVE_USES_CUE_WINDOWS else is_clean
+            _, _, _, UL = session_scope(s, now, ok)
+            if len(UL) >= 2:
+                last2 = UL[-2:]
+                d = (last2[0]["pulseRateBpm"] + last2[1]["pulseRateBpm"]) / 2 - UL[0]["pulseRateBpm"]
+                settling = "settling" if d <= -SETTLE_DELTA_BPM else "rising" if d >= SETTLE_DELTA_BPM else "steady"
+                settling_cue = any(w.get("motorActive") for w in last2 + [UL[0]])
+            _, _, _, U = session_scope(s, now)       # calm index: clean windows only, always
+            calm = calm_index(U)
+            cs = session_cues(s["id"])
+            cue = {"lastAtMs": max(cs) if cs else None, "countThisSession": len(cs)}
+        return {
+            "schema": 1, "device": DEVICE_ID, "atMs": now, "sessionId": sid if s else None, "state": state,
+            "signal": signal, "reason": reason,
+            "heart": {"beatIntervalMs": beat, "duringCue": heart_cue},
+            "settling": settling, "settlingDuringCue": settling_cue, "steadiness": steadiness,
+            "cue": cue, "calmIndex": calm,
+            "origin": latest.get("origin") if latest else None,
+        }
+
+
 @app.get("/api/companion/reviewer/sessions")
 def reviewer_sessions():
+    now = now_ms()
     with lock:
         out = []
-        for s in db["sessions"].values():
-            linked = session_windows(s)
-            usable = [w for w in linked if is_clean(w)]
-            # Vibration policy (Phase 1): cues are frequent during reps, so in-session windows are
-            # mostly vibration-overlapped and are NOT used as pulse readings. The comparison is
-            # a clean reading just before the session and the first clean one after it.
-            allw = plausible_windows(now_ms())
-            start, end = s["startedAtMs"], s.get("endedAtMs")
-            pre = [w for w in allw if is_clean(w) and start - PRE_POST_WINDOW_MS <= w["windowEndMs"] <= start]
-            post = [w for w in allw if end is not None and is_clean(w)
-                    and end <= w["windowStartMs"] <= end + PRE_POST_WINDOW_MS]
+        for s in sorted(db["sessions"].values(), key=lambda x: x["startedAtMs"]):
+            sm, (inn, pre, post, U) = build_summary(s, now)
             cmds = [c for c in db["commands"].values() if c["sessionId"] == s["id"]]
             out.append({
                 "companionSessionId": s["id"],
                 "state": s["state"],
                 "events": len(s["events"]),
                 "end": s["end"],
-                "featureWindows": len(linked),
-                "usableWindows": len(usable),
-                "vibrationOverlapWindows": sum(1 for w in linked if w.get("motorActive")),
-                "prePulseBpm": pre[-1]["pulseRateBpm"] if pre else None,
-                "postPulseBpm": post[0]["pulseRateBpm"] if post else None,
+                "featureWindows": len(inn),
+                "usableWindows": sum(1 for w in inn if is_clean(w)),
+                "vibrationOverlapWindows": sum(1 for w in inn if w.get("motorActive")),
+                "prePulseBpm": pre["pulseRateBpm"] if pre else None,
+                "postPulseBpm": post["pulseRateBpm"] if post else None,
                 "hapticCommands": len(cmds),
                 "hapticExecuted": sum(1 for c in cmds if any(a["result"] == "executed" for a in c["acks"])),
+                "startedAtMs": sm["startedAtMs"], "endedAtMs": sm["endedAtMs"], "durationMs": sm["durationMs"],
+                "reps": sm["reps"], "easeOffs": sm["easeOffs"], "cues": sm["cues"],
+                "pulseTrend": sm["pulse"]["trend"], "startBpm": sm["pulse"]["startBpm"], "endBpm": sm["pulse"]["endBpm"],
+                "signalPct": sm["signalPct"], "steadyPct": sm["steadyPct"], "calmIndex": sm["calmIndex"],
+                "origin": sm["origin"],
             })
     return out
+
+
+@app.get("/api/companion/reviewer/sessions/{sid}/timeline")
+def reviewer_timeline(sid: str):
+    now = now_ms()
+    with lock:
+        s = db["sessions"].get(sid)
+        if s is None:
+            raise HTTPException(404, "unknown session")
+        S, E = s["startedAtMs"], s.get("endedAtMs")
+        inn, pre, post, U = session_scope(s, now)
+        fr, to = S - PRE_POST_WINDOW_MS, (E if E is not None else now) + PRE_POST_WINDOW_MS
+        in_keys = {(w["boot"], w["seq"]) for w in inn}
+        start_k = (U[0]["boot"], U[0]["seq"]) if len(U) >= 2 else None
+        end_k = (U[-1]["boot"], U[-1]["seq"]) if len(U) >= 2 else None
+        wins = []
+        for w in plausible_windows(now):
+            if not (w["windowEndMs"] > fr and w["windowStartMs"] < to):
+                continue
+            k = (w["boot"], w["seq"])
+            probs = quality_problems(w)
+            wins.append({
+                "boot": w["boot"], "seq": w["seq"], "windowStartMs": w["windowStartMs"], "windowEndMs": w["windowEndMs"],
+                "contact": w["contact"], "quality": w["quality"], "pulseRateBpm": w.get("pulseRateBpm"),
+                "moving": w.get("moving"), "motionValid": w.get("motionValid"), "motorActive": w.get("motorActive"),
+                "timingGap": w.get("timingGap"), "origin": w.get("origin"),
+                "usable": not probs, "problems": probs,
+                "role": "in" if k in in_keys else "pre" if w["windowEndMs"] <= S else "post",
+                "reading": "end" if k == end_k else "start" if k == start_k else None,
+            })
+        ev = [{"source": "mirrorwell", **e} for e in s["events"]]
+        ev += [{"source": "band", "type": b["type"], "detail": b["detail"], "atMs": b["atMs"], "boot": b["boot"]}
+               for b in db["band_events"] if fr <= b["atMs"] <= to]
+        ev.sort(key=lambda e: e.get("atMs") or 0)
+        cmds = []
+        for c in sorted((c for c in db["commands"].values() if c.get("sessionId") == sid), key=lambda c: c["issuedAtMs"]):
+            res = [a["result"] for a in c["acks"]]
+            outcome = next((r for r in ("executed", "stopped", "rejected", "accepted") if r in res), "no_ack")
+            cmds.append({"commandId": c["commandId"], "pattern": c["pattern"], "issuedAtMs": c["issuedAtMs"],
+                         "expiresAtMs": c["expiresAtMs"], "maxDurationMs": c["maxDurationMs"], "outcome": outcome,
+                         "acks": [{"result": a["result"], "reason": a.get("reason"), "atMs": a.get("atMs")} for a in c["acks"]]})
+        return {"schema": 1, "companionSessionId": sid, "startedAtMs": S, "endedAtMs": E,
+                "range": {"fromMs": fr, "toMs": to}, "windows": wins, "events": ev, "commands": cmds}
+
+
+@app.get("/api/companion/reviewer/trends")
+def reviewer_trends():
+    now = now_ms()
+    off = datetime.now().astimezone().utcoffset()
+    with lock:
+        rows, days = [], {}
+        for s in sorted(db["sessions"].values(), key=lambda x: x["startedAtMs"]):
+            inn, pre, post, U = session_scope(s, now)
+            d = datetime.fromtimestamp(s["startedAtMs"] / 1000).strftime("%Y-%m-%d")
+            days[d] = days.get(d, 0) + 1
+            rows.append({"companionSessionId": s["id"], "startedAtMs": s["startedAtMs"], "date": d,
+                         "meanUsablePulseBpm": r1(sum(w["pulseRateBpm"] for w in U) / len(U)) if U else None,
+                         "readings": len(U), "pulseTrend": pulse_trend(U)[0],
+                         "origin": window_origin(inn + [w for w in (pre, post) if w])})
+        return {"schema": 1, "utcOffsetMinutes": int(off.total_seconds() // 60) if off else 0,
+                "days": [{"date": d, "sessions": n} for d, n in sorted(days.items())], "sessions": rows}
+
+
+# Reviewer page (agent C's static folder). A route, not a mount, so it also works if the folder
+# appears after startup, and it is registered BEFORE the MirrorWell catch-all below.
+@app.get("/reviewer")
+def reviewer_redirect():
+    return RedirectResponse("/reviewer/")
+
+
+@app.get("/reviewer/{path:path}")
+def reviewer_page(path: str):
+    if not REVIEWER_DIR.is_dir():
+        raise HTTPException(404, "reviewer page not installed")
+    target = (REVIEWER_DIR / (path or "index.html")).resolve()
+    if target.is_dir():
+        target = target / "index.html"
+    if not target.is_relative_to(REVIEWER_DIR) or not target.is_file():
+        raise HTTPException(404, "not found")
+    return FileResponse(target)
 
 
 # Test-only hooks to exercise the band's duplicate/expiry rules.
