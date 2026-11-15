@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "device": "cb-01",
+  "atMs": 1794813721000,
+  "sessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12",
+  "state": "vibration_overlap",
+  "signal": 3,
+  "reason": "Pulse paused while the band buzzes.",
+  "heart": {
+    "beatIntervalMs": null
+  },
+  "settling": "steady",
+  "steadiness": "steady",
+  "cue": {
+    "lastAtMs": 1794813715020,
+    "countThisSession": 7
+  },
+  "calmIndex": {
+    "value": 68,
+    "label": "experimental"
+  }
+}

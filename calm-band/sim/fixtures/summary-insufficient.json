@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "companionSessionId": "c7d2a1e4-0b6f-4f0e-8a51-6e2f9b3d4c10",
+  "state": "ended",
+  "startedAtMs": 1794727800000,
+  "endedAtMs": 1794727980000,
+  "endReason": "user_stopped",
+  "durationMs": 180000,
+  "reps": 5,
+  "easeOffs": 0,
+  "cues": 5,
+  "pulse": {
+    "trend": "insufficient",
+    "startBpm": null,
+    "endBpm": null
+  },
+  "steadyPct": 100,
+  "signalPct": 0,
+  "calmIndex": {
+    "value": null,
+    "label": "experimental"
+  },
+  "plainWords": [
+    "You completed 5 reps.",
+    "No ease-off cues were needed.",
+    "The band could not get a clear enough pulse reading this time.",
+    "Your hand stayed steady for most of the session."
+  ]
+}

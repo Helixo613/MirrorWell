@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "device": "cb-01",
+  "atMs": 1794813810000,
+  "sessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12",
+  "state": "stale",
+  "signal": 0,
+  "reason": "Lost touch with the band. Check it is switched on and nearby.",
+  "heart": {
+    "beatIntervalMs": null
+  },
+  "settling": "steady",
+  "steadiness": null,
+  "cue": {
+    "lastAtMs": 1794813775020,
+    "countThisSession": 11
+  },
+  "calmIndex": {
+    "value": 68,
+    "label": "experimental"
+  }
+}

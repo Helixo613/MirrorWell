@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "device": "cb-01",
+  "atMs": 1794813800500,
+  "sessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12",
+  "state": "poor_quality",
+  "signal": 1,
+  "reason": "Keep your hand still for a clearer reading.",
+  "heart": {
+    "beatIntervalMs": null
+  },
+  "settling": "steady",
+  "steadiness": "moving",
+  "cue": {
+    "lastAtMs": 1794813775020,
+    "countThisSession": 11
+  },
+  "calmIndex": {
+    "value": 68,
+    "label": "experimental"
+  }
+}

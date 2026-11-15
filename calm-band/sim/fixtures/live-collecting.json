@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "device": "cb-01",
+  "atMs": 1794813460000,
+  "sessionId": null,
+  "state": "collecting",
+  "signal": 0,
+  "reason": "Getting a first reading. Rest your fingertip on the sensor and keep still for about a minute.",
+  "heart": {
+    "beatIntervalMs": null
+  },
+  "settling": null,
+  "steadiness": null,
+  "cue": {
+    "lastAtMs": null,
+    "countThisSession": 0
+  },
+  "calmIndex": {
+    "value": null,
+    "label": "experimental"
+  }
+}

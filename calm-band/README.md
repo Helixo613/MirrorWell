@@ -28,6 +28,16 @@ pip install fastapi uvicorn paho-mqtt httpx
 
 Expected output: `48 passed, 0 failed`, `33/33 backend checks passed`, `13/13 checks passed`, `23/23 firmware checks passed`, and finally `ALL SUITES PASSED`. The script checks exit codes, `FAIL` lines, Python tracebacks and the exact counts, so it can't report success when a suite crashed. Logs go to `test-logs/`. The script uses ports 1883, 8000 and 8001, and it reuses an MQTT broker that's already running on 1883.
 
+## Simulated band on Windows (no hardware)
+
+`sim/sim_band.py` publishes the firmware's exact MQTT messages with scenarios (`settle`, `steady`, `rising`, `finger_off`, `moving`, `motor`, `dropout`, `mixed`). `sim/start-demo-sim.ps1` starts Mosquitto, the backend and the simulated band:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File calm-band\sim\start-demo-sim.ps1 -Scenario settle
+```
+
+Add `-Fast` for 15x faster windows, `-Headless` for no windows (logs in `sim\logs\`), and `-MqttPort 1884 -HttpPort 8001` for a second independent stack. The real-hardware `start-demo.ps1` in the repo root is separate. The UI/API contract for the demo build is `CONTRACT-UI.md`, with example payloads in `sim/fixtures/`.
+
 ## Running pieces by hand
 
 ```bash

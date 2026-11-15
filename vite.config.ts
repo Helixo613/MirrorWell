@@ -10,11 +10,20 @@ export default defineConfig({
     // '@/' → src/ path alias (mirrors tsconfig.app.json paths). Build-time only, no runtime cost.
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
+  // Calm Band companion spike: in `npm run dev`, /api is proxied to the local backend so the
+  // browser still only talks to its own origin. Dev server only; the built app is served by the
+  // backend itself (same origin). Override the target with COMPANION_BACKEND=http://127.0.0.1:8001.
+  server: {
+    proxy: { '/api': process.env.COMPANION_BACKEND ?? 'http://127.0.0.1:8000' },
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
+        // The backend serves the companion API and the reviewer page on the same origin; the
+        // service worker must not answer those navigations with MirrorWell's index.html.
+        navigateFallbackDenylist: [/^\/api\//, /^\/reviewer/],
         // no-network gate (ARCHITECTURE §9): only same-origin assets are ever cached/fetched.
         // .wasm must be included — the actual FaceLandmarker runtime binaries live in
         // public/wasm/ (largest is ~10.6MB) and must be precached for true offline support
