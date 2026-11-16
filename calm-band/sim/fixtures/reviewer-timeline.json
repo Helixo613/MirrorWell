@@ -24,7 +24,8 @@
       "usable": true,
       "problems": [],
       "role": "pre",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -42,7 +43,8 @@
       "usable": true,
       "problems": [],
       "role": "pre",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -60,7 +62,8 @@
       "usable": true,
       "problems": [],
       "role": "pre",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -78,7 +81,8 @@
       "usable": true,
       "problems": [],
       "role": "pre",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -96,7 +100,8 @@
       "usable": true,
       "problems": [],
       "role": "pre",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -114,7 +119,8 @@
       "usable": true,
       "problems": [],
       "role": "pre",
-      "reading": "start"
+      "reading": "start",
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -132,7 +138,8 @@
       "usable": true,
       "problems": [],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -150,7 +157,8 @@
       "usable": true,
       "problems": [],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -168,7 +176,8 @@
       "usable": true,
       "problems": [],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -188,7 +197,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -208,7 +218,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -228,7 +239,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -248,7 +260,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -268,7 +281,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -288,7 +302,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -308,7 +323,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -328,7 +344,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -348,7 +365,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -368,7 +386,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -390,7 +409,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -412,7 +432,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -434,7 +455,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -456,7 +478,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -478,7 +501,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -498,7 +522,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -518,7 +543,8 @@
         "vibration_overlap"
       ],
       "role": "in",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -536,7 +562,8 @@
       "usable": true,
       "problems": [],
       "role": "post",
-      "reading": "end"
+      "reading": "end",
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -554,7 +581,8 @@
       "usable": true,
       "problems": [],
       "role": "post",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -572,7 +600,8 @@
       "usable": true,
       "problems": [],
       "role": "post",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     },
     {
       "boot": "3bd2e0fa",
@@ -590,7 +619,8 @@
       "usable": true,
       "problems": [],
       "role": "post",
-      "reading": null
+      "reading": null,
+      "stressEstimate": null
     }
   ],
   "events": [
@@ -963,5 +993,6 @@
         }
       ]
     }
-  ]
+  ],
+  "model": null
 }

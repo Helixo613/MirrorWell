@@ -21,6 +21,8 @@
     "label": "experimental"
   },
   "origin": "replay",
+  "stressEstimate": null,
+  "model": null,
   "plainWords": [
     "You completed 5 reps.",
     "No ease-off cues were needed.",

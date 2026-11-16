@@ -183,7 +183,34 @@ def summary(sid, now):
             "reps": reps, "easeOffs": eo, "cues": len(cues(sid, now)),
             "pulse": {"trend": tr, "startBpm": sb, "endBpm": eb}, "steadyPct": steady, "signalPct": sig,
             "calmIndex": calm(U), "origin": origin_of(inn + [w for w in (pre, post) if w]),
+            "stressEstimate": session_stress(inn, U), "model": model_info(),
             "plainWords": words}, (inn, pre, post, U)
+
+# ------------------------------------------------------------ experimental model (independent re-implementation)
+MODEL = None   # set to the stub below to write the "-model" fixtures; None = no model (everything null)
+LABEL = "experimental: not a medical measure"
+def load_model(path):
+    d = json.loads(Path(path).read_text(encoding="utf-8"))
+    return d
+def stress_value(w, base):
+    if MODEL is None or base is None or not usable(w) or w["pulseRateSdBpm"] is None: return None
+    x = [w["pulseRateBpm"], w["pulseRateSdBpm"], w["pulseRateBpm"] - base]
+    z = MODEL["intercept"] + sum(c * (xi - m) / sd for c, xi, m, sd in zip(MODEL["coef"], x, MODEL["scalerMean"], MODEL["scalerStd"]))
+    return round(1 / (1 + math.exp(-z)), 4)
+def stress_block(v):
+    return None if MODEL is None else {"value": v, "modelVersion": MODEL["modelVersion"], "label": LABEL}
+def session_stress(inn, U):
+    if MODEL is None: return None
+    base = U[0]["pulseRateBpm"] if U else None
+    vals = [v for v in (stress_value(w, base) for w in inn) if v is not None]
+    b = stress_block(round(sum(vals) / len(vals), 4) if vals else None)
+    b["scoredWindows"] = len(vals)
+    return b
+def model_info():
+    if MODEL is None: return None
+    ev = MODEL.get("evaluation", {})
+    return {"modelVersion": MODEL["modelVersion"], "method": ev.get("method"), "balancedAccuracyMean": ev.get("balancedAccuracyMean"),
+            "balancedAccuracySd": ev.get("balancedAccuracySd"), "label": LABEL}
 
 NOW = E2 + 130_000
 def reviewer_row(sid):
@@ -198,7 +225,8 @@ def reviewer_row(sid):
             "startedAtMs": s["startedAtMs"], "endedAtMs": s["endedAtMs"], "durationMs": sm["durationMs"],
             "reps": sm["reps"], "easeOffs": sm["easeOffs"], "cues": sm["cues"], "pulseTrend": sm["pulse"]["trend"],
             "startBpm": sm["pulse"]["startBpm"], "endBpm": sm["pulse"]["endBpm"], "signalPct": sm["signalPct"],
-            "steadyPct": sm["steadyPct"], "calmIndex": sm["calmIndex"], "origin": sm["origin"]}
+            "steadyPct": sm["steadyPct"], "calmIndex": sm["calmIndex"], "origin": sm["origin"],
+            "stressEstimate": sm["stressEstimate"], "model": sm["model"]}
 
 def timeline(sid):
     s = sessions[sid]
@@ -206,6 +234,7 @@ def timeline(sid):
     inn, pre, post, U = scope(s, NOW)
     fr, to = S - PRE, (E if E is not None else NOW) + PRE
     ink = {key(w) for w in inn}
+    base = U[0]["pulseRateBpm"] if U else None
     ws = []
     for w in sorted(windows, key=lambda w: w["windowEndMs"]):
         if not (w["windowEndMs"] > fr and w["windowStartMs"] < to and w["windowEndMs"] <= NOW): continue
@@ -215,7 +244,8 @@ def timeline(sid):
         if len(U) >= 2 and key(w) == key(U[-1]): reading = "end"
         ws.append({k: w[k] for k in ("boot", "seq", "windowStartMs", "windowEndMs", "contact", "quality", "pulseRateBpm",
                                      "moving", "motionValid", "motorActive", "timingGap", "origin")}
-                  | {"usable": usable(w), "problems": problems(w), "role": role, "reading": reading})
+                  | {"usable": usable(w), "problems": problems(w), "role": role, "reading": reading,
+                     "stressEstimate": stress_block(stress_value(w, base))})
     ev = [{"source": "mirrorwell", **e} for e in s["events"]]
     ev += [{"source": "band", "type": b["type"], "detail": b["detail"], "atMs": b["atMs"], "boot": b["boot"]}
            for b in band_events if fr <= b["atMs"] <= to]
@@ -229,7 +259,7 @@ def timeline(sid):
                    "expiresAtMs": c["expiresAtMs"], "maxDurationMs": c["maxDurationMs"], "outcome": outcome,
                    "acks": [{"result": a["result"], "reason": a["reason"], "atMs": a["atMs"]} for a in c["acks"]]})
     return {"schema": 1, "companionSessionId": sid, "startedAtMs": S, "endedAtMs": E,
-            "range": {"fromMs": fr, "toMs": to}, "windows": ws, "events": ev, "commands": cs}
+            "range": {"fromMs": fr, "toMs": to}, "windows": ws, "events": ev, "commands": cs, "model": model_info()}
 
 def trends():
     rows, days = [], {}
@@ -321,5 +351,11 @@ dump("summary-404.json", {"detail": "unknown session"})
 dump("reviewer-sessions.json", [reviewer_row(SID1), reviewer_row(SID2)])
 dump("reviewer-timeline.json", timeline(SID2))
 dump("reviewer-trends.json", trends())
+# same data scored by the PLACEHOLDER model (calm-band/model/stress_lr_stub.json): the "-model" fixtures
+MODEL = load_model(Path(__file__).resolve().parents[2] / "model" / "stress_lr_stub.json")
+sm2m, _ = summary(SID2, NOW); dump("summary-settled-model.json", sm2m)
+dump("reviewer-sessions-model.json", [reviewer_row(SID1), reviewer_row(SID2)])
+dump("reviewer-timeline-model.json", timeline(SID2))
+MODEL = None
 print("NOW", NOW)
 for f in sorted(OUT.glob("*.json")): print(f.name, f.stat().st_size)

@@ -4,6 +4,7 @@
   var Q = new URLSearchParams(location.search);
   var FIX = Q.get('fixtures');              // '1' | 'empty' | 'error'
   var FORCE_ORIGIN = Q.get('origin');       // fixtures only: tag sessions as e.g. 'sim'
+  var MODELFX = Q.get('model') === '1' ? '-model' : '';   // fixtures only: use the *-model fixture files
   var THEME = Q.get('theme');
   if (THEME === 'light' || THEME === 'dark') document.documentElement.setAttribute('data-theme', THEME);
   var API = '../api/companion/reviewer/';
@@ -64,13 +65,13 @@
         if (kind === 'sessions') return Promise.resolve([]);
         if (kind === 'trends') return Promise.resolve({ schema: 1, utcOffsetMinutes: 0, days: [], sessions: [] });
       }
-      if (kind === 'sessions') return getJson(FIXDIR + 'reviewer-sessions.json').then(function (a) {
+      if (kind === 'sessions') return getJson(FIXDIR + 'reviewer-sessions' + MODELFX + '.json').then(function (a) {
         if (FORCE_ORIGIN === 'none') a.forEach(function (s) { delete s.origin; });
         else if (FORCE_ORIGIN) a.forEach(function (s) { s.origin = FORCE_ORIGIN; });
         return a;
       });
       if (kind === 'trends') return getJson(FIXDIR + 'reviewer-trends.json');
-      return getJson(FIXDIR + 'reviewer-timeline.json').then(function (t) {
+      return getJson(FIXDIR + 'reviewer-timeline' + MODELFX + '.json').then(function (t) {
         if (t.companionSessionId === sid) {
           if (FORCE_ORIGIN === 'mixed') t.windows.forEach(function (w, i) { w.origin = i < t.windows.length / 2 ? 'sim' : 'live'; });
           else if (FORCE_ORIGIN === 'none') t.windows.forEach(function (w) { delete w.origin; });
@@ -164,9 +165,11 @@
       var wrap = el('div', { class: 'chartwrap', 'data-testid': 'chart' });
       box.appendChild(wrap);
       drawTimeline(wrap, t);
+      var sw = stressStrip(t);
+      if (sw) box.appendChild(sw);
       box.appendChild(legend());
     }
-    box.appendChild(facts(s));
+    box.appendChild(facts(s, t));
   }
 
   function legend() {
@@ -195,7 +198,38 @@
     return s;
   }
 
-  function facts(s) {
+  /* ---------- experimental stress estimate (only when the backend has a model) ---------- */
+  function hasModel(o) { return !!(o && o.model && o.model.modelVersion); }
+  function isStub(m) { return !!(m && m.modelVersion === 'stub-not-trained'); }
+  function stressStrip(t) {
+    if (!hasModel(t) || !(t.windows || []).some(function (w) { return w.stressEstimate; })) return null;
+    var wrap = el('div', { class: 'stress', 'data-testid': 'stress-strip' });
+    if (isStub(t.model)) wrap.appendChild(el('p', { class: 'msg err', 'data-testid': 'placeholder-model', text: 'PLACEHOLDER MODEL: these numbers are made up and mean nothing.' }));
+    wrap.appendChild(el('h3', { text: 'Experimental stress estimate', style: 'margin-bottom:2px' }));
+    var W = Math.max(300, document.getElementById('detail').clientWidth || 640), narrow = W < 520;
+    var L = narrow ? 52 : 62, R = 10, H = 30, pw = W - L - R;
+    var from = t.range.fromMs, to = t.range.toMs, wins = t.windows;
+    var steps = [];
+    for (var i = 1; i < wins.length; i++) { var dd = wins[i].windowEndMs - wins[i - 1].windowEndMs; if (dd > 0) steps.push(dd); }
+    steps.sort(function (a, b) { return a - b; });
+    var step = steps.length ? steps[Math.floor(steps.length / 2)] : 15000;
+    function X(ms) { return L + (ms - from) / (to - from) * pw; }
+    var svg = el('svg', { class: 'chart', viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Experimental stress estimate over time; gaps where a reading was not clean' });
+    svg.appendChild(el('text', { x: L - 5, y: 19, 'text-anchor': 'end', text: 'estimate' }));
+    wins.forEach(function (w) {
+      var v = w.stressEstimate && w.stressEstimate.value;
+      if (typeof v !== 'number') return;                       // gap: null stays empty
+      var x0 = X(Math.max(from, w.windowEndMs - step)), x1 = X(Math.min(to, w.windowEndMs));
+      var r = el('rect', { class: 'stressbar', x: x0, y: 4, width: Math.max(1, x1 - x0 - 0.5), height: 22, 'fill-opacity': (0.2 + 0.8 * Math.max(0, Math.min(1, v))).toFixed(2), 'data-testid': 'stress-cell' },
+        el('title', { text: hhmmss(w.windowEndMs) + ': ' + v.toFixed(2) + ' (0 to 1, experimental)' }));
+      svg.appendChild(r);
+    });
+    wrap.appendChild(svg);
+    wrap.appendChild(el('p', { class: 'msg', text: 'Darker = higher model score (0 to 1). Empty where the reading was not clean. Experimental: not a medical measure.' }));
+    return wrap;
+  }
+
+  function facts(s, t) {
     var dl = el('dl', { class: 'facts', 'data-testid': 'facts' });
     function f(k, v, note) { dl.appendChild(el('div', null, el('dt', { text: k }), el('dd', null, v, note ? el('small', { text: note }) : null))); }
     var trend = s.pulseTrend || 'insufficient';
@@ -209,6 +243,13 @@
     f('Calm index', ci.value == null ? '—' : String(ci.value), 'experimental: not a medical or stress measure');
     f('Reps / cues / ease-offs', (s.reps == null ? '—' : s.reps) + ' / ' + (s.cues == null ? '—' : s.cues) + ' / ' + (s.easeOffs == null ? '—' : s.easeOffs));
     f('Pre / post reading', num(s.prePulseBpm) + ' / ' + num(s.postPulseBpm), 'bpm, outside the session');
+    var m = hasModel(s) ? s.model : (t && hasModel(t) ? t.model : null);
+    if (m) {
+      var se = s.stressEstimate;
+      f('Stress estimate (experimental)', se && typeof se.value === 'number' ? se.value.toFixed(2) : '—', 'mean of clean windows; experimental: not a medical measure');
+      f('Model', m.modelVersion + (isStub(m) ? ' (PLACEHOLDER MODEL)' : ''),
+        typeof m.balancedAccuracyMean === 'number' ? 'leave-one-subject-out balanced accuracy ' + m.balancedAccuracyMean.toFixed(2) + (typeof m.balancedAccuracySd === 'number' ? ' ± ' + m.balancedAccuracySd.toFixed(2) : '') : 'no accuracy figure');
+    }
     return el('div', null, el('h3', { text: 'Session facts' }), dl);
   }
 

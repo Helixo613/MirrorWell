@@ -40,7 +40,9 @@
       "value": null,
       "label": "experimental"
     },
-    "origin": "replay"
+    "origin": "replay",
+    "stressEstimate": null,
+    "model": null
   },
   {
     "companionSessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12",
@@ -83,6 +85,8 @@
       "value": 100,
       "label": "experimental"
     },
-    "origin": "replay"
+    "origin": "replay",
+    "stressEstimate": null,
+    "model": null
   }
 ]

@@ -80,3 +80,5 @@ svg .lane{fill:var(--muted);font-size:10px}
 .facts dd small{display:block;font-weight:400;font-size:.72rem;color:var(--muted)}
 .trendgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media (max-width:820px){.trendgrid{grid-template-columns:1fr}}
+svg .stressbar{fill:var(--accent)}
+.stress{margin-top:4px}

@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "companionSessionId": "5b0e9f8e-6a51-4c8e-9d43-2f1f0c6a7b12",
+  "state": "ended",
+  "startedAtMs": 1794813600000,
+  "endedAtMs": 1794813840000,
+  "endReason": "completed",
+  "durationMs": 240000,
+  "reps": 10,
+  "easeOffs": 1,
+  "cues": 11,
+  "pulse": {
+    "trend": "settled",
+    "startBpm": 86.2,
+    "endBpm": 78.5
+  },
+  "steadyPct": 75,
+  "signalPct": 38,
+  "calmIndex": {
+    "value": 100,
+    "label": "experimental"
+  },
+  "origin": "replay",
+  "stressEstimate": {
+    "value": 0.3954,
+    "modelVersion": "stub-not-trained",
+    "label": "experimental: not a medical measure",
+    "scoredWindows": 3
+  },
+  "model": {
+    "modelVersion": "stub-not-trained",
+    "method": "leave-one-subject-out",
+    "balancedAccuracyMean": 0.5,
+    "balancedAccuracySd": 0.0,
+    "label": "experimental: not a medical measure"
+  },
+  "plainWords": [
+    "You completed 10 reps.",
+    "You had 1 ease-off cue.",
+    "Your pulse settled as the session went on.",
+    "Your hand moved quite a bit, which makes pulse readings harder."
+  ]
+}

@@ -1,0 +1,121 @@
+subject,model,features,bal_acc,f1
+2,majority,n/a,0.5,0.0
+2,threshold rule,relativePulseBpm,0.6996527777777778,0.5769230769230769
+2,threshold rule,pulseRateBpm (no relative),0.6788194444444444,0.5454545454545454
+2,logistic regression,3 features,0.6909722222222222,0.5714285714285714
+2,random forest,3 features,0.796875,0.71875
+2,logistic regression,without relativePulseBpm,0.6909722222222222,0.5714285714285714
+2,random forest,without relativePulseBpm,0.734375,0.6333333333333333
+2,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.6788194444444444,0.5454545454545454
+3,majority,n/a,0.5,0.0
+3,threshold rule,relativePulseBpm,0.8819444444444444,0.7083333333333334
+3,threshold rule,pulseRateBpm (no relative),0.8472222222222222,0.7878787878787878
+3,logistic regression,3 features,0.7916666666666666,0.5714285714285714
+3,random forest,3 features,0.7361111111111112,0.5
+3,logistic regression,without relativePulseBpm,0.8125,0.6037735849056604
+3,random forest,without relativePulseBpm,0.625,0.4
+3,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.8888888888888888,0.723404255319149
+4,majority,n/a,0.5,0.0
+4,threshold rule,relativePulseBpm,0.9726027397260274,0.9512195121951219
+4,threshold rule,pulseRateBpm (no relative),0.7564102564102564,0.6779661016949152
+4,logistic regression,3 features,0.9469617140850017,0.925
+4,random forest,3 features,1.0,1.0
+4,logistic regression,without relativePulseBpm,0.9230769230769231,0.9166666666666666
+4,random forest,without relativePulseBpm,0.896557780119424,0.8767123287671232
+4,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.9863013698630136,0.975
+5,majority,n/a,0.5,0.0
+5,threshold rule,relativePulseBpm,0.8888888888888888,0.8666666666666667
+5,threshold rule,pulseRateBpm (no relative),0.962962962962963,0.9512195121951219
+5,logistic regression,3 features,0.8611111111111112,0.8387096774193549
+5,random forest,3 features,0.8611111111111112,0.8387096774193549
+5,logistic regression,without relativePulseBpm,0.8703703703703703,0.8478260869565217
+5,random forest,without relativePulseBpm,0.8518518518518519,0.8297872340425532
+5,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.8796296296296297,0.8571428571428571
+6,majority,n/a,0.5,0.0
+6,threshold rule,relativePulseBpm,0.5391228070175439,0.2127659574468085
+6,threshold rule,pulseRateBpm (no relative),0.4998245614035088,0.04878048780487805
+6,logistic regression,3 features,0.5126315789473684,0.16666666666666666
+6,random forest,3 features,0.5656140350877193,0.2608695652173913
+6,logistic regression,without relativePulseBpm,0.48631578947368426,0.08695652173913043
+6,random forest,without relativePulseBpm,0.5392982456140352,0.18181818181818182
+6,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.5326315789473683,0.17777777777777778
+7,majority,n/a,0.5,0.0
+7,threshold rule,relativePulseBpm,0.9153846153846155,0.8860759493670886
+7,threshold rule,pulseRateBpm (no relative),0.8461538461538461,0.8181818181818182
+7,logistic regression,3 features,0.9076923076923077,0.8604651162790697
+7,random forest,3 features,0.8892307692307693,0.85
+7,logistic regression,without relativePulseBpm,0.9076923076923077,0.8604651162790697
+7,random forest,without relativePulseBpm,0.8958974358974359,0.8607594936708861
+7,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.9343589743589744,0.9024390243902439
+8,majority,n/a,0.5,0.0
+8,threshold rule,relativePulseBpm,0.7588991430454846,0.6857142857142857
+8,threshold rule,pulseRateBpm (no relative),0.6829268292682926,0.5357142857142857
+8,logistic regression,3 features,0.8279499011206328,0.7887323943661971
+8,random forest,3 features,0.8442649967040211,0.8051948051948052
+8,logistic regression,without relativePulseBpm,0.8414634146341464,0.8115942028985508
+8,random forest,without relativePulseBpm,0.8225115359261701,0.782608695652174
+8,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.8076796308503627,0.7567567567567568
+9,majority,n/a,0.5,0.0
+9,threshold rule,relativePulseBpm,0.6146916146916147,0.39215686274509803
+9,threshold rule,pulseRateBpm (no relative),0.6146916146916147,0.39215686274509803
+9,logistic regression,3 features,0.6706514206514207,0.5396825396825397
+9,random forest,3 features,0.6531531531531531,0.48148148148148145
+9,logistic regression,without relativePulseBpm,0.6962924462924462,0.5846153846153846
+9,random forest,without relativePulseBpm,0.6503811503811504,0.5151515151515151
+9,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.6072418572418572,0.4
+10,majority,n/a,0.5,0.0
+10,threshold rule,relativePulseBpm,0.7710210210210211,0.704225352112676
+10,threshold rule,pulseRateBpm (no relative),0.5,0.5487804878048781
+10,logistic regression,3 features,0.7253753753753753,0.6875
+10,random forest,3 features,0.7489489489489489,0.6981132075471698
+10,logistic regression,without relativePulseBpm,0.5472972972972973,0.5732484076433121
+10,random forest,without relativePulseBpm,0.5202702702702703,0.5590062111801242
+10,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.5878378378378378,0.5960264900662252
+11,majority,n/a,0.5,0.0
+11,threshold rule,relativePulseBpm,0.6116666666666667,0.36363636363636365
+11,threshold rule,pulseRateBpm (no relative),0.6074999999999999,0.35294117647058826
+11,logistic regression,3 features,0.7079166666666667,0.5
+11,random forest,3 features,0.7033333333333334,0.5161290322580645
+11,logistic regression,without relativePulseBpm,0.7370833333333333,0.5116279069767442
+11,random forest,without relativePulseBpm,0.6254166666666667,0.3783783783783784
+11,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.6095833333333334,0.35714285714285715
+13,majority,n/a,0.5,0.0
+13,threshold rule,relativePulseBpm,0.875,0.8571428571428571
+13,threshold rule,pulseRateBpm (no relative),0.5933333333333334,0.5673758865248227
+13,logistic regression,3 features,0.9141666666666667,0.8666666666666667
+13,random forest,3 features,0.8216666666666667,0.7692307692307693
+13,logistic regression,without relativePulseBpm,0.88,0.8163265306122449
+13,random forest,without relativePulseBpm,0.835,0.7676767676767676
+13,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.895,0.8444444444444444
+14,majority,n/a,0.5,0.0
+14,threshold rule,relativePulseBpm,0.9933333333333334,0.9879518072289156
+14,threshold rule,pulseRateBpm (no relative),0.98,0.9647058823529412
+14,logistic regression,3 features,1.0,1.0
+14,random forest,3 features,0.9866666666666667,0.9761904761904762
+14,logistic regression,without relativePulseBpm,1.0,1.0
+14,random forest,without relativePulseBpm,0.8414634146341464,0.8115942028985508
+14,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.98,0.9647058823529412
+15,majority,n/a,0.5,0.0
+15,threshold rule,relativePulseBpm,0.7964285714285715,0.7368421052631579
+15,threshold rule,pulseRateBpm (no relative),0.6446428571428571,0.5675675675675675
+15,logistic regression,3 features,0.6982142857142857,0.6176470588235294
+15,random forest,3 features,0.6488095238095238,0.5882352941176471
+15,logistic regression,without relativePulseBpm,0.6357142857142857,0.56
+15,random forest,without relativePulseBpm,0.6791666666666667,0.6027397260273972
+15,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.7607142857142857,0.6885245901639344
+16,majority,n/a,0.5,0.0
+16,threshold rule,relativePulseBpm,0.9010526315789473,0.8421052631578947
+16,threshold rule,pulseRateBpm (no relative),0.7368421052631579,0.6428571428571429
+16,logistic regression,3 features,0.8410526315789473,0.6808510638297872
+16,random forest,3 features,0.8214035087719298,0.6666666666666666
+16,logistic regression,without relativePulseBpm,0.8343859649122807,0.6666666666666666
+16,random forest,without relativePulseBpm,0.6631578947368422,0.45454545454545453
+16,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.9010526315789473,0.8421052631578947
+17,majority,n/a,0.5,0.0
+17,threshold rule,relativePulseBpm,0.9797297297297297,0.9662921348314607
+17,threshold rule,pulseRateBpm (no relative),0.9534883720930232,0.9512195121951219
+17,logistic regression,3 features,0.9410747957259584,0.9130434782608695
+17,random forest,3 features,0.981615336266499,0.9767441860465116
+17,logistic regression,without relativePulseBpm,0.9429604022627278,0.9213483146067416
+17,random forest,without relativePulseBpm,0.9245757385292269,0.898876404494382
+17,logistic regression,pulseRateBpm + relativePulseBpm (v1b),0.9864864864864865,0.9772727272727273

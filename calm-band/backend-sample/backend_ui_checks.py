@@ -290,6 +290,86 @@ def part_a():
         n_ev = app.store.conn.execute("SELECT COUNT(*) FROM band_events WHERE boot='cc'").fetchone()[0]
     check("concurrent MQTT-style writes + HTTP reads: no errors", not errors, errors[:3])
     check("concurrent writes: memory and SQLite agree and nothing lost", n_mem == N == n_db and n_ev == N, (n_mem, n_db, n_ev))
+    part_model(F)
+
+
+def part_model(F):
+    """Experimental stress model: off = no change; on = only clean windows are scored, formula = hand calculation."""
+    print("\n== Part A2: experimental stress model ==")
+    NOW, SID1, SID2 = F["NOW"], F["SID1"], F["SID2"]
+    stub = HERE.parent / "model" / "stress_lr_stub.json"
+    app.now_ms = lambda: NOW
+    # --- model off
+    app.MODEL = None
+    seed(F)
+    sm = get(f"/api/companion/sessions/{SID2}/summary")[1]
+    rows = get("/api/companion/reviewer/sessions")[1]
+    tl = get(f"/api/companion/reviewer/sessions/{SID2}/timeline")[1]
+    check("model off: summary equals fixture; stressEstimate and model are null", sm == fx("summary-settled.json") and sm["stressEstimate"] is None and sm["model"] is None)
+    check("model off: sessions equal fixture, all null", rows == fx("reviewer-sessions.json") and all(r["stressEstimate"] is None and r["model"] is None for r in rows))
+    check("model off: timeline equals fixture; every window's stressEstimate is null", tl == fx("reviewer-timeline.json") and all(w["stressEstimate"] is None for w in tl["windows"]) and tl["model"] is None)
+    live_off = get("/api/companion/live")[1]
+    # --- loader: missing / invalid / unset -> no model
+    import stress_model as sm_mod
+    bad = TMP / "bad.json"
+    good = json.loads(stub.read_text(encoding="utf-8"))
+    cases = {"unset": None, "missing file": str(TMP / "nope.json")}
+    for name, mutate in {"2 features": lambda d: d.update(features=d["features"][:2]), "coef length": lambda d: d.update(coef=[1, 2]),
+                         "std zero": lambda d: d.update(scalerStd=[1, 0, 1]), "wrong type": lambda d: d.update(type="svm"),
+                         "NaN-ish string": lambda d: d.update(intercept="x")}.items():
+        d = json.loads(json.dumps(good)); mutate(d)
+        f = TMP / f"bad-{len(cases)}.json"; f.write_text(json.dumps(d), encoding="utf-8"); cases[name] = str(f)
+    bad.write_text("{not json", encoding="utf-8"); cases["not JSON"] = str(bad)
+    check("loader: unset, missing, malformed or invalid model files all give no model",
+          all(sm_mod.load(v) is None for v in cases.values()), [k for k, v in cases.items() if sm_mod.load(v) is not None])
+    v1 = HERE.parent / "model" / "stress_lr_v1.json"
+    m1 = sm_mod.load(str(v1)) if v1.exists() else None
+    check("loader: the real model stress_lr_v1.json is valid (3 features, LOSO score present)",
+          m1 is not None and m1["modelVersion"] == "stress_lr_v1" and m1["evaluation"]["balancedAccuracyMean"] is not None)
+    check("loader: a relative path works from the repo root (as in DEMO_NOTES)",
+          sm_mod.load("calm-band/model/stress_lr_stub.json") is not None)
+    v1b = HERE.parent / "model" / "stress_lr_v1b.json"
+    mb = sm_mod.load(str(v1b)) if v1b.exists() else None
+    check("v1b: valid, and scoring ignores pulseRateSdBpm (SD slot has coef 0; any SD gives the same score)",
+          mb is not None and mb["modelVersion"] == "stress_lr_v1b" and mb["coef"][1] == 0
+          and len({sm_mod.score(mb, 85.0, sd, 4.0) for sd in (0.0, 1.8, 16.4, 50.0, 500.0)}) == 1)
+    check("loader: the stub file is valid", sm_mod.load(str(stub)) is not None and sm_mod.load(str(stub))["modelVersion"] == "stub-not-trained")
+    # --- model on
+    app.MODEL = sm_mod.load(str(stub))
+    seed(F)
+    sm = get(f"/api/companion/sessions/{SID2}/summary")[1]
+    rows = get("/api/companion/reviewer/sessions")[1]
+    tl = get(f"/api/companion/reviewer/sessions/{SID2}/timeline")[1]
+    check("model on: summary equals the -model fixture", sm == fx("summary-settled-model.json"), diff(sm, fx("summary-settled-model.json")))
+    check("model on: sessions equal the -model fixture", rows == fx("reviewer-sessions-model.json"))
+    check("model on: timeline equals the -model fixture", tl == fx("reviewer-timeline-model.json"))
+    check("model on: /live is unchanged", get("/api/companion/live")[1] == live_off and "stressEstimate" not in live_off)
+    wins = tl["windows"]
+    scored = [w for w in wins if w["stressEstimate"]["value"] is not None]
+    check("model on: exactly the clean windows are scored; every other window is null",
+          scored and all(w["usable"] for w in scored) and all(w["stressEstimate"]["value"] is None for w in wins if not w["usable"])
+          and all(w["stressEstimate"]["value"] is not None for w in wins if w["usable"]))
+    check("model on: stub model version and label on every window", all(w["stressEstimate"]["modelVersion"] == "stub-not-trained"
+          and w["stressEstimate"]["label"] == "experimental: not a medical measure" for w in wins))
+    check("model on: moving, buzzing and contact-less windows are null",
+          all(w["stressEstimate"]["value"] is None for w in wins if w["moving"] or w["motorActive"] or not w["contact"] or w["quality"] < 0.8))
+    # hand calculation of one window: baseline = start reading (U[0]) pulse
+    base = next(w for w in wins if w["reading"] == "start")["pulseRateBpm"]
+    w = scored[len(scored) // 2]
+    raw = next(x for x in F["windows"] if (x["boot"], x["seq"]) == (w["boot"], w["seq"]))
+    m = good
+    xs = [raw["pulseRateBpm"], raw["pulseRateSdBpm"], raw["pulseRateBpm"] - base]
+    z = m["intercept"] + sum(c * (x - mu) / sd for c, x, mu, sd in zip(m["coef"], xs, m["scalerMean"], m["scalerStd"]))
+    hand = 1 / (1 + 2.718281828459045 ** (-z))
+    check("model on: score matches a hand calculation of the formula", abs(w["stressEstimate"]["value"] - hand) < 1e-4, (w["stressEstimate"]["value"], hand))
+    mean = sum(x["stressEstimate"]["value"] for x in wins if x["role"] == "in" and x["stressEstimate"]["value"] is not None)
+    n = sum(1 for x in wins if x["role"] == "in" and x["stressEstimate"]["value"] is not None)
+    check("model on: session value is the mean of its scored windows", n and sm["stressEstimate"]["scoredWindows"] == n and abs(sm["stressEstimate"]["value"] - mean / n) < 1e-3)
+    s1 = next(r for r in rows if r["companionSessionId"] == SID1)
+    check("model on: a session with no clean windows has value null (not 0), but still names the model",
+          s1["stressEstimate"]["value"] is None and s1["stressEstimate"]["modelVersion"] == "stub-not-trained" and s1["model"]["balancedAccuracyMean"] == 0.5)
+    check("model on: no medical/stress wording leaked into plainWords", clean_words(sm["plainWords"]))
+    app.MODEL = None
 
 
 # =============================================================================== Part B

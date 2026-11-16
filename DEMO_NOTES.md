@@ -33,6 +33,20 @@ Everything below was run on the real hardware on this laptop.
 
 Band power: laptop USB or a USB power bank both work. The band starts by itself; the blue LED goes solid when connected. The laptop must still be on the same hotspot running steps 2–3.
 
+## Experimental stress estimate (optional)
+
+The reviewer page (http://localhost:8000/reviewer/) can show an **experimental** model-based estimate. It is **off by default**: without the switch below the demo behaves exactly as before and the reviewer shows nothing extra. It is a research-style score from a logistic regression trained on the public WESAD dataset (`calm-band\model\RESULTS.md`; leave-one-subject-out balanced accuracy 0.80 ± 0.16). It is **not a medical measure** and is shown only on the reviewer page, never in MirrorWell.
+
+**WITHOUT the model (the default):** do nothing different. Steps 2-3 above, as written.
+
+**WITH the model:** in the same second window, set the variable before running `start-demo.ps1` (run from the repo folder):
+```
+cd C:\Users\arnav\OneDrive\Desktop\Arnav\MirrorWell
+$env:CALMBAND_MODEL = 'calm-band\model\stress_lr_v1b.json'
+powershell -NoProfile -ExecutionPolicy Bypass -File .\start-demo.ps1
+```
+(`start-backend.ps1` works the same way.) If the file is missing or invalid the backend prints a `[calm band] CALMBAND_MODEL ...` line and runs WITHOUT a model. Check: open the reviewer, pick a session; "Experimental stress estimate" appears under the timeline and "Model: stress_lr_v1b" in Session facts. Only clean windows are scored, so a session with no clean readings shows an empty strip. `stress_lr_v1b` scores from pulse rate and the pulse relative to the session start only (it ignores the pulse SD, which the band measures differently from the training data). `stress_lr_v1.json` stays in the repo for reference only. `calm-band\model\stress_lr_stub.json` is a made-up placeholder for tests only (the reviewer shows a red PLACEHOLDER MODEL warning if it is ever loaded); never use it in the demo.
+
 ## Do / don't
 
 - Pulse sensor **face-up**. Face-down on a table it reflects infrared and fakes a ~140 BPM "pulse".
