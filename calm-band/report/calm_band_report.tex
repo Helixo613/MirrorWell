@@ -99,7 +99,7 @@ Facial-exercise programmes are widely recommended for facial weakness, asymmetry
 
 This project presents the \textbf{Calm Band}, a low-cost Internet of Things (IoT) companion to MirrorWell. An \textbf{ESP32} desk hub reads a \textbf{MAX30102} optical pulse sensor on the fingertip at 100 samples per second and an \textbf{MPU6050} motion sensor on the wrist at 32 samples per second, and drives a \textbf{vibration motor} on the wrist. Every 15 seconds the hub summarises the last 60 seconds into a \textbf{feature window} (finger contact, pulse rate, motion and a quality score) and publishes it over \textbf{MQTT} with TLS to a \textbf{FastAPI} backend. The backend links readings to MirrorWell sessions by their own timestamps, decides whether a reading is fit to show, and turns repetition and ease-off events into short, expiring vibration commands. A physical STOP button cuts the motor instantly, without the network.
 
-Safety and data honesty were first-class requirements: missing data is reported as missing and never as calm, readings that overlap a vibration or a finger removal are withheld, and stale, duplicate, malformed or late commands are rejected on the band itself. The firmware compiles for the ESP32 (69\% of flash, 35\% of RAM) and was validated with \textbf{117 automated checks} across four test suites, all passing, plus two self-tests on an emulated ESP32. A physical prototype then passed every end-to-end test with MirrorWell; a live band card and a reviewer page were added and tested with a simulated band. An encrypted broker and a WESAD-trained stress model are future work. The hardware cost is ₹949–1,449, within the ₹1,500 budget.
+Safety and data honesty were first-class requirements: missing data is reported as missing and never as calm, readings that overlap a vibration or a finger removal are withheld, and stale, duplicate, malformed or late commands are rejected on the band itself. The firmware compiles for the ESP32 (69\% of flash, 35\% of RAM) and was validated with \textbf{117 automated checks} across four test suites, all passing, plus two emulator self-tests. A physical prototype then passed every end-to-end test with MirrorWell; a live band card and a reviewer page were added and tested with a simulated band. An encrypted broker and band validation of a WESAD-trained stress model are future work. Hardware cost is ₹949–1,449 (budget ₹1,500).
 
 }
 \clearpage
@@ -156,6 +156,7 @@ Safety and data honesty were first-class requirements: missing data is reported 
  & \hspace{1.2em}{\small Post-Session Summary in Plain Words} & {\small\pageref{sec:6.summary}} \\
  & \hspace{1.2em}{\small Reviewer and Therapist Page} & {\small\pageref{sec:6.reviewer}} \\
  & \hspace{1.2em}{\small Experimental Calm Index} & {\small\pageref{sec:6.calm}} \\
+ & \hspace{1.2em}{\small Experimental Stress Model (WESAD)} & {\small\pageref{sec:6.stress}} \\
  & \hspace{1.2em}{\small Testing of the New Parts} & {\small\pageref{sec:6.newtests}} \\
  & \hspace{1.2em}{\small Discussion} & {\small\pageref{sec:6.4}} \\
  & \hspace{1.2em}{\small Limitations} & {\small\pageref{sec:6.5}} \\
@@ -187,6 +188,7 @@ Safety and data honesty were first-class requirements: missing data is reported 
 \noindent\makebox[0.09\linewidth][l]{\ref{tab:bench-mode-pulse-readings}}BENCH-Mode Pulse Readings with a Still Fingertip\dotfill\pageref{tab:bench-mode-pulse-readings}\par
 \noindent\makebox[0.09\linewidth][l]{\ref{tab:end-to-end-results-real-hardware}}End-to-End Results on the Real Hardware\dotfill\pageref{tab:end-to-end-results-real-hardware}\par
 \noindent\makebox[0.09\linewidth][l]{\ref{tab:live-card-messages}}Messages Shown on the Live Card\dotfill\pageref{tab:live-card-messages}\par
+\noindent\makebox[0.09\linewidth][l]{\ref{tab:stress-model-results}}Leave-One-Subject-Out Results of the Experimental Stress Model on WESAD\dotfill\pageref{tab:stress-model-results}\par
 \noindent\makebox[0.09\linewidth][l]{\ref{tab:new-tests}}Automated Tests of the Storage, Live Card, Summary and Reviewer Parts\dotfill\pageref{tab:new-tests}\par
 \noindent\makebox[0.09\linewidth][l]{\ref{tab:bill-of-materials-estimated-prices-octob}}Bill of Materials (estimated prices, October 2026)\dotfill\pageref{tab:bill-of-materials-estimated-prices-octob}\par
 }
@@ -828,6 +830,32 @@ The reviewer page also shows one derived number, the \textbf{calm index}. It com
 \end{equation*}
 A value of 50 means the same pulse as at the start; 100 means a drop of 7.5 BPM or more; 0 means a rise of 7.5 BPM or more. With fewer than two clean readings the value is missing, not zero. The index is always printed with the label \textbf{``experimental: not a medical or stress measure''}. It compares a person only with their own start of that one session, so it cannot be compared between people or sessions. MirrorWell does not show it at all.
 
+\section{Experimental Stress Model (WESAD)}\label{sec:6.stress}
+
+A small stress model was trained and tested offline on the public WESAD dataset [8] (Schmidt et al., ICMI 2018). It uses the wrist pulse signal (blood-volume pulse) recorded by the Empatica E4 at 64 Hz from 15 subjects (S2 to S17, without S12), and only the \emph{baseline} (sitting calmly) and \emph{stress} (a public-speaking and mental-arithmetic task) segments. Windows of 60 seconds were taken every 15 seconds, and windows with fewer than 20 valid beat intervals were dropped. This leaves \textbf{1,592 windows}, 33\% of them from the stress task. WESAD is for non-commercial scientific use, so the data is not stored in the project.
+
+The model sees three numbers per window: the average pulse, the beat-to-beat variation of the pulse, and how far the pulse is above that person's own calm baseline. Every model was tested with \textbf{leave-one-subject-out} evaluation: it is trained on 14 people, tested on the 15th, and this is repeated for each person. Table~\ref{tab:stress-model-results} gives the mean and standard deviation over the 15 people. Balanced accuracy counts calm and stress equally, so 0.5 is a coin flip.
+
+\begin{table}[H]
+\centering\small\setstretch{1.0}
+\caption{Leave-One-Subject-Out Results of the Experimental Stress Model on WESAD}\label{tab:stress-model-results}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{\dimexpr 0.30\linewidth-2\tabcolsep-0.4pt\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.28\linewidth-2\tabcolsep-0.4pt\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.21\linewidth-2\tabcolsep-0.4pt\relax}|>{\raggedright\arraybackslash}p{\dimexpr 0.21\linewidth-2\tabcolsep-0.4pt\relax}|}
+\hline
+\rowcolor{headgray}\textbf{Model} & \textbf{Features} & \textbf{Balanced accuracy} & \textbf{F1 (stress)} \\ \hline
+Majority class & none & 0.500 ± 0.000 & 0.000 ± 0.000 \\ \hline
+Threshold rule & relative pulse & 0.813 ± 0.144 & 0.716 ± 0.236 \\ \hline
+Logistic regression v1 & all 3 & 0.803 ± 0.133 & 0.702 ± 0.217 \\ \hline
+Logistic regression v1b & pulse + relative pulse & 0.802 ± 0.160 & 0.707 ± 0.246 \\ \hline
+Random forest (comparison) & all 3 & 0.804 ± 0.130 & 0.710 ± 0.212 \\ \hline
+\end{tabular}
+\end{table}
+
+All three real models reach about 0.80. A one-line threshold on the relative pulse is as good as logistic regression or a random forest, so the model is not doing anything complicated; the personal baseline carries most of the signal. The results also vary a lot between people (standard deviation 0.13 to 0.16): for some people it works well, for others it is close to guessing.
+
+\textbf{Why v1b drops pulse variability.} Version v1b keeps the same layout as v1 but switches off the beat-to-beat variation feature. This costs nothing measurable on WESAD (0.802 against 0.803), although it is a little less consistent between people. The reason is a \textbf{sensor mismatch}: the variation in the WESAD windows averages about 16 BPM, while our MAX30102 band reads roughly 2 to 7 BPM, so that feature would fall far outside the range the model was trained on.
+
+\textbf{Status.} The model is shown only on the reviewer page and is labelled \textbf{experimental}; MirrorWell does not show it. It is \textbf{not validated on our band}: the Empatica E4 has a different signal quality, placement and sampling rate, and the test compared a laboratory stress task with sitting still, so exercise, caffeine, excitement or talking can also raise the score. It also needs a calm baseline from the same person, and it was tested on 15 mostly young volunteers. It is a biofeedback aid, not a medical or diagnostic tool.
+
 \section{Testing of the New Parts}\label{sec:6.newtests}
 
 The new parts were tested automatically at several levels (Table~\ref{tab:new-tests}) and then end to end. The counts below are from the final merged build.
@@ -864,7 +892,7 @@ The vibration-overlap policy has a cost: frequent rep cues leave few clean windo
 \item The contact check (raw IR ≥ 50,000) can be passed by a reflective surface: with the sensor face-down on a table it reported a false pulse. Correct handling (sensor face-up, finger resting lightly) avoids this for now.
 \item The encrypted EMQX connection is implemented in the firmware but has not been tested end to end; the simulator, the test backend and the hardware test all used a local broker without TLS.
 \item The backend stores data in a local SQLite file on one laptop; a cloud database is not connected. The new live card, summary and reviewer page were tested with the simulated band; their check with the real band is done at the demonstration. The calm index is experimental and is not a medical or stress measure.
-\item The stress-estimation model is planned, not built.
+\item The experimental stress model was trained and tested only on WESAD (Empatica E4); it has not been validated on our band.
 \end{itemize}
 
 \chapter{CONCLUSION AND FUTURE SCOPE}\label{ch:7}
@@ -877,13 +905,13 @@ This project designed and implemented the Calm Band, an IoT companion that adds 
 The firmware compiles for the ESP32 using 69\% of flash and 35\% of RAM, all 117 automated checks pass, and emulator self-tests confirm that sensing and vibration timing are independent of network delays. The physical prototype confirmed these results on real parts: it produced a usable resting pulse with quality up to 1.00, executed every vibration cue from a live MirrorWell session, withheld the pulse when the finger was removed or the band moved, and recovered from an 85-second network loss without losing any data.
 
 
-The demonstration build adds the parts a user and a therapist actually see. MirrorWell now shows a live band card with a heart that beats at the measured pace, signal bars, steadiness and a settling arrow, with no raw numbers and with honest messages when the data is poor, and it ends each session with a summary in plain words. A reviewer page shows each session as a timeline with gaps left empty, marks buzzes, movement, cues and STOP presses, labels simulated data, and offers an experimental calm index. Session data now survives backend restarts in SQLite. These parts passed 181 backend UI checks, the 33 backend checks, 438 MirrorWell tests and the reviewer page tests with the simulated band; the real-band session with these screens is checked at the demonstration.
+The demonstration build adds the parts a user and a therapist actually see. MirrorWell now shows a live band card with a heart that beats at the measured pace, signal bars, steadiness and a settling arrow, with no raw numbers and with honest messages when the data is poor, and it ends each session with a summary in plain words. A reviewer page shows each session as a timeline with gaps left empty, marks buzzes, movement, cues and STOP presses, labels simulated data, and offers an experimental calm index. Session data now survives backend restarts in SQLite, and an experimental WESAD-trained stress model (balanced accuracy about 0.80 in leave-one-subject-out tests, not yet validated on the band) is shown on the reviewer page only. These parts passed 181 backend UI checks, the 33 backend checks, 438 MirrorWell tests and the reviewer page tests with the simulated band; the real-band session with these screens is checked at the demonstration.
 
 
 \section{Future Scope}\label{sec:7.2}
 
 \begin{enumerate}\item \textbf{Hardware validation:} compare the band's pulse with a manual count or a reference pulse oximeter, add a plausibility check (for example, rejecting windows with a very high beat-to-beat spread) so that a reflective surface cannot pass as a finger, and measure the motor's interference on the pulse sensor.
-\item \textbf{WESAD-trained stress model:} train logistic regression and random forest models on WESAD with leave-one-subject-out evaluation, and show an experimental estimate only after it is checked.
+\item \textbf{Validate the stress model on the band:} the WESAD-trained model (logistic regression and random forest, leave-one-subject-out) has not been tested on our band's signal; record sessions with the band, compare the model with them, and find a variability feature that suits the MAX30102.
 \item \textbf{RMSSD in the firmware:} compute this beat-to-beat variability measure on the band itself from the clean beat intervals.
 \item \textbf{Data collection and personal calibration:} record a small dataset in RECORD mode and calibrate the model to each person.
 \item \textbf{Live model scoring:} score the model on live windows during a session, with the same quality rules that apply today.
