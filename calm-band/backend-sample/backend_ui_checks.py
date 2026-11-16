@@ -328,6 +328,11 @@ def part_model(F):
           m1 is not None and m1["modelVersion"] == "stress_lr_v1" and m1["evaluation"]["balancedAccuracyMean"] is not None)
     check("loader: a relative path works from the repo root (as in DEMO_NOTES)",
           sm_mod.load("calm-band/model/stress_lr_stub.json") is not None)
+    v1b = HERE.parent / "model" / "stress_lr_v1b.json"
+    mb = sm_mod.load(str(v1b)) if v1b.exists() else None
+    check("v1b: valid, and scoring ignores pulseRateSdBpm (SD slot has coef 0; any SD gives the same score)",
+          mb is not None and mb["modelVersion"] == "stress_lr_v1b" and mb["coef"][1] == 0
+          and len({sm_mod.score(mb, 85.0, sd, 4.0) for sd in (0.0, 1.8, 16.4, 50.0, 500.0)}) == 1)
     check("loader: the stub file is valid", sm_mod.load(str(stub)) is not None and sm_mod.load(str(stub))["modelVersion"] == "stub-not-trained")
     # --- model on
     app.MODEL = sm_mod.load(str(stub))

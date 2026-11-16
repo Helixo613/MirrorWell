@@ -282,7 +282,7 @@ The fixtures are consistent with each other: the settled session appears in the 
 
 Added after the freeze, **additive only**. `GET /api/companion/live` and `/status` do not change and never carry it; MirrorWell (`src/`) does not show it.
 
-**Switch.** Env `CALMBAND_MODEL` = path to a logistic-regression JSON (`model/stress_lr_v1.json` is the real one; `model/stress_lr_stub.json` is a made-up placeholder, `modelVersion: "stub-not-trained"`, for tests only). Unset, a missing file or an invalid file (not 3 features, bad array lengths, std <= 0, wrong type) = **no model**: the backend behaves as before and every field below is `null`.
+**Switch.** Env `CALMBAND_MODEL` = path to a logistic-regression JSON (`model/stress_lr_v1b.json` is the one to use, `model/stress_lr_v1.json` is kept for reference; `model/stress_lr_stub.json` is a made-up placeholder, `modelVersion: "stub-not-trained"`, for tests only). Unset, a missing file or an invalid file (not 3 features, bad array lengths, std <= 0, wrong type) = **no model**: the backend behaves as before and every field below is `null`.
 
 **Formula** (pure Python, no scikit-learn): `x = [pulseRateBpm, pulseRateSdBpm, relativePulseBpm]`; `score = 1 / (1 + exp(-(intercept + sum(coef[i] * (x[i] - scalerMean[i]) / scalerStd[i]))))`. `relativePulseBpm` = the window's pulse minus `U[0].pulseRateBpm` (the session's baseline, the same start reading as the calm index).
 
